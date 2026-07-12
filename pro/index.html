@@ -75,12 +75,34 @@
   .card .star { position: absolute; top: 4px; right: 6px; background: rgba(0,0,0,.6); border-radius: 4px; }
   .star.on, .starbtn.on { color: var(--gold); }
   textarea.memo { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
+  /* 홈 랜딩 */
+  .hero { text-align: center; padding: 56px 16px 40px; }
+  .hero-badge { display: inline-block; background: #2a1a1a; color: var(--gold); border: 1px solid #5a3a1a; border-radius: 20px; font-size: 12px; padding: 4px 14px; margin-bottom: 18px; }
+  .hero h2 { font-size: 38px; line-height: 1.3; margin-bottom: 14px; letter-spacing: -1px; }
+  .hero h2 em { font-style: normal; background: linear-gradient(90deg, #ff4444, #ffb020); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--sub); font-size: 15px; margin-bottom: 26px; }
+  .hero button { font-size: 15px; padding: 12px 26px; }
+  .feat4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .feat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; cursor: pointer; transition: border-color .15s, transform .15s; }
+  .feat:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .feat .fi { font-size: 26px; margin-bottom: 10px; }
+  .feat .ft { font-weight: 700; margin-bottom: 6px; }
+  .feat .fd { font-size: 13px; color: var(--sub); line-height: 1.6; }
+  .chip { display: inline-block; background: #10131a; border: 1px solid var(--border); color: var(--sub); border-radius: 16px; padding: 6px 14px; font-size: 13px; cursor: pointer; margin: 3px; }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+  footer { text-align: center; color: var(--sub); font-size: 12px; padding: 30px 0 10px; border-top: 1px solid var(--border); margin-top: 30px; }
+  .keymini { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 </style>
 </head>
 <body>
 <h1>▶ YT <span>떡상</span> 리서치<span class="pro">PRO</span> <small style="color:var(--sub);font-size:13px;font-weight:400">— 검색 · 채널 추적 · 트렌드 분석</small></h1>
 
 <div class="panel">
+  <div class="keymini" id="keyMini" style="display:none">
+    <span class="good">🔑 API 키 저장됨 ✓</span>
+    <button class="mini" id="keyEdit">변경</button>
+  </div>
+  <div id="keyFull">
   <div class="row">
     <div class="field" style="flex:1;min-width:280px">
       <label>내 YouTube API 키 (브라우저에만 저장됨)</label>
@@ -97,17 +119,37 @@
       <li>생성된 키를 복사해서 위 칸에 붙여넣기</li>
     </ol>
   </details>
+  </div>
 </div>
 
 <div class="tabs">
-  <div class="tab active" data-view="search">🔍 검색</div>
+  <div class="tab active" data-view="home">🏠 홈</div>
+  <div class="tab" data-view="search">🔍 검색</div>
   <div class="tab" data-view="track">📌 채널 추적</div>
   <div class="tab" data-view="insight">📊 트렌드 분석</div>
   <div class="tab" data-view="saved">⭐ 저장함</div>
 </div>
 
+<!-- ═══════════ 홈 탭 ═══════════ -->
+<div class="view active" id="view-home">
+  <div class="hero">
+    <div class="hero-badge">🚀 유튜버를 위한 무료 벤치마킹 도구</div>
+    <h2>어떤 영상이 <em>떡상</em>하는지,<br>감이 아니라 데이터로.</h2>
+    <p>장르 검색 한 번으로 떡상 영상 발굴 → 채널 추적 → 제목·업로드 패턴 분석까지</p>
+    <button data-go="search">🔍 지금 검색 시작</button>
+  </div>
+  <div class="feat4">
+    <div class="feat" data-go="search"><div class="fi">🔍</div><div class="ft">떡상 영상 검색</div><div class="fd">조회수÷구독자 배율로 채널 체급 대비 터진 영상만 골라냄. 12개국 지원.</div></div>
+    <div class="feat" data-go="search"><div class="fi">🖼</div><div class="ft">썸네일 갤러리</div><div class="fd">잘나가는 썸네일을 한 화면에 모아 벤치마킹. 저장함에 메모까지.</div></div>
+    <div class="feat" data-go="track"><div class="fi">📌</div><div class="ft">채널 추적</div><div class="fd">경쟁 채널을 등록하면 최신 영상의 떡상 여부를 자동 감지.</div></div>
+    <div class="feat" data-go="insight"><div class="fi">📊</div><div class="ft">트렌드 분석</div><div class="fd">떡상 제목 단어, 업로드 요일·시간대, 진입 난이도까지 자동 리포트.</div></div>
+  </div>
+  <div class="tiles" id="homeStats"></div>
+  <div class="panel"><h3 style="font-size:14px;margin-bottom:8px">🕘 최근 검색어</h3><div id="history"><span class="ch">아직 검색 기록이 없어요.</span></div></div>
+</div>
+
 <!-- ═══════════ 검색 탭 ═══════════ -->
-<div class="view active" id="view-search">
+<div class="view" id="view-search">
 <div class="panel">
   <div class="row">
     <div class="field">
@@ -235,6 +277,8 @@
   <table id="savedTable"><thead></thead><tbody></tbody></table>
 </div>
 </div>
+
+<footer>▶ YT 떡상 리서치 PRO · YouTube Data API 기반 · 키는 브라우저에만 저장되며 서버로 전송되지 않습니다</footer>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -579,6 +623,7 @@ async function search() {
   btn.disabled = true;
   status.textContent = '검색 중...';
   try {
+    pushHist($('#query').value);
     if ($('#mode').value === 'channel') await searchChannels(status);
     else await searchVideos(status);
   } catch (e) {
@@ -927,18 +972,53 @@ function buildInsight() {
 }
 
 // ═══════════ 탭 전환 ═══════════
-document.querySelectorAll('.tab').forEach(t =>
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    $('#view-' + t.dataset.view).classList.add('active');
-    if (t.dataset.view === 'track' && !$('#trackTable tbody').innerHTML) refreshTracked();
-    if (t.dataset.view === 'saved') renderSaved();
-  }));
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.view === name));
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  $('#view-' + name).classList.add('active');
+  if (name === 'track' && !$('#trackTable tbody').innerHTML) refreshTracked();
+  if (name === 'saved') renderSaved();
+  if (name === 'home') renderHome();
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.view)));
+document.querySelectorAll('[data-go]').forEach(el => el.addEventListener('click', () => switchTab(el.dataset.go)));
+
+// ═══════════ 홈: 통계 + 최근 검색어 ═══════════
+const HIST_KEY = 'yt_history';
+const loadHist = () => { try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch { return []; } };
+function pushHist(q) {
+  if (!q.trim()) return;
+  let h = loadHist().filter(x => x !== q);
+  h.unshift(q);
+  localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 10)));
+}
+function renderHome() {
+  $('#homeStats').innerHTML = [
+    ['🗂 발굴한 채널 DB', Object.keys(loadDB()).length + '개'],
+    ['⭐ 저장한 영상', loadBM().length + '개'],
+    ['📌 추적 중인 채널', loadTracked().length + '개'],
+  ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  const h = loadHist();
+  $('#history').innerHTML = h.length
+    ? h.map(q => `<span class="chip" data-hq="${q}">${q}</span>`).join('')
+    : '<span class="ch">아직 검색 기록이 없어요.</span>';
+  document.querySelectorAll('[data-hq]').forEach(c =>
+    c.addEventListener('click', () => { $('#query').value = c.dataset.hq; switchTab('search'); search(); }));
+}
+
+// ═══════════ API 키 패널 접기 ═══════════
+function updateKeyPanel(editing) {
+  const has = !!($('#apiKey').value || '').trim();
+  $('#keyMini').style.display = has && !editing ? 'flex' : 'none';
+  $('#keyFull').style.display = has && !editing ? 'none' : 'block';
+}
+$('#keyEdit').addEventListener('click', () => { updateKeyPanel(true); $('#apiKey').focus(); });
+$('#apiKey').addEventListener('blur', () => updateKeyPanel(false));
 
 $('#apiKey').value = localStorage.getItem('yt_api_key') || '';
 $('#apiKey').addEventListener('input', e => localStorage.setItem('yt_api_key', e.target.value.trim()));
+updateKeyPanel(false);
+renderHome();
 $('#searchBtn').addEventListener('click', search);
 $('#query').addEventListener('keydown', e => e.key === 'Enter' && search());
 

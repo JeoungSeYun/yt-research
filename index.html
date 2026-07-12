@@ -324,9 +324,10 @@ async function searchVideos(status) {
   const variants = await queryVariants($('#query').value);
   status.textContent = `검색어 ${variants.length}종으로 수집 중... (${variants.slice(0, 5).join(', ')}…)`;
   const pools = await Promise.all([
-    ...['relevance', 'viewCount'].map(async order => {
+    // 조회수순은 필터로 걸러질 것을 감안해 2배 깊게 수집
+    ...[['relevance', want], ['viewCount', want * 2]].map(async ([order, target]) => {
       let items = [], pageToken = '';
-      while (items.length < want) {
+      while (items.length < target) {
         const data = await yt('search', { ...base, order, ...(pageToken && { pageToken }) });
         items.push(...data.items);
         pageToken = data.nextPageToken;
@@ -378,8 +379,8 @@ async function searchVideos(status) {
   let note = '';
   if ($('#region').value && $('#region').value !== 'KR' && /[가-힣]/.test($('#query').value))
     note = ' · ⚠ 해외 영상은 그 나라 언어 검색어(예: minecraft minigame)로 검색해야 잘 나옴';
-  status.textContent = `${rows.length}개 영상 · 배율(조회수÷구독자)이 높을수록 채널 체급 대비 떡상한 영상` + note;
-  mode = 'video'; sortKey = 'ratio'; sortDesc = true;
+  status.textContent = `${rows.length}개 영상 (조회수순) · 배율 헤더 클릭 시 떡상순 정렬` + note;
+  mode = 'video'; sortKey = 'views'; sortDesc = true;
   renderVideos();
 }
 

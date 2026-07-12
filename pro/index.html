@@ -262,6 +262,7 @@
     <div class="panel chart"><h3>🔤 떡상 제목에 많이 쓰인 단어</h3><div id="chartWords"></div></div>
     <div class="panel chart"><h3>📅 업로드 요일 분포</h3><div id="chartDays"></div></div>
     <div class="panel chart"><h3>⏱ 영상 길이 분포</h3><div id="chartDur"></div></div>
+    <div class="panel chart"><h3>⚡ 쇼츠 길이 분포 (초 단위)</h3><div id="chartShorts"></div></div>
     <div class="panel chart"><h3>✍ 제목 패턴</h3><div id="patterns" style="font-size:13px;line-height:2.1"></div></div>
     <div class="panel chart"><h3>🕐 업로드 시간대 분포</h3><div id="chartHours"></div></div>
     <div class="panel chart"><h3>🏆 떡상 제목 TOP 5 (조회/구독 배율순)</h3><div id="topTitles" style="font-size:13px;line-height:1.5"></div></div>
@@ -966,6 +967,15 @@ function buildInsight() {
     else buckets[4][1]++;
   });
   barChart($('#chartDur'), buckets.map(([label, value]) => ({ label, value })), v => v + '개');
+
+  // 쇼츠(≤3분) 길이 분포 — 초 단위
+  const shorts = rows.filter(r => r.dur <= 180);
+  const sBuckets = [['~15초', 0, 15], ['15~30초', 16, 30], ['30~45초', 31, 45], ['45~60초', 46, 60], ['1분~1분30', 61, 90], ['1분30~2분', 91, 120], ['2~3분', 121, 180]]
+    .map(([label, lo, hi]) => ({ label, value: shorts.filter(r => r.dur >= lo && r.dur <= hi).length }));
+  $('#chartShorts').innerHTML = '';
+  if (shorts.length) barChart($('#chartShorts'), sBuckets, v => v + '개');
+  else $('#chartShorts').innerHTML = '<span class="ch" style="font-size:13px">결과에 쇼츠가 없어요.</span>';
+  $('#chartShorts').closest('.panel').querySelector('h3').textContent = `⚡ 쇼츠 길이 분포 (초 단위 · ${shorts.length}개)`;
 
   // 업로드 시간대 (3시간 단위)
   const hourBuckets = ['0~3시', '3~6시', '6~9시', '9~12시', '12~15시', '15~18시', '18~21시', '21~24시'].map(label => ({ label, value: 0 }));

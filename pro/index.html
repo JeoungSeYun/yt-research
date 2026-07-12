@@ -18,10 +18,10 @@
     letter-spacing: -.01em; -webkit-font-smoothing: antialiased;
   }
   #view-home { max-width: 980px; margin: 0 auto; }
-  h1 { font-size: 21px; margin-bottom: 18px; font-weight: 700; letter-spacing: -.02em; }
-  h1 span { background: linear-gradient(90deg, #2997ff, #a972ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  h1 .pro { background: linear-gradient(90deg, #2997ff, #a972ff); color: #fff; font-size: 10px; border-radius: 20px; padding: 3px 9px; vertical-align: middle; margin-left: 6px; letter-spacing: .02em; }
-  .panel { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  h1 { font-size: 19px; margin-bottom: 18px; font-weight: 700; letter-spacing: -.02em; }
+  h1 span { color: var(--accent); }
+  h1 .pro { border: 1px solid var(--border); color: var(--sub); font-size: 10px; border-radius: 5px; padding: 2px 6px; vertical-align: middle; margin-left: 7px; letter-spacing: .05em; font-weight: 600; }
+  .panel { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 14px; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field label { font-size: 12px; color: var(--sub); }
@@ -58,7 +58,7 @@
   .view.active { display: block; }
   /* 스탯 타일 */
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .tile { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; }
+  .tile { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
   .tile .k { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
   .tile .v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
   /* 바 차트 */
@@ -86,15 +86,14 @@
   textarea.memo { width: 100%; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 7px 10px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
   .vtitle:hover { color: var(--accent); }
   /* 홈 랜딩 */
-  .hero { text-align: center; padding: 72px 16px 52px; }
-  .hero-badge { display: inline-block; background: rgba(41, 151, 255, .12); color: var(--accent); border: 1px solid rgba(41, 151, 255, .3); border-radius: 980px; font-size: 12px; font-weight: 600; padding: 5px 16px; margin-bottom: 22px; }
-  .hero h2 { font-size: 48px; line-height: 1.15; margin-bottom: 18px; letter-spacing: -.03em; font-weight: 700; }
-  .hero h2 em { font-style: normal; background: linear-gradient(90deg, #2997ff, #a972ff, #ff6482); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .hero p { color: var(--sub); font-size: 17px; margin-bottom: 30px; letter-spacing: -.01em; }
-  .hero button { font-size: 16px; padding: 13px 30px; }
+  .hero { text-align: left; padding: 44px 6px 34px; }
+  .hero h2 { font-size: 30px; line-height: 1.3; margin-bottom: 10px; letter-spacing: -.02em; font-weight: 700; }
+  .hero h2 em { font-style: normal; color: var(--accent); }
+  .hero p { color: var(--sub); font-size: 14.5px; margin-bottom: 22px; }
+  .hero button { font-size: 14px; padding: 10px 22px; }
   .feat4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px; }
-  .feat { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 18px; padding: 24px; cursor: pointer; transition: border-color .2s, transform .2s, background .2s; }
-  .feat:hover { border-color: rgba(41, 151, 255, .5); transform: translateY(-3px); background: rgba(38, 38, 42, .75); }
+  .feat { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 22px; cursor: pointer; transition: border-color .2s; }
+  .feat:hover { border-color: rgba(41, 151, 255, .5); }
   .feat .fi { font-size: 28px; margin-bottom: 12px; }
   .feat .ft { font-weight: 700; margin-bottom: 6px; letter-spacing: -.01em; }
   .feat .fd { font-size: 13px; color: var(--sub); line-height: 1.6; }
@@ -155,10 +154,9 @@
 <!-- ═══════════ 홈 탭 ═══════════ -->
 <div class="view active" id="view-home">
   <div class="hero">
-    <div class="hero-badge">유튜버를 위한 무료 벤치마킹 도구</div>
-    <h2>어떤 영상이 <em>떡상</em>하는지,<br>감이 아니라 데이터로.</h2>
-    <p>장르 검색 한 번으로 떡상 영상 발굴 → 채널 추적 → 제목·업로드 패턴 분석까지</p>
-    <button data-go="search">지금 검색 시작</button>
+    <h2>어떤 영상이 <em>떡상</em>하는지, 감이 아니라 데이터로.</h2>
+    <p>장르를 검색하면 채널 규모 대비 터진 영상을 찾아주고, 제목·업로드 패턴까지 분석합니다.</p>
+    <button data-go="search">검색 시작</button>
   </div>
   <div class="feat4">
     <div class="feat" data-go="search"><div class="ft">떡상 영상 검색</div><div class="fd">조회수÷구독자 배율로 채널 체급 대비 터진 영상만 골라냄. 12개국 지원.</div></div>
@@ -172,7 +170,7 @@
 
 <!-- ═══════════ 검색 탭 ═══════════ -->
 <div class="view" id="view-search">
-<div class="panel" style="border-radius:26px">
+<div class="panel">
   <div class="searchbar">
     <select id="mode">
       <option value="video" selected>영상</option>
@@ -438,6 +436,7 @@ async function buildVideoRows(items) {
       channel: i.snippet.channelTitle, channelId: i.snippet.channelId,
       thumb: i.snippet.thumbnails.medium?.url, views, subs,
       ratio: subs ? views / subs : 0, vpd: Math.round(views / ageDays),
+      vph: Math.round(views / Math.max(1, ageDays * 24)),
       likes: +v.statistics.likeCount || 0, published: i.snippet.publishedAt,
       dur: parseDur(v.contentDetails.duration),
     };
@@ -700,7 +699,7 @@ function renderVideos() {
   $('#results thead').innerHTML = `<tr>
     <th></th><th data-sort="title">제목</th>
     <th data-sort="views" class="num">조회수</th><th data-sort="subs" class="num">구독자</th>
-    <th data-sort="ratio" class="num">조회/구독 배율</th><th data-sort="vpd" class="num">일평균 조회</th>
+    <th data-sort="ratio" class="num">조회/구독 배율</th><th data-sort="vpd" class="num">일평균 조회</th><th data-sort="vph" class="num">시간당 조회</th>
     <th data-sort="likes" class="num">좋아요</th><th data-sort="published" class="num">업로드</th>
     <th data-sort="dur" class="num">길이</th></tr>`;
   sortRows();
@@ -715,6 +714,7 @@ function renderVideos() {
       <td class="num">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
       <td class="num ${r.ratio >= 5 ? 'hot' : ''}">${r.ratio ? r.ratio.toFixed(1) + '×' : '-'}</td>
       <td class="num">${fmtNum(r.vpd)}</td>
+      <td class="num">${fmtNum(r.vph)}</td>
       <td class="num">${fmtNum(r.likes)}</td>
       <td class="num">${new Date(r.published).toLocaleDateString('ko-KR')}</td>
       <td class="num">${fmtDur(r.dur)}</td>
@@ -765,8 +765,8 @@ $('#csvBtn').addEventListener('click', () => {
   const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
   let csv;
   if (mode === 'video') {
-    csv = ['제목,채널,조회수,구독자,배율,일평균조회,좋아요,업로드,길이,링크',
-      ...rows.map(r => [esc(r.title), esc(r.channel), r.views, r.subs, r.ratio.toFixed(1), r.vpd, r.likes, r.published.slice(0, 10), fmtDur(r.dur), 'https://youtu.be/' + r.id].join(','))].join('\n');
+    csv = ['제목,채널,조회수,구독자,배율,일평균조회,시간당조회,좋아요,업로드,길이,링크',
+      ...rows.map(r => [esc(r.title), esc(r.channel), r.views, r.subs, r.ratio.toFixed(1), r.vpd, r.vph, r.likes, r.published.slice(0, 10), fmtDur(r.dur), 'https://youtu.be/' + r.id].join(','))].join('\n');
   } else {
     csv = ['채널,구독자,관련도,총조회수,영상수,평균조회,링크',
       ...rows.map(r => [esc(r.channel), r.subs, r.score + '%', r.totalViews, r.videos, r.avgViews, 'https://youtube.com/channel/' + r.channelId].join(','))].join('\n');

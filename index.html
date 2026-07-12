@@ -91,9 +91,19 @@
     <div class="field">
       <label>지역</label>
       <select id="region">
-        <option value="KR" selected>한국</option>
-        <option value="US">미국</option>
-        <option value="">전체</option>
+        <option value="KR" selected>🇰🇷 한국</option>
+        <option value="US">🇺🇸 미국</option>
+        <option value="JP">🇯🇵 일본</option>
+        <option value="GB">🇬🇧 영국</option>
+        <option value="DE">🇩🇪 독일</option>
+        <option value="FR">🇫🇷 프랑스</option>
+        <option value="ES">🇪🇸 스페인</option>
+        <option value="BR">🇧🇷 브라질</option>
+        <option value="ID">🇮🇩 인도네시아</option>
+        <option value="VN">🇻🇳 베트남</option>
+        <option value="TH">🇹🇭 태국</option>
+        <option value="RU">🇷🇺 러시아</option>
+        <option value="">🌍 전체</option>
       </select>
     </div>
     <div class="field">
@@ -143,6 +153,20 @@ const SYN = {
   '모드': ['모드', 'mod', '애드온', 'addon'],
   '레드스톤': ['레드스톤', 'redstone', '자동화', '회로'],
 };
+// ─── 국가별 설정: 우선 언어 + 그 나라 문자 감지 정규식 ───
+const REGION_LANG = { KR: 'ko', US: 'en', GB: 'en', JP: 'ja', DE: 'de', FR: 'fr', ES: 'es', BR: 'pt', ID: 'id', VN: 'vi', TH: 'th', RU: 'ru' };
+// 고유 문자가 있는 언어: 제목에 그 문자가 있어야 그 나라 콘텐츠로 인정
+const NATIVE_SCRIPT = { KR: /[가-힣]/, JP: /[ぁ-んァ-ヶ一-龯]/, TH: /[ก-๙]/, RU: /[а-яА-Я]/ };
+// 라틴 문자권 국가에서는 한글/일본어/태국어/키릴 문자가 섞인 영상 제외
+const NON_LATIN = /[가-힣ぁ-んァ-ヶ一-龯ก-๙а-яА-Я]/;
+const regionLang = () => REGION_LANG[$('#region').value] || '';
+function regionFilter(list, textOf) {
+  const region = $('#region').value;
+  if (NATIVE_SCRIPT[region]) return list.filter(r => NATIVE_SCRIPT[region].test(textOf(r)));
+  if (region) return list.filter(r => !NON_LATIN.test(textOf(r)));
+  return list;
+}
+
 // 튜토리얼/제작성 키워드: 검색어에 직접 안 썼으면 결과에서 제외 (플레이 영상만 남김)
 const OFFTOPIC = ['만들기', '만드는', '제작', '커맨드', '명령어', '애드온', '다운로드', '설치법', '서버 만', '맵 만', '강좌'];
 
@@ -161,8 +185,8 @@ function getSuggestions(q) {
     function cleanup() { delete window[cb]; s.remove(); clearTimeout(timer); }
     window[cb] = data => { cleanup(); resolve((data[1] || []).map(x => x[0])); };
     s.onerror = () => { cleanup(); resolve([]); };
-    s.src = 'https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&hl=ko&q='
-      + encodeURIComponent(q) + '&jsonp=' + cb;
+    s.src = 'https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&hl=' + (regionLang() || 'ko')
+      + '&gl=' + ($('#region').value || 'US') + '&q=' + encodeURIComponent(q) + '&jsonp=' + cb;
     document.head.appendChild(s);
   });
 }
@@ -269,7 +293,7 @@ async function buildVideoRows(items) {
 
 function applyVideoFilters(list) {
   if ($('#duration').value === 'short') list = list.filter(r => r.dur <= 180);
-  if ($('#region').value === 'US') list = list.filter(r => !/[가-힣]/.test(r.title + r.channel));
+  list = regionFilter(list, r => r.title + ' ' + r.channel);
   const q = $('#query').value;
   const groups = tokenGroups(q);
   // 튜토리얼/제작성 영상 컷 (검색어에 직접 쓴 경우는 예외)
@@ -292,7 +316,7 @@ async function searchVideos(status) {
     q: $('#query').value,
     regionCode: $('#region').value,
     videoDuration: $('#duration').value === 'any' ? '' : $('#duration').value,
-    relevanceLanguage: { KR: 'ko', US: 'en' }[$('#region').value] || '',
+    relevanceLanguage: regionLang(),
   };
   if (days) base.publishedAfter = new Date(Date.now() - days * 864e5).toISOString();
 
@@ -352,8 +376,8 @@ async function searchVideos(status) {
   rows = applyVideoFilters(rows).slice(0, want);
 
   let note = '';
-  if ($('#region').value === 'US' && /[가-힣]/.test($('#query').value))
-    note = ' · ⚠ 해외 영상은 영어 검색어(예: minecraft minigame)로 검색해야 잘 나옴';
+  if ($('#region').value && $('#region').value !== 'KR' && /[가-힣]/.test($('#query').value))
+    note = ' · ⚠ 해외 영상은 그 나라 언어 검색어(예: minecraft minigame)로 검색해야 잘 나옴';
   status.textContent = `${rows.length}개 영상 · 배율(조회수÷구독자)이 높을수록 채널 체급 대비 떡상한 영상` + note;
   mode = 'video'; sortKey = 'ratio'; sortDesc = true;
   renderVideos();
@@ -366,7 +390,7 @@ async function searchChannels(status) {
     part: 'snippet', maxResults: 50,
     q: $('#query').value,
     regionCode: $('#region').value,
-    relevanceLanguage: { KR: 'ko', US: 'en' }[$('#region').value] || '',
+    relevanceLanguage: regionLang(),
   };
   // 유튜브 채널 검색이 부실해서: 검색어 변형 여러 개 × (채널 검색 + 영상 검색)으로 폭넓게 후보 수집
   const variants = await queryVariants($('#query').value);
@@ -415,8 +439,7 @@ async function searchChannels(status) {
     };
   }).filter(Boolean).filter(r => r.subs > 0 && r.videos > 0 && !r.channel.endsWith(' - Topic'));
 
-  if ($('#region').value === 'US') cands = cands.filter(r => !/[가-힣]/.test(r.channel));
-  if ($('#region').value === 'KR') cands = cands.filter(r => /[가-힣]/.test(r.fullDesc));
+  cands = regionFilter(cands, r => r.fullDesc);
 
   // ─── 핵심: 각 채널의 최근 업로드 20개를 실제로 열어서 장르 일치 비율을 계산 ───
   // 제목 목록은 누적 DB에 7일간 캐시해서 할당량 절약

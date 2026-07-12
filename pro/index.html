@@ -102,6 +102,17 @@
   .chip:hover { color: var(--text); border-color: var(--accent); }
   footer { text-align: center; color: var(--sub); font-size: 12px; padding: 30px 0 10px; border-top: 1px solid var(--border); margin-top: 30px; }
   .keymini { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  /* 검색바 — 스포트라이트 스타일 */
+  .searchbar { display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); border-radius: 980px; padding: 6px 6px 6px 10px; transition: border-color .2s; }
+  .searchbar:focus-within { border-color: var(--accent); }
+  .searchbar select { background: rgba(255, 255, 255, .09); border: none; border-radius: 980px; padding: 9px 14px; font-size: 13.5px; font-weight: 600; flex-shrink: 0; cursor: pointer; }
+  .searchbar input { flex: 1; background: none; border: none; font-size: 16px; padding: 10px 6px; min-width: 0; }
+  .searchbar input:focus { background: none; border: none; }
+  .searchbar button { flex-shrink: 0; padding: 10px 24px; }
+  .filters { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .filters select { border-radius: 980px; font-size: 13px; padding: 7px 14px; color: var(--sub); cursor: pointer; }
+  .filters select:hover { color: var(--text); }
+  .resultsbar { display: flex; align-items: center; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -161,79 +172,62 @@
 
 <!-- ═══════════ 검색 탭 ═══════════ -->
 <div class="view" id="view-search">
-<div class="panel">
-  <div class="row">
-    <div class="field">
-      <label>대상</label>
-      <select id="mode">
-        <option value="video" selected>영상</option>
-        <option value="channel">채널</option>
-      </select>
-    </div>
-    <div class="field" style="flex:2;min-width:220px">
-      <label>검색어 (아무거나)</label>
-      <input id="query" value="" placeholder="예: 마인크래프트 정보, 미니게임, 마크 야생, roblox obby">
-    </div>
-    <div class="field">
-      <label>기간</label>
-      <select id="period">
-        <option value="7">최근 1주</option>
-        <option value="30" selected>최근 1개월</option>
-        <option value="90">최근 3개월</option>
-        <option value="365">최근 1년</option>
-        <option value="0">전체</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>지역</label>
-      <select id="region">
-        <option value="KR" selected>한국</option>
-        <option value="US">미국</option>
-        <option value="JP">일본</option>
-        <option value="GB">영국</option>
-        <option value="DE">독일</option>
-        <option value="FR">프랑스</option>
-        <option value="ES">스페인</option>
-        <option value="BR">브라질</option>
-        <option value="ID">인도네시아</option>
-        <option value="VN">베트남</option>
-        <option value="TH">태국</option>
-        <option value="RU">러시아</option>
-        <option value="">전체</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>영상 길이</label>
-      <select id="duration">
-        <option value="any" selected>전체</option>
-        <option value="short">쇼츠 (≤3분)</option>
-        <option value="medium">4~20분</option>
-        <option value="long">20분+</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>개수</label>
-      <select id="count">
-        <option value="25">25</option>
-        <option value="50" selected>50</option>
-        <option value="100">100</option>
-      </select>
-    </div>
-    <div class="field">
-      <button id="searchBtn">검색</button>
-    </div>
-    <div class="field">
-      <button class="mini" id="csvBtn" style="padding:9px 14px">CSV 저장</button>
-    </div>
-    <div class="field">
-      <button class="mini" id="viewToggle" style="padding:9px 14px">갤러리 보기</button>
-    </div>
+<div class="panel" style="border-radius:26px">
+  <div class="searchbar">
+    <select id="mode">
+      <option value="video" selected>영상</option>
+      <option value="channel">채널</option>
+    </select>
+    <input id="query" value="" placeholder="어떤 장르를 벤치마킹할까요? — 예: 마인크래프트 미니게임">
+    <button id="searchBtn">검색</button>
   </div>
-  <div id="presets" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div class="filters">
+    <select id="period">
+      <option value="7">최근 1주</option>
+      <option value="30" selected>최근 1개월</option>
+      <option value="90">최근 3개월</option>
+      <option value="365">최근 1년</option>
+      <option value="0">전체 기간</option>
+    </select>
+    <select id="region">
+      <option value="KR" selected>한국</option>
+      <option value="US">미국</option>
+      <option value="JP">일본</option>
+      <option value="GB">영국</option>
+      <option value="DE">독일</option>
+      <option value="FR">프랑스</option>
+      <option value="ES">스페인</option>
+      <option value="BR">브라질</option>
+      <option value="ID">인도네시아</option>
+      <option value="VN">베트남</option>
+      <option value="TH">태국</option>
+      <option value="RU">러시아</option>
+      <option value="">모든 지역</option>
+    </select>
+    <select id="duration">
+      <option value="any" selected>모든 길이</option>
+      <option value="short">쇼츠 (≤3분)</option>
+      <option value="medium">4~20분</option>
+      <option value="long">20분 이상</option>
+    </select>
+    <select id="count">
+      <option value="25">25개</option>
+      <option value="50" selected>50개</option>
+      <option value="100">100개</option>
+    </select>
+  </div>
+  <div id="presets" style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div class="status" id="status"></div>
 </div>
 
 <div class="panel" style="overflow-x:auto">
+  <div class="resultsbar">
+    <span class="ch" style="font-size:13px">결과</span>
+    <span style="margin-left:auto;display:flex;gap:8px">
+      <button class="mini" id="viewToggle">갤러리 보기</button>
+      <button class="mini" id="csvBtn">CSV 저장</button>
+    </span>
+  </div>
   <table id="results">
     <thead></thead>
     <tbody></tbody>

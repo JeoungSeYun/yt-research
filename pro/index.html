@@ -126,6 +126,7 @@
 <div class="tabs">
   <div class="tab active" data-view="home">🏠 홈</div>
   <div class="tab" data-view="search">🔍 검색</div>
+  <div class="tab" data-view="keyword">🔑 키워드</div>
   <div class="tab" data-view="track">📌 채널 추적</div>
   <div class="tab" data-view="insight">📊 트렌드 분석</div>
   <div class="tab" data-view="saved">⭐ 저장함</div>
@@ -232,6 +233,24 @@
 </div>
 </div>
 
+<!-- ═══════════ 키워드 탭 ═══════════ -->
+<div class="view" id="view-keyword">
+<div class="panel">
+  <div class="row">
+    <div class="field" style="flex:1;min-width:240px">
+      <label>분석할 키워드</label>
+      <input id="kwQuery" placeholder="예: 마인크래프트 미니게임 (Enter로 분석)">
+    </div>
+    <div class="field"><button id="kwBtn">분석</button></div>
+  </div>
+  <div class="status" id="kwStatus">키워드의 기회 점수·경쟁 현황·연관 키워드를 분석해줘요.</div>
+</div>
+<div id="kwBody" style="display:none">
+  <div class="tiles" id="kwTiles"></div>
+  <div class="panel"><h3 style="font-size:14px;margin-bottom:10px">🔗 연관 키워드 (사람들이 실제 검색하는 표현 · 클릭하면 바로 검색)</h3><div id="kwRelated"></div></div>
+</div>
+</div>
+
 <!-- ═══════════ 채널 추적 탭 ═══════════ -->
 <div class="view" id="view-track">
 <div class="panel">
@@ -266,6 +285,7 @@
     <div class="panel chart"><h3>✍ 제목 패턴</h3><div id="patterns" style="font-size:13px;line-height:2.1"></div></div>
     <div class="panel chart"><h3>🕐 업로드 시간대 분포</h3><div id="chartHours"></div></div>
     <div class="panel chart"><h3>🏆 떡상 제목 TOP 5 (조회/구독 배율순)</h3><div id="topTitles" style="font-size:13px;line-height:1.5"></div></div>
+    <div class="panel chart"><h3>🏷 상위 영상들이 쓰는 태그 (클릭하면 검색)</h3><div id="chartTags"></div></div>
   </div>
 </div>
 </div>
@@ -826,9 +846,26 @@ async function refreshTracked() {
       const d = await yt('videos', { part: 'statistics', id: ids.join(',') });
       d.items.forEach(v => vstats[v.id] = +v.statistics.viewCount || 0);
     }
+    // 구독자 증감 기록 (하루 1스냅샷, 최근 60개 보관)
+    const GROW_KEY = 'yt_growth';
+    let growth; try { growth = JSON.parse(localStorage.getItem(GROW_KEY)) || {}; } catch { growth = {}; }
+    const today = new Date().toISOString().slice(0, 10);
+    tracked.forEach(t => {
+      const subs = +(byId[t.id]?.statistics.subscriberCount) || 0;
+      const arr = growth[t.id] || [];
+      if (!arr.length || arr[arr.length - 1].d !== today) arr.push({ d: today, subs });
+      else arr[arr.length - 1].subs = subs;
+      growth[t.id] = arr.slice(-60);
+    });
+    localStorage.setItem(GROW_KEY, JSON.stringify(growth));
+
     // 구독자순 표시 + 원본 인덱스 유지 (삭제용)
-    const display = tracked.map((t, idx) => ({ ...t, idx, subs: +(byId[t.id]?.statistics.subscriberCount) || 0 }))
-      .sort((a, b) => b.subs - a.subs);
+    const display = tracked.map((t, idx) => {
+      const arr = growth[t.id] || [];
+      const prev = arr.length >= 2 ? arr[arr.length - 2].subs : null;
+      const subs = +(byId[t.id]?.statistics.subscriberCount) || 0;
+      return { ...t, idx, subs, delta: prev === null ? null : subs - prev, since: arr.length >= 2 ? arr[arr.length - 2].d : null };
+    }).sort((a, b) => b.subs - a.subs);
     $('#trackTable thead').innerHTML = '<tr><th>채널</th><th>최신 영상 5개</th><th></th></tr>';
     $('#trackTable tbody').innerHTML = display.map(t => {
       const vids = (latest[t.id] || []).map(v => {
@@ -849,7 +886,7 @@ async function refreshTracked() {
         <td style="min-width:160px;vertical-align:top;padding-top:14px">
           <a href="https://youtube.com/channel/${t.id}" target="_blank" style="display:flex;align-items:center;gap:8px;text-decoration:none">
             <img class="cthumb" src="${t.thumb}">
-            <span><span class="vtitle" style="max-width:120px">${t.name}</span><span class="ch">구독자 ${fmtNum(t.subs)}</span></span>
+            <span><span class="vtitle" style="max-width:120px">${t.name}</span><span class="ch">구독자 ${fmtNum(t.subs)}</span>${t.delta ? `<span class="ch" style="color:${t.delta > 0 ? 'var(--green)' : 'var(--accent)'}">${t.delta > 0 ? '▲ +' : '▼ '}${fmtNum(Math.abs(t.delta))} <small>(${t.since}~)</small></span>` : ''}</span>
           </a>
         </td>
         <td>${vids}</td>
@@ -876,6 +913,58 @@ $('#viewToggle').addEventListener('click', () => {
   localStorage.setItem('yt_viewmode', viewMode);
   applyViewMode();
 });
+
+// ═══════════ 키워드 분석 ═══════════
+async function analyzeKeyword() {
+  const q = $('#kwQuery').value.trim();
+  if (!q) return;
+  const btn = $('#kwBtn');
+  btn.disabled = true;
+  try {
+    $('#kwStatus').textContent = '연관 키워드 수집 중... (할당량 무료)';
+    const s1 = await getSuggestions(q);
+    const deeper = await Promise.all(s1.slice(0, 3).map(s => getSuggestions(s)));
+    const related = [...new Set([...s1, ...deeper.flat()])].filter(x => x.toLowerCase() !== q.toLowerCase()).slice(0, 24);
+    // 연관 키워드는 할당량 무료라 먼저 보여줌 (경쟁 분석이 실패해도 유지)
+    $('#kwRelated').innerHTML = related.length
+      ? related.map(k => `<span class="chip" data-kws="${k}">${k}</span>`).join('')
+      : '<span class="ch">연관 키워드 없음</span>';
+    document.querySelectorAll('[data-kws]').forEach(c =>
+      c.addEventListener('click', () => { $('#query').value = c.dataset.kws; switchTab('search'); search(); }));
+    $('#kwTiles').innerHTML = '';
+    $('#kwBody').style.display = 'block';
+
+    $('#kwStatus').textContent = '상위 영상 경쟁 분석 중...';
+    const d = await yt('search', {
+      part: 'snippet', type: 'video', q, maxResults: 25, order: 'viewCount',
+      regionCode: $('#region').value, relevanceLanguage: regionLang(),
+      publishedAfter: new Date(Date.now() - 90 * 864e5).toISOString(),
+    });
+    const vids = await buildVideoRows(d.items);
+    const avg = vids.length ? Math.round(vids.reduce((a, r) => a + r.views, 0) / vids.length) : 0;
+    const subsSorted = vids.map(r => r.subs).filter(Boolean).sort((a, b) => a - b);
+    const medSubs = subsSorted[Math.floor(subsSorted.length / 2)] || 0;
+    const chanN = new Set(vids.map(r => r.channelId)).size;
+    const hotPct = vids.length ? Math.round(vids.filter(r => r.ratio >= 5).length / vids.length * 100) : 0;
+    // 기회 점수(추정): 상위 영상 평균 조회수가 중앙 구독자 대비 높고, 떡상 비율이 높을수록 작은 채널의 기회
+    const score = Math.max(1, Math.min(100, Math.round(Math.log10((medSubs ? avg / medSubs : 0) + 1) * 45 + hotPct * 0.5 + Math.min(chanN, 25))));
+    const grade = score >= 65 ? '🟢 좋음' : score >= 40 ? '🟡 보통' : '🔴 어려움';
+
+    $('#kwTiles').innerHTML = [
+      ['기회 점수 (추정)', score + '점 ' + grade],
+      ['최근 3개월 상위 평균 조회', fmtNum(avg)],
+      ['중앙값 구독자 (경쟁 체급)', fmtNum(medSubs)],
+      ['상위 25개 중 떡상 비율', hotPct + '%'],
+    ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v" style="font-size:19px">${v}</div></div>`).join('');
+    $('#kwStatus').textContent = `"${q}" 분석 완료 · 기회 점수는 상위 영상 데이터 기반 추정치예요.`;
+  } catch (e) {
+    $('#kwStatus').textContent = /quota/i.test(e.message) ? '⚠ 오늘 API 할당량 소진 (오후 4~5시 리셋)' : '⚠ ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+$('#kwBtn').addEventListener('click', analyzeKeyword);
+$('#kwQuery').addEventListener('keydown', e => e.key === 'Enter' && analyzeKeyword());
 
 // ═══════════ 저장함 ═══════════
 function renderSaved() {
@@ -989,6 +1078,16 @@ function buildInsight() {
       <span class="hot">${i + 1}.</span> <a class="vtitle" style="display:inline" href="https://youtu.be/${r.id}" target="_blank">${r.title}</a><br>
       <span class="ch">${r.channel} · ${fmtNum(r.views)}회 · 구독자 ${fmtNum(r.subs)} → <b class="hot">${r.ratio.toFixed(1)}×</b></span>
     </div>`).join('');
+
+  // 인기 태그 (영상들이 실제 달아둔 태그 빈도)
+  const tagFreq = {};
+  rows.forEach(r => (r.tags || []).forEach(t => { const k = t.toLowerCase(); tagFreq[k] = (tagFreq[k] || 0) + 1; }));
+  const topTags = Object.entries(tagFreq).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  $('#chartTags').innerHTML = topTags.length
+    ? topTags.map(([t, n]) => `<span class="chip" data-tagq="${t}">${t} <b style="color:var(--gold)">${n}</b></span>`).join('')
+    : '<span class="ch" style="font-size:13px">태그 정보가 없어요.</span>';
+  document.querySelectorAll('[data-tagq]').forEach(c =>
+    c.addEventListener('click', () => { $('#query').value = c.dataset.tagq; switchTab('search'); search(); }));
 
   // 제목 패턴
   const pct = f => Math.round(rows.filter(f).length / rows.length * 100) + '%';

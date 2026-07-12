@@ -62,7 +62,7 @@
   .brow .bt { flex: 1; height: 18px; display: flex; align-items: center; }
   .brow .bar { height: 14px; background: var(--bar); border-radius: 0 4px 4px 0; min-width: 2px; transition: filter .15s; }
   .brow:hover .bar { filter: brightness(1.25); }
-  .brow .bv { font-size: 12px; color: var(--text); margin-left: 8px; font-variant-numeric: tabular-nums; }
+  .brow .bv { font-size: 12px; color: var(--text); margin-left: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .charts2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
   /* 썸네일 갤러리 */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
@@ -142,7 +142,7 @@
   </div>
   <div class="feat4">
     <div class="feat" data-go="search"><div class="fi">🔍</div><div class="ft">떡상 영상 검색</div><div class="fd">조회수÷구독자 배율로 채널 체급 대비 터진 영상만 골라냄. 12개국 지원.</div></div>
-    <div class="feat" data-go="search"><div class="fi">🖼</div><div class="ft">썸네일 갤러리</div><div class="fd">잘나가는 썸네일을 한 화면에 모아 벤치마킹. 저장함에 메모까지.</div></div>
+    <div class="feat" data-go="keyword"><div class="fi">🔑</div><div class="ft">키워드 분석</div><div class="fd">기회 점수와 연관 키워드로 어떤 주제를 팔지 결정.</div></div>
     <div class="feat" data-go="track"><div class="fi">📌</div><div class="ft">채널 추적</div><div class="fd">경쟁 채널을 등록하면 최신 영상의 떡상 여부를 자동 감지.</div></div>
     <div class="feat" data-go="insight"><div class="fi">📊</div><div class="ft">트렌드 분석</div><div class="fd">떡상 제목 단어, 업로드 요일·시간대, 진입 난이도까지 자동 리포트.</div></div>
   </div>
@@ -1003,7 +1003,7 @@ function barChart(el, data, fmt) {
   el.innerHTML = data.map(d => `
     <div class="brow" title="${d.label}: ${fmt ? fmt(d.value) : d.value}">
       <div class="bl">${d.label}</div>
-      <div class="bt"><div class="bar" style="width:${Math.round(d.value / max * 100)}%"></div><span class="bv">${fmt ? fmt(d.value) : d.value}</span></div>
+      <div class="bt"><div class="bar" style="width:${Math.round(d.value / max * 80)}%"></div><span class="bv">${fmt ? fmt(d.value) : d.value}</span></div>
     </div>`).join('');
 }
 

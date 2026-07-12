@@ -812,7 +812,11 @@ async function refreshTracked() {
       try {
         const up = byId[t.id]?.contentDetails?.relatedPlaylists?.uploads;
         const d = await yt('playlistItems', { part: 'snippet,contentDetails', playlistId: up, maxResults: 5 });
-        latest[t.id] = d.items.map(i => ({ id: i.contentDetails.videoId, title: i.snippet.title, at: i.contentDetails.videoPublishedAt || i.snippet.publishedAt }));
+        latest[t.id] = d.items.map(i => ({
+          id: i.contentDetails.videoId, title: i.snippet.title,
+          at: i.contentDetails.videoPublishedAt || i.snippet.publishedAt,
+          thumb: i.snippet.thumbnails?.default?.url,
+        }));
       } catch { latest[t.id] = []; }
     }));
     const vidIds = Object.values(latest).flat().map(v => v.id);
@@ -821,32 +825,46 @@ async function refreshTracked() {
       const d = await yt('videos', { part: 'statistics', id: ids.join(',') });
       d.items.forEach(v => vstats[v.id] = +v.statistics.viewCount || 0);
     }
-    $('#trackTable thead').innerHTML = '<tr><th></th><th>채널</th><th class="num">구독자</th><th>최신 영상 5개 (조회수 · 배율)</th><th></th></tr>';
-    $('#trackTable tbody').innerHTML = tracked.map((t, idx) => {
-      const c = byId[t.id];
-      const subs = +(c?.statistics.subscriberCount) || 0;
+    // 구독자순 표시 + 원본 인덱스 유지 (삭제용)
+    const display = tracked.map((t, idx) => ({ ...t, idx, subs: +(byId[t.id]?.statistics.subscriberCount) || 0 }))
+      .sort((a, b) => b.subs - a.subs);
+    $('#trackTable thead').innerHTML = '<tr><th>채널</th><th>최신 영상 5개</th><th></th></tr>';
+    $('#trackTable tbody').innerHTML = display.map(t => {
       const vids = (latest[t.id] || []).map(v => {
         const views = vstats[v.id] || 0;
-        const ratio = subs ? views / subs : 0;
-        return `<div style="margin:3px 0">
-          <a class="vtitle" style="display:inline;font-weight:400;font-size:13px" href="https://youtu.be/${v.id}" target="_blank">${v.title.slice(0, 45)}</a>
-          <span class="ch"> · ${new Date(v.at).toLocaleDateString('ko-KR')} · ${fmtNum(views)}회</span>
-          <span class="${ratio >= 1 ? 'hot' : 'ch'}"> ${ratio.toFixed(1)}×${ratio >= 1 ? ' 🔥' : ''}</span>
+        const ratio = t.subs ? views / t.subs : 0;
+        const isNew = Date.now() - new Date(v.at) < 3 * 864e5;
+        return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+          <a href="https://youtu.be/${v.id}" target="_blank"><img src="${v.thumb || ''}" style="width:64px;border-radius:4px;display:block" loading="lazy"></a>
+          <div style="min-width:0">
+            <a class="vtitle" style="font-weight:400;font-size:13px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" href="https://youtu.be/${v.id}" target="_blank">${v.title}</a>
+            <span class="ch">${new Date(v.at).toLocaleDateString('ko-KR')} · ${fmtNum(views)}회</span>
+            ${isNew ? '<span class="badge" style="color:var(--green);border-color:#2a4a3a;background:#1a2a22">NEW</span>' : ''}
+            <span class="${ratio >= 1 ? 'hot' : 'ch'}"> ${ratio.toFixed(1)}×${ratio >= 1 ? ' 🔥' : ''}</span>
+          </div>
         </div>`;
       }).join('') || '<span class="ch">영상 없음</span>';
       return `<tr>
-        <td><a href="https://youtube.com/channel/${t.id}" target="_blank"><img class="cthumb" src="${t.thumb}"></a></td>
-        <td><a class="vtitle" href="https://youtube.com/channel/${t.id}" target="_blank">${t.name}</a></td>
-        <td class="num">${fmtNum(subs)}</td>
+        <td style="min-width:160px;vertical-align:top;padding-top:14px">
+          <a href="https://youtube.com/channel/${t.id}" target="_blank" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+            <img class="cthumb" src="${t.thumb}">
+            <span><span class="vtitle" style="max-width:120px">${t.name}</span><span class="ch">구독자 ${fmtNum(t.subs)}</span></span>
+          </a>
+        </td>
         <td>${vids}</td>
-        <td><button class="mini" data-rm="${idx}">삭제</button></td>
+        <td style="white-space:nowrap;vertical-align:top;padding-top:14px">
+          <button class="mini" data-pop="${t.id}" data-name="${t.name}">인기 영상</button><br>
+          <button class="mini" data-rm="${t.idx}" style="margin-top:6px">삭제</button>
+        </td>
       </tr>`;
     }).join('');
     document.querySelectorAll('button[data-rm]').forEach(b =>
       b.addEventListener('click', () => {
         const t = loadTracked(); t.splice(+b.dataset.rm, 1); saveTracked(t); refreshTracked();
       }));
-    $('#trackStatus').textContent = `${tracked.length}개 채널 · 배율 = 영상 조회수 ÷ 구독자 (1× 이상이면 떡상 🔥)`;
+    document.querySelectorAll('button[data-pop]').forEach(b =>
+      b.addEventListener('click', () => { switchTab('search'); channelVideos(b.dataset.pop, b.dataset.name); }));
+    $('#trackStatus').textContent = `${tracked.length}개 채널 (구독자순) · 배율 = 조회수÷구독자, 1× 이상 🔥 · 3일 내 업로드는 NEW`;
   } catch (e) {
     $('#trackStatus').textContent = /quota/i.test(e.message) ? '⚠ 오늘 API 할당량 소진 (오후 4~5시 리셋)' : '⚠ ' + e.message;
   }
@@ -977,7 +995,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.view === name));
   document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
   $('#view-' + name).classList.add('active');
-  if (name === 'track' && !$('#trackTable tbody').innerHTML) refreshTracked();
+  if (name === 'track') refreshTracked();
   if (name === 'saved') renderSaved();
   if (name === 'home') renderHome();
 }

@@ -63,6 +63,18 @@
   .brow:hover .bar { filter: brightness(1.25); }
   .brow .bv { font-size: 12px; color: var(--text); margin-left: 8px; font-variant-numeric: tabular-nums; }
   .charts2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  /* 썸네일 갤러리 */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .card { background: #10131a; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; position: relative; }
+  .card img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; }
+  .card .ct { padding: 8px 10px; }
+  .card .t { font-size: 13px; font-weight: 600; line-height: 1.4; height: 2.8em; overflow: hidden; color: var(--text); text-decoration: none; display: block; }
+  .card .s { font-size: 12px; color: var(--sub); margin-top: 4px; display: flex; justify-content: space-between; }
+  .card .hotag { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,.75); color: var(--gold); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+  .card .star, .starbtn { cursor: pointer; background: none; border: none; font-size: 16px; padding: 0 4px; color: var(--sub); }
+  .card .star { position: absolute; top: 4px; right: 6px; background: rgba(0,0,0,.6); border-radius: 4px; }
+  .star.on, .starbtn.on { color: var(--gold); }
+  textarea.memo { width: 100%; background: #10131a; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
 </style>
 </head>
 <body>
@@ -91,6 +103,7 @@
   <div class="tab active" data-view="search">🔍 검색</div>
   <div class="tab" data-view="track">📌 채널 추적</div>
   <div class="tab" data-view="insight">📊 트렌드 분석</div>
+  <div class="tab" data-view="saved">⭐ 저장함</div>
 </div>
 
 <!-- ═══════════ 검색 탭 ═══════════ -->
@@ -159,6 +172,9 @@
     <div class="field">
       <button class="mini" id="csvBtn" style="padding:9px 14px">⬇ CSV</button>
     </div>
+    <div class="field">
+      <button class="mini" id="viewToggle" style="padding:9px 14px">🖼 갤러리</button>
+    </div>
   </div>
   <div id="presets" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div class="status" id="status"></div>
@@ -169,6 +185,7 @@
     <thead></thead>
     <tbody></tbody>
   </table>
+  <div class="grid" id="gridWrap" style="display:none"></div>
 </div>
 </div>
 
@@ -203,13 +220,47 @@
     <div class="panel chart"><h3>📅 업로드 요일 분포</h3><div id="chartDays"></div></div>
     <div class="panel chart"><h3>⏱ 영상 길이 분포</h3><div id="chartDur"></div></div>
     <div class="panel chart"><h3>✍ 제목 패턴</h3><div id="patterns" style="font-size:13px;line-height:2.1"></div></div>
+    <div class="panel chart"><h3>🕐 업로드 시간대 분포</h3><div id="chartHours"></div></div>
+    <div class="panel chart"><h3>🏆 떡상 제목 TOP 5 (조회/구독 배율순)</h3><div id="topTitles" style="font-size:13px;line-height:1.5"></div></div>
   </div>
+</div>
+</div>
+
+<!-- ═══════════ 저장함 탭 ═══════════ -->
+<div class="view" id="view-saved">
+<div class="panel">
+  <div class="status" id="savedStatus">검색 결과의 ⭐ 버튼으로 영상을 저장하고 메모를 남길 수 있어요.</div>
+</div>
+<div class="panel" style="overflow-x:auto">
+  <table id="savedTable"><thead></thead><tbody></tbody></table>
 </div>
 </div>
 
 <script>
 const $ = s => document.querySelector(s);
 let rows = [], mode = 'video', sortKey = 'views', sortDesc = true;
+let viewMode = localStorage.getItem('yt_viewmode') || 'list';
+
+// ─── 영상 저장함 (북마크 + 메모) ───
+const BM_KEY = 'yt_bookmarks';
+const loadBM = () => { try { return JSON.parse(localStorage.getItem(BM_KEY)) || []; } catch { return []; } };
+const saveBM = b => localStorage.setItem(BM_KEY, JSON.stringify(b));
+const isBM = id => loadBM().some(b => b.id === id);
+function toggleBM(r) {
+  const b = loadBM();
+  const i = b.findIndex(x => x.id === r.id);
+  if (i >= 0) b.splice(i, 1);
+  else b.push({ id: r.id, title: r.title, thumb: r.thumb, channel: r.channel, views: r.views, ratio: +(+r.ratio).toFixed(1), memo: '' });
+  saveBM(b);
+}
+function attachStars(container) {
+  container.querySelectorAll('[data-star]').forEach(b =>
+    b.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      const r = rows.find(x => x.id === b.dataset.star);
+      if (r) { toggleBM(r); b.classList.toggle('on'); }
+    }));
+}
 
 // ─── 동의어 ───
 const SYN = {
@@ -553,6 +604,28 @@ function markSort() {
   });
 }
 
+function applyViewMode() {
+  const grid = mode === 'video' && viewMode === 'grid';
+  $('#results thead').style.display = grid ? 'none' : '';
+  $('#results tbody').style.display = grid ? 'none' : '';
+  $('#gridWrap').style.display = grid ? 'grid' : 'none';
+  $('#viewToggle').textContent = viewMode === 'grid' ? '📋 목록' : '🖼 갤러리';
+}
+
+function renderGrid() {
+  $('#gridWrap').innerHTML = rows.map(r => `
+    <div class="card">
+      ${r.ratio >= 5 ? '<span class="hotag">🔥 ' + r.ratio.toFixed(0) + '×</span>' : ''}
+      <button class="star ${isBM(r.id) ? 'on' : ''}" data-star="${r.id}">★</button>
+      <a href="https://youtu.be/${r.id}" target="_blank"><img src="${r.thumb}" loading="lazy"></a>
+      <div class="ct">
+        <a class="t" href="https://youtu.be/${r.id}" target="_blank">${r.title}</a>
+        <div class="s"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${r.channel}</span><span>${fmtNum(r.views)}회 · ${fmtDur(r.dur)}</span></div>
+      </div>
+    </div>`).join('');
+  attachStars($('#gridWrap'));
+}
+
 function renderVideos() {
   $('#results thead').innerHTML = `<tr>
     <th></th><th data-sort="title">제목</th>
@@ -566,7 +639,7 @@ function renderVideos() {
       <td><a href="https://youtu.be/${r.id}" target="_blank"><img class="thumb" src="${r.thumb}" loading="lazy"></a></td>
       <td>
         <a class="vtitle" href="https://youtu.be/${r.id}" target="_blank">${r.title}${r.ratio >= 5 ? '<span class="badge">🔥 떡상</span>' : ''}</a>
-        <a class="ch" href="https://youtube.com/channel/${r.channelId}" target="_blank">${r.channel}</a>
+        <a class="ch" href="https://youtube.com/channel/${r.channelId}" target="_blank">${r.channel}</a> <button class="starbtn ${isBM(r.id) ? 'on' : ''}" data-star="${r.id}" title="저장함에 추가">★</button>
       </td>
       <td class="num">${fmtNum(r.views)}</td>
       <td class="num">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
@@ -576,6 +649,9 @@ function renderVideos() {
       <td class="num">${new Date(r.published).toLocaleDateString('ko-KR')}</td>
       <td class="num">${fmtDur(r.dur)}</td>
     </tr>`).join('');
+  attachStars($('#results tbody'));
+  renderGrid();
+  applyViewMode();
   markSort();
 }
 
@@ -601,6 +677,7 @@ function renderChannels() {
     b.addEventListener('click', () => { const r = rows[+b.dataset.ch]; channelVideos(r.channelId, r.channel); }));
   document.querySelectorAll('button[data-track]').forEach(b =>
     b.addEventListener('click', () => { const r = rows[+b.dataset.track]; addTracked({ id: r.channelId, name: r.channel, thumb: r.thumb }); b.textContent = '✓ 추적 중'; }));
+  applyViewMode();
   markSort();
 }
 
@@ -729,6 +806,36 @@ async function refreshTracked() {
   }
 }
 
+$('#viewToggle').addEventListener('click', () => {
+  viewMode = viewMode === 'grid' ? 'list' : 'grid';
+  localStorage.setItem('yt_viewmode', viewMode);
+  applyViewMode();
+});
+
+// ═══════════ 저장함 ═══════════
+function renderSaved() {
+  const b = loadBM();
+  $('#savedStatus').textContent = b.length ? `저장한 영상 ${b.length}개 · 메모는 자동 저장됨` : '검색 결과의 ⭐ 버튼으로 영상을 저장하고 메모를 남길 수 있어요.';
+  $('#savedTable thead').innerHTML = b.length ? '<tr><th></th><th>제목</th><th class="num">조회수</th><th class="num">배율</th><th style="min-width:220px">메모</th><th></th></tr>' : '';
+  $('#savedTable tbody').innerHTML = b.map((v, i) => `
+    <tr>
+      <td><a href="https://youtu.be/${v.id}" target="_blank"><img class="thumb" src="${v.thumb}" loading="lazy"></a></td>
+      <td><a class="vtitle" href="https://youtu.be/${v.id}" target="_blank">${v.title}</a><span class="ch">${v.channel}</span></td>
+      <td class="num">${fmtNum(v.views)}</td>
+      <td class="num ${v.ratio >= 5 ? 'hot' : ''}">${v.ratio}×</td>
+      <td><textarea class="memo" data-memo="${i}" placeholder="벤치마킹 포인트 메모...">${v.memo || ''}</textarea></td>
+      <td><button class="mini" data-del="${i}">삭제</button></td>
+    </tr>`).join('');
+  document.querySelectorAll('textarea[data-memo]').forEach(t =>
+    t.addEventListener('input', () => {
+      const b2 = loadBM(); b2[+t.dataset.memo].memo = t.value; saveBM(b2);
+    }));
+  document.querySelectorAll('button[data-del]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const b2 = loadBM(); b2.splice(+btn.dataset.del, 1); saveBM(b2); renderSaved();
+    }));
+}
+
 $('#trackSearchBtn').addEventListener('click', trackSearch);
 $('#trackQuery').addEventListener('keydown', e => e.key === 'Enter' && trackSearch());
 $('#trackRefreshBtn').addEventListener('click', refreshTracked);
@@ -756,9 +863,16 @@ function buildInsight() {
   const med = [...rows].sort((a, b) => a.views - b.views)[Math.floor(rows.length / 2)].views;
   const hotN = rows.filter(r => r.ratio >= 5).length;
   const shortsN = rows.filter(r => r.dur <= 180).length;
+  const chanN = new Set(rows.map(r => r.channelId)).size;
+  const subsSorted = rows.map(r => r.subs).filter(Boolean).sort((a, b) => a - b);
+  const medSubs = subsSorted[Math.floor(subsSorted.length / 2)] || 0;
+  // 경쟁 강도: 중앙 구독자가 낮고 떡상 비율이 높으면 작은 채널도 뚫을 수 있는 장르
+  const difficulty = medSubs < 5e4 && hotN >= rows.length * 0.15 ? '낮음 🟢' : medSubs < 3e5 ? '보통 🟡' : '높음 🔴';
   $('#tiles').innerHTML = [
     ['평균 조회수', fmtNum(avg)], ['중앙값 조회수', fmtNum(med)],
     ['🔥 떡상 영상 (5×+)', hotN + '개'], ['쇼츠 비율', Math.round(shortsN / rows.length * 100) + '%'],
+    ['참여 채널 수', chanN + '개'], ['중앙값 구독자', fmtNum(medSubs)],
+    ['진입 난이도', difficulty],
   ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 
   // 제목 단어 빈도 (조회수 가중치 없이 단순 빈도)
@@ -789,6 +903,19 @@ function buildInsight() {
   });
   barChart($('#chartDur'), buckets.map(([label, value]) => ({ label, value })), v => v + '개');
 
+  // 업로드 시간대 (3시간 단위)
+  const hourBuckets = ['0~3시', '3~6시', '6~9시', '9~12시', '12~15시', '15~18시', '18~21시', '21~24시'].map(label => ({ label, value: 0 }));
+  rows.forEach(r => hourBuckets[Math.floor(new Date(r.published).getHours() / 3)].value++);
+  barChart($('#chartHours'), hourBuckets, v => v + '개');
+
+  // 떡상 제목 TOP 5
+  const top5 = [...rows].sort((a, b) => b.ratio - a.ratio).slice(0, 5);
+  $('#topTitles').innerHTML = top5.map((r, i) => `
+    <div style="margin-bottom:10px">
+      <span class="hot">${i + 1}.</span> <a class="vtitle" style="display:inline" href="https://youtu.be/${r.id}" target="_blank">${r.title}</a><br>
+      <span class="ch">${r.channel} · ${fmtNum(r.views)}회 · 구독자 ${fmtNum(r.subs)} → <b class="hot">${r.ratio.toFixed(1)}×</b></span>
+    </div>`).join('');
+
   // 제목 패턴
   const pct = f => Math.round(rows.filter(f).length / rows.length * 100) + '%';
   const avgLen = Math.round(rows.reduce((a, r) => a + r.title.length, 0) / rows.length);
@@ -807,6 +934,7 @@ document.querySelectorAll('.tab').forEach(t =>
     t.classList.add('active');
     $('#view-' + t.dataset.view).classList.add('active');
     if (t.dataset.view === 'track' && !$('#trackTable tbody').innerHTML) refreshTracked();
+    if (t.dataset.view === 'saved') renderSaved();
   }));
 
 $('#apiKey').value = localStorage.getItem('yt_api_key') || '';

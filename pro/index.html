@@ -56,6 +56,10 @@
   .tab.active { background: var(--accent); color: #fff; }
   .view { display: none; }
   .view.active { display: block; }
+  .view.slide-right { animation: slideR .28s cubic-bezier(.22,.61,.36,1); }
+  .view.slide-left { animation: slideL .28s cubic-bezier(.22,.61,.36,1); }
+  @keyframes slideR { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+  @keyframes slideL { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
   /* 스탯 타일 */
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .tile { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
@@ -1122,11 +1126,17 @@ function buildInsight() {
     괄호 ( ) 사용: <b>${pct(r => /[()]/.test(r.title))}</b> · "..." 말줄임: <b>${pct(r => /\.\.\.|…/.test(r.title))}</b>`;
 }
 
-// ═══════════ 탭 전환 ═══════════
+// ═══════════ 탭 전환 (방향에 맞춰 슬라이드) ═══════════
+const TAB_ORDER = ['home', 'search', 'keyword', 'track', 'insight', 'saved'];
+let curTab = 'home';
 function switchTab(name) {
+  if (name === curTab) return;
+  const dir = TAB_ORDER.indexOf(name) >= TAB_ORDER.indexOf(curTab) ? 'slide-right' : 'slide-left';
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.view === name));
-  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-  $('#view-' + name).classList.add('active');
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active', 'slide-right', 'slide-left'));
+  const v = $('#view-' + name);
+  v.classList.add('active', dir);
+  curTab = name;
   if (name === 'track') refreshTracked();
   if (name === 'saved') renderSaved();
   if (name === 'home') renderHome();

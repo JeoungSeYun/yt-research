@@ -155,7 +155,6 @@
 </style>
 </head>
 <body>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <div class="topbar">
   <h1><span>떡상</span> 리서치<span class="pro">PRO</span></h1>
   <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -1233,45 +1232,107 @@ $('#presets').innerHTML = PRESETS.map(p => `<button class="mini preset" data-q="
 document.querySelectorAll('.preset').forEach(b =>
   b.addEventListener('click', () => { $('#query').value = b.dataset.q; search(); }));
 
-// ═══════════ Google 로그인 (클라이언트 사이드 · 백엔드 없음) ═══════════
-const GOOGLE_CLIENT_ID = '662051378413-d5hlqc1h7r7dkpl5dq4k5kto603ipmfa.apps.googleusercontent.com';
+// ═══════════ Google 로그인 + Firebase 클라우드 동기화 ═══════════
 const USER_KEY = 'yt_user';
 const loadUser = () => { try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; } catch { return null; } };
-function decodeJwt(t) {
-  try { return JSON.parse(decodeURIComponent(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''))); }
-  catch { return {}; }
-}
-function onGoogleLogin(resp) {
-  const p = decodeJwt(resp.credential);
-  localStorage.setItem(USER_KEY, JSON.stringify({ name: p.name || p.email, email: p.email, picture: p.picture }));
-  renderAuth();
-}
+
+// 동기화 대상 키: 저장한 영상/추적 채널/검색 기록/구독자 증감
+window.SYNC_KEYS = ['yt_tracked', 'yt_bookmarks', 'yt_history', 'yt_growth'];
+window.__syncing = false;
+// 이 키들에 로컬 저장이 일어나면 클라우드로 밀어올림 (동기화 중엔 스킵)
+const _setItem = localStorage.setItem.bind(localStorage);
+localStorage.setItem = (k, v) => {
+  _setItem(k, v);
+  if (!window.__syncing && window.SYNC_KEYS.includes(k)) window.__cloudPush?.();
+};
+// 클라우드에서 데이터를 내려받은 뒤 화면 갱신
+window.__refreshAfterSync = () => {
+  renderHome();
+  if (curTab === 'track') refreshTracked();
+  if (curTab === 'saved') renderSaved();
+};
+
+// 로그인 UI (Firebase 모듈이 window.tsAuth를 채워줌)
 function renderAuth() {
   const el = $('#authArea');
   const u = loadUser();
   if (u) {
     el.innerHTML = `${u.picture ? `<img src="${u.picture}" referrerpolicy="no-referrer">` : ''}<span class="uname">${u.name}</span><button class="mini" id="logoutBtn">로그아웃</button>`;
-    $('#logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem(USER_KEY);
-      if (window.google?.accounts) google.accounts.id.disableAutoSelect();
-      renderAuth();
-    });
+    $('#logoutBtn').addEventListener('click', () => window.tsAuth?.logout());
   } else {
-    el.innerHTML = '<div id="gbtn"></div>';
-    if (window.google?.accounts?.id) {
-      google.accounts.id.renderButton($('#gbtn'), { theme: 'filled_black', size: 'medium', type: 'standard', shape: 'pill', text: 'signin_with' });
-    } else {
-      el.innerHTML = '<span class="ch" style="font-size:12px">로그인 로딩 중…</span>';
-    }
+    el.innerHTML = '<button class="mini" id="loginBtn" style="border-color:var(--accent);color:var(--accent)">Google 계정으로 로그인</button>';
+    $('#loginBtn').addEventListener('click', () => window.tsAuth?.login());
   }
 }
-function initGoogle() {
-  if (!window.google?.accounts?.id) { setTimeout(initGoogle, 300); return; }
-  if (GOOGLE_CLIENT_ID.startsWith('GOOGLE_CLIENT_ID')) { renderAuth(); return; }
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin, auto_select: true });
-  renderAuth();
-}
-initGoogle();
+window.renderAuth = renderAuth;
+renderAuth();
+</script>
+
+<!-- Firebase 클라우드 동기화 -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDlkTOoR1ktDlEffuQp14T4h357VpU8JxM",
+  authDomain: "tteoksang-research.firebaseapp.com",
+  projectId: "tteoksang-research",
+  storageBucket: "tteoksang-research.firebasestorage.app",
+  messagingSenderId: "274139625384",
+  appId: "1:274139625384:web:3e6d0d95f11ccebb2f4f9d"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+setPersistence(auth, browserLocalPersistence);
+
+let uid = null, pushTimer = null;
+const SYNC = window.SYNC_KEYS; // ['yt_tracked','yt_bookmarks','yt_history','yt_growth']
+
+window.tsAuth = {
+  login: () => signInWithPopup(auth, provider).catch(e => { if (e.code !== 'auth/popup-closed-by-user') alert('로그인 실패: ' + e.message); }),
+  logout: () => signOut(auth),
+};
+
+// 로컬 → 클라우드 (1.5초 디바운스)
+window.__cloudPush = () => {
+  if (!uid) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    const data = { at: Date.now() };
+    SYNC.forEach(k => { try { data[k.replace('yt_', '')] = JSON.parse(localStorage.getItem(k) || 'null'); } catch { data[k.replace('yt_', '')] = null; } });
+    try { await setDoc(doc(db, 'users', uid), data, { merge: true }); } catch (e) { console.warn('cloud push 실패', e); }
+  }, 1500);
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    uid = user.uid;
+    localStorage.setItem(USER_KEY, JSON.stringify({ name: user.displayName || user.email, email: user.email, picture: user.photoURL }));
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      if (snap.exists()) {
+        const d = snap.data();
+        window.__syncing = true;
+        SYNC.forEach(k => { const f = k.replace('yt_', ''); if (d[f] !== undefined && d[f] !== null) localStorage.setItem(k, JSON.stringify(d[f])); });
+        window.__syncing = false;
+        window.__refreshAfterSync?.();
+      } else {
+        window.__cloudPush?.(); // 최초 로그인: 현재 로컬 데이터를 클라우드로
+      }
+    } catch (e) { console.warn('cloud load 실패', e); }
+    window.renderAuth?.();
+  } else {
+    uid = null;
+    localStorage.removeItem(USER_KEY);
+    window.renderAuth?.();
+  }
+});
+
+// USER_KEY 참조용 (모듈 스코프)
+const USER_KEY = 'yt_user';
 </script>
 </body>
 </html>

@@ -50,7 +50,7 @@
   .mini { padding: 5px 14px; font-size: 12px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); color: var(--sub); font-weight: 500; }
   .mini:hover { color: var(--text); border-color: var(--accent); filter: none; }
   /* 탭 — 세그먼트 컨트롤 (활성 표시가 미끄러짐) */
-  .tabs { display: inline-flex; gap: 4px; margin-bottom: 18px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 4px; position: relative; }
+  .tabs { display: flex; gap: 4px; width: fit-content; margin: 0 auto 20px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 4px; position: relative; max-width: 100%; overflow-x: auto; }
   .tab-indicator { position: absolute; top: 4px; bottom: 4px; border-radius: 980px; background: var(--accent); z-index: 0; transition: left .3s cubic-bezier(.4,.9,.3,1), width .3s cubic-bezier(.4,.9,.3,1); pointer-events: none; }
   .tab { padding: 8px 18px; border-radius: 980px; color: var(--sub); font-weight: 600; font-size: 13.5px; cursor: pointer; transition: color .25s; position: relative; z-index: 1; white-space: nowrap; }
   .tab:hover { color: var(--text); }
@@ -85,12 +85,13 @@
   .star.on, .starbtn.on { color: var(--gold); }
   textarea.memo { width: 100%; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 7px 10px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
   .vtitle:hover { color: var(--accent); }
-  /* 홈 랜딩 */
-  .hero { text-align: left; padding: 44px 6px 34px; }
-  .hero h2 { font-size: 30px; line-height: 1.3; margin-bottom: 10px; letter-spacing: -.02em; font-weight: 700; }
+  /* 홈 랜딩 (중앙 정렬) */
+  .hero { text-align: center; padding: 52px 6px 38px; }
+  .hero h2 { font-size: 32px; line-height: 1.3; margin-bottom: 12px; letter-spacing: -.02em; font-weight: 700; }
   .hero h2 em { font-style: normal; color: var(--accent); }
-  .hero p { color: var(--sub); font-size: 14.5px; margin-bottom: 22px; }
+  .hero p { color: var(--sub); font-size: 15px; margin-bottom: 24px; }
   .hero button { font-size: 14px; padding: 10px 22px; }
+  .hero .searchbar { margin: 0 auto; }
   .feat4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 14px; }
   .feat { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 22px; cursor: pointer; transition: border-color .2s; }
   .feat:hover { border-color: rgba(41, 151, 255, .5); }

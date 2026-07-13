@@ -137,6 +137,21 @@
   .candcard .cs { font-size: 12px; color: var(--sub); margin-top: 1px; }
   .candcard button { flex-shrink: 0; padding: 6px 14px; font-size: 12px; }
   .candcard button.added { background: rgba(48, 209, 88, .14); color: var(--green); box-shadow: none; cursor: default; }
+  /* 추적 중인 채널 카드 */
+  .trackcard { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 15px 16px; margin-bottom: 12px; }
+  .trackhead { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
+  .trackhead .hi { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; text-decoration: none; }
+  .trackhead .cn { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trackhead .cs { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .trackhead .cs .up { color: var(--green); } .trackhead .cs .dn { color: var(--accent); }
+  .trackbtns { display: flex; gap: 6px; flex-shrink: 0; }
+  .trackvids { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+  .tvid { flex: 0 0 152px; text-decoration: none; position: relative; }
+  .tvid img { width: 152px; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; display: block; background: #222; }
+  .tvid .tvt { font-size: 12px; color: var(--text); font-weight: 500; margin-top: 6px; line-height: 1.35; height: 2.7em; overflow: hidden; }
+  .tvid .tvm { font-size: 11px; color: var(--sub); margin-top: 3px; }
+  .tvid .rb { color: var(--gold); font-weight: 700; }
+  .tvid .nb { position: absolute; top: 6px; left: 6px; background: var(--green); color: #04110a; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -294,13 +309,11 @@
   <div id="trackCandidates" class="candlist"></div>
   <div class="status" id="trackStatus">채널을 추가하면 최신 영상과 떡상 여부를 한눈에 볼 수 있어요.</div>
 </div>
-<div class="panel" style="overflow-x:auto">
-  <div class="resultsbar">
-    <span class="ch" style="font-size:13px">추적 중인 채널</span>
-    <span style="margin-left:auto"><button class="mini" id="trackRefreshBtn">새로고침</button></span>
-  </div>
-  <table id="trackTable"><thead></thead><tbody></tbody></table>
+<div class="resultsbar" style="max-width:1200px">
+  <span class="ch" style="font-size:13px">추적 중인 채널</span>
+  <span style="margin-left:auto"><button class="mini" id="trackRefreshBtn">새로고침</button></span>
 </div>
+<div id="trackList"></div>
 </div>
 
 <!-- ═══════════ 트렌드 분석 탭 ═══════════ -->
@@ -657,21 +670,14 @@ async function channelVideos(channelId, channelTitle) {
   btn.disabled = true;
   status.textContent = `"${channelTitle}" 인기 영상 검색 중...`;
   try {
-    const days = +$('#period').value;
+    // 채널의 역대(전체 기간) 인기 영상 — 기간 필터 무시
     const base = { part: 'snippet', type: 'video', maxResults: 50, channelId, order: 'viewCount' };
-    if (days) base.publishedAfter = new Date(Date.now() - days * 864e5).toISOString();
     let items = (await yt('search', base)).items;
-    let note = '';
-    if (!items.length && days) {
-      delete base.publishedAfter;
-      items = (await yt('search', base)).items;
-      note = ' (기간 내 영상 없음 → 전체 기간으로 표시)';
-    }
     if (!items.length) { status.textContent = `"${channelTitle}" 영상 없음`; return; }
     rows = await buildVideoRows(items);
     rows.sort((a, b) => b.views - a.views);
     if ($('#duration').value === 'short') rows = rows.filter(r => r.dur <= 180);
-    status.textContent = `"${channelTitle}" 인기 영상 ${rows.length}개` + note;
+    status.textContent = `"${channelTitle}" 역대 인기 영상 ${rows.length}개 (조회수순)`;
     mode = 'video'; sortKey = 'views'; sortDesc = true;
     renderVideos();
     buildInsight();
@@ -870,8 +876,7 @@ async function trackSearch() {
 async function refreshTracked() {
   const tracked = loadTracked();
   if (!tracked.length) {
-    $('#trackTable thead').innerHTML = '';
-    $('#trackTable tbody').innerHTML = '';
+    $('#trackList').innerHTML = '<div class="ch" style="font-size:13px;padding:6px 2px">아직 추적 중인 채널이 없어요. 위에서 채널을 검색해 추가하세요.</div>';
     $('#trackStatus').textContent = '채널을 추가하면 최신 영상과 떡상 여부를 한눈에 볼 수 있어요.';
     return;
   }
@@ -887,7 +892,7 @@ async function refreshTracked() {
     await Promise.all(tracked.map(async t => {
       try {
         const up = byId[t.id]?.contentDetails?.relatedPlaylists?.uploads;
-        const d = await yt('playlistItems', { part: 'snippet,contentDetails', playlistId: up, maxResults: 5 });
+        const d = await yt('playlistItems', { part: 'snippet,contentDetails', playlistId: up, maxResults: 6 });
         latest[t.id] = d.items.map(i => ({
           id: i.contentDetails.videoId, title: i.snippet.title,
           at: i.contentDetails.videoPublishedAt || i.snippet.publishedAt,
@@ -921,35 +926,31 @@ async function refreshTracked() {
       const subs = +(byId[t.id]?.statistics.subscriberCount) || 0;
       return { ...t, idx, subs, delta: prev === null ? null : subs - prev, since: arr.length >= 2 ? arr[arr.length - 2].d : null };
     }).sort((a, b) => b.subs - a.subs);
-    $('#trackTable thead').innerHTML = '<tr><th>채널</th><th>최신 영상 5개</th><th></th></tr>';
-    $('#trackTable tbody').innerHTML = display.map(t => {
+    $('#trackList').innerHTML = display.map(t => {
       const vids = (latest[t.id] || []).map(v => {
         const views = vstats[v.id] || 0;
         const ratio = t.subs ? views / t.subs : 0;
         const isNew = Date.now() - new Date(v.at) < 3 * 864e5;
-        return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
-          <a href="https://youtu.be/${v.id}" target="_blank"><img src="${v.thumb || ''}" style="width:64px;border-radius:4px;display:block" loading="lazy"></a>
-          <div style="min-width:0">
-            <a class="vtitle" style="font-weight:400;font-size:13px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" href="https://youtu.be/${v.id}" target="_blank">${v.title}</a>
-            <span class="ch">${new Date(v.at).toLocaleDateString('ko-KR')} · ${fmtNum(views)}회</span>
-            ${isNew ? '<span class="badge" style="color:var(--green);border-color:#2a4a3a;background:#1a2a22">NEW</span>' : ''}
-            <span class="${ratio >= 1 ? 'hot' : 'ch'}"> ${ratio.toFixed(1)}×</span>
-          </div>
-        </div>`;
-      }).join('') || '<span class="ch">영상 없음</span>';
-      return `<tr>
-        <td style="min-width:160px;vertical-align:top;padding-top:14px">
-          <a href="https://youtube.com/channel/${t.id}" target="_blank" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+        return `<a class="tvid" href="https://youtu.be/${v.id}" target="_blank">
+          <img src="${v.thumb || ''}" loading="lazy">${isNew ? '<span class="nb">NEW</span>' : ''}
+          <div class="tvt">${v.title}</div>
+          <div class="tvm">${fmtNum(views)}회 · ${new Date(v.at).toLocaleDateString('ko-KR')} <span class="${ratio >= 1 ? 'rb' : ''}">· ${ratio.toFixed(1)}×${ratio >= 1 ? ' 🔥' : ''}</span></div>
+        </a>`;
+      }).join('') || '<span class="ch" style="font-size:13px">영상 없음</span>';
+      const dl = t.delta ? `<span class="${t.delta > 0 ? 'up' : 'dn'}"> · ${t.delta > 0 ? '▲+' : '▼'}${fmtNum(Math.abs(t.delta))}</span>` : '';
+      return `<div class="trackcard">
+        <div class="trackhead">
+          <a class="hi" href="https://youtube.com/channel/${t.id}" target="_blank">
             <img class="cthumb" src="${t.thumb}">
-            <span><span class="vtitle" style="max-width:120px">${t.name}</span><span class="ch">구독자 ${fmtNum(t.subs)}</span>${t.delta ? `<span class="ch" style="color:${t.delta > 0 ? 'var(--green)' : 'var(--accent)'}">${t.delta > 0 ? '▲ +' : '▼ '}${fmtNum(Math.abs(t.delta))} <small>(${t.since}~)</small></span>` : ''}</span>
+            <span style="min-width:0"><div class="cn">${t.name}</div><div class="cs">구독자 ${fmtNum(t.subs)}${dl}</div></span>
           </a>
-        </td>
-        <td>${vids}</td>
-        <td style="white-space:nowrap;vertical-align:top;padding-top:14px">
-          <button class="mini" data-pop="${t.id}" data-name="${t.name}">인기 영상</button><br>
-          <button class="mini" data-rm="${t.idx}" style="margin-top:6px">삭제</button>
-        </td>
-      </tr>`;
+          <div class="trackbtns">
+            <button class="mini" data-pop="${t.id}" data-name="${t.name}">인기 영상</button>
+            <button class="mini" data-rm="${t.idx}">삭제</button>
+          </div>
+        </div>
+        <div class="trackvids">${vids}</div>
+      </div>`;
     }).join('');
     document.querySelectorAll('button[data-rm]').forEach(b =>
       b.addEventListener('click', () => {

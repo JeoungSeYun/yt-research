@@ -119,6 +119,16 @@
   .autharea { display: flex; align-items: center; gap: 8px; }
   .autharea img { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); }
   .autharea .uname { font-size: 13px; color: var(--text); font-weight: 500; }
+  /* 채널 추적 후보 카드 */
+  .candlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
+  .candcard { display: flex; align-items: center; gap: 11px; background: rgba(255, 255, 255, .05); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; transition: border-color .15s; }
+  .candcard:hover { border-color: rgba(41, 151, 255, .4); }
+  .candcard img { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+  .candcard .ci { flex: 1; min-width: 0; }
+  .candcard .cn { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .candcard .cs { font-size: 12px; color: var(--sub); margin-top: 1px; }
+  .candcard button { flex-shrink: 0; padding: 6px 14px; font-size: 12px; }
+  .candcard button.added { background: rgba(48, 209, 88, .14); color: var(--green); box-shadow: none; cursor: default; }
 </style>
 </head>
 <body>
@@ -273,7 +283,7 @@
     <input id="trackQuery" placeholder="추적할 채널 이름 — 예: 구릉다">
     <button id="trackSearchBtn">채널 찾기</button>
   </div>
-  <div id="trackCandidates" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
+  <div id="trackCandidates" class="candlist"></div>
   <div class="status" id="trackStatus">채널을 추가하면 최신 영상과 떡상 여부를 한눈에 볼 수 있어요.</div>
 </div>
 <div class="panel" style="overflow-x:auto">
@@ -821,17 +831,29 @@ async function trackSearch() {
     const ids = d.items.map(i => i.id.channelId);
     const stats = await yt('channels', { part: 'statistics,snippet', id: ids.join(',') });
     const byId = {}; stats.items.forEach(c => byId[c.id] = c);
+    const already = new Set(loadTracked().map(t => t.id));
     $('#trackCandidates').innerHTML = d.items.map(i => {
       const c = byId[i.id.channelId];
       const subs = c ? fmtNum(+c.statistics.subscriberCount || 0) : '?';
-      return `<button class="mini" data-add="${i.id.channelId}" data-name="${i.snippet.channelTitle}" data-thumb="${i.snippet.thumbnails.default?.url || ''}">+ ${i.snippet.channelTitle} (${subs})</button>`;
+      const thumb = c?.snippet.thumbnails?.default?.url || i.snippet.thumbnails.default?.url || '';
+      const on = already.has(i.id.channelId);
+      return `<div class="candcard">
+        <img src="${thumb}" loading="lazy">
+        <div class="ci">
+          <div class="cn">${i.snippet.channelTitle}</div>
+          <div class="cs">구독자 ${subs}</div>
+        </div>
+        <button class="mini ${on ? 'added' : ''}" data-add="${i.id.channelId}" data-name="${i.snippet.channelTitle}" data-thumb="${thumb}" ${on ? 'disabled' : ''}>${on ? '추가됨' : '+ 추적'}</button>
+      </div>`;
     }).join('');
-    document.querySelectorAll('button[data-add]').forEach(b =>
+    document.querySelectorAll('#trackCandidates button[data-add]').forEach(b =>
       b.addEventListener('click', () => {
         addTracked({ id: b.dataset.add, name: b.dataset.name, thumb: b.dataset.thumb });
-        b.textContent = '✓ ' + b.dataset.name;
+        b.textContent = '추가됨';
+        b.classList.add('added');
+        b.disabled = true;
       }));
-    $('#trackStatus').textContent = '추가할 채널을 클릭하세요.';
+    $('#trackStatus').textContent = `"${q}" 검색 결과 ${d.items.length}개 · 추적할 채널의 "+ 추적"을 누르세요.`;
   } catch (e) {
     $('#trackStatus').textContent = ' ' + e.message;
   }

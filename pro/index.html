@@ -63,7 +63,6 @@
   .tile .v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
   /* 바 차트 */
   .chart { margin-top: 4px; }
-  .chart h3 { font-size: 14px; margin-bottom: 10px; }
   .brow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .brow .bl { width: 90px; font-size: 12px; color: var(--sub); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .brow .bt { flex: 1; height: 18px; display: flex; align-items: center; }
@@ -91,7 +90,7 @@
   .hero h2 em { font-style: normal; color: var(--accent); }
   .hero p { color: var(--sub); font-size: 14.5px; margin-bottom: 22px; }
   .hero button { font-size: 14px; padding: 10px 22px; }
-  .feat4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px; }
+  .feat4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 14px; }
   .feat { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 22px; cursor: pointer; transition: border-color .2s; }
   .feat:hover { border-color: rgba(41, 151, 255, .5); }
   .feat .fi { font-size: 28px; margin-bottom: 12px; }
@@ -101,6 +100,9 @@
   .chip:hover { color: var(--text); border-color: var(--accent); }
   footer { text-align: center; color: var(--sub); font-size: 12px; padding: 30px 0 10px; border-top: 1px solid var(--border); margin-top: 30px; }
   .keymini { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .topbar h1 { margin-bottom: 0; }
+  .panel h3 { font-size: 13px; font-weight: 600; color: var(--sub); margin-bottom: 12px; letter-spacing: .01em; }
   /* 검색바 — 스포트라이트 스타일 */
   .searchbar { display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); border-radius: 980px; padding: 6px 6px 6px 10px; transition: border-color .2s; }
   .searchbar:focus-within { border-color: var(--accent); }
@@ -115,13 +117,15 @@
 </style>
 </head>
 <body>
-<h1>YT <span>떡상</span> 리서치<span class="pro">PRO</span><small style="color:var(--sub);font-size:13px;font-weight:400">— 검색 · 채널 추적 · 트렌드 분석</small></h1>
-
-<div class="panel">
+<div class="topbar">
+  <h1>YT <span>떡상</span> 리서치<span class="pro">PRO</span></h1>
   <div class="keymini" id="keyMini" style="display:none">
-    <span class="good"> API 키 저장됨 ✓</span>
+    <span class="good" style="font-size:12.5px">API 키 저장됨 ✓</span>
     <button class="mini" id="keyEdit">변경</button>
   </div>
+</div>
+
+<div class="panel" id="keyWrap">
   <div id="keyFull">
   <div class="row">
     <div class="field" style="flex:1;min-width:280px">
@@ -165,7 +169,7 @@
     <div class="feat" data-go="insight"><div class="ft">트렌드 분석</div><div class="fd">떡상 제목 단어, 업로드 요일·시간대, 진입 난이도까지 자동 리포트.</div></div>
   </div>
   <div class="tiles" id="homeStats"></div>
-  <div class="panel"><h3 style="font-size:14px;margin-bottom:8px">최근 검색어</h3><div id="history"><span class="ch">아직 검색 기록이 없어요.</span></div></div>
+  <div class="panel"><h3>최근 검색어</h3><div id="history"><span class="ch">아직 검색 기록이 없어요.</span></div></div>
 </div>
 
 <!-- ═══════════ 검색 탭 ═══════════ -->
@@ -237,36 +241,33 @@
 <!-- ═══════════ 키워드 탭 ═══════════ -->
 <div class="view" id="view-keyword">
 <div class="panel">
-  <div class="row">
-    <div class="field" style="flex:1;min-width:240px">
-      <label>분석할 키워드</label>
-      <input id="kwQuery" placeholder="예: 마인크래프트 미니게임 (Enter로 분석)">
-    </div>
-    <div class="field"><button id="kwBtn">분석</button></div>
+  <div class="searchbar">
+    <input id="kwQuery" placeholder="분석할 키워드 — 예: 마인크래프트 미니게임">
+    <button id="kwBtn">분석</button>
   </div>
   <div class="status" id="kwStatus">키워드의 기회 점수·경쟁 현황·연관 키워드를 분석해줘요.</div>
 </div>
 <div id="kwBody" style="display:none">
   <div class="tiles" id="kwTiles"></div>
-  <div class="panel"><h3 style="font-size:14px;margin-bottom:10px">연관 키워드 (사람들이 실제 검색하는 표현 · 클릭하면 바로 검색)</h3><div id="kwRelated"></div></div>
+  <div class="panel"><h3>연관 키워드 — 클릭하면 바로 검색</h3><div id="kwRelated"></div></div>
 </div>
 </div>
 
 <!-- ═══════════ 채널 추적 탭 ═══════════ -->
 <div class="view" id="view-track">
 <div class="panel">
-  <div class="row">
-    <div class="field" style="flex:1;min-width:240px">
-      <label>추적할 채널 검색</label>
-      <input id="trackQuery" placeholder="채널 이름 입력 후 Enter (예: 구릉다)">
-    </div>
-    <div class="field"><button id="trackSearchBtn">채널 찾기</button></div>
-    <div class="field"><button class="mini" id="trackRefreshBtn" style="padding:9px 14px">새로고침</button></div>
+  <div class="searchbar">
+    <input id="trackQuery" placeholder="추적할 채널 이름 — 예: 구릉다">
+    <button id="trackSearchBtn">채널 찾기</button>
   </div>
   <div id="trackCandidates" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
   <div class="status" id="trackStatus">채널을 추가하면 최신 영상과 떡상 여부를 한눈에 볼 수 있어요.</div>
 </div>
 <div class="panel" style="overflow-x:auto">
+  <div class="resultsbar">
+    <span class="ch" style="font-size:13px">추적 중인 채널</span>
+    <span style="margin-left:auto"><button class="mini" id="trackRefreshBtn">새로고침</button></span>
+  </div>
   <table id="trackTable"><thead></thead><tbody></tbody></table>
 </div>
 </div>
@@ -1141,7 +1142,7 @@ function renderHome() {
 function updateKeyPanel(editing) {
   const has = !!($('#apiKey').value || '').trim();
   $('#keyMini').style.display = has && !editing ? 'flex' : 'none';
-  $('#keyFull').style.display = has && !editing ? 'none' : 'block';
+  $('#keyWrap').style.display = has && !editing ? 'none' : 'block';
 }
 $('#keyEdit').addEventListener('click', () => { updateKeyPanel(true); $('#apiKey').focus(); });
 $('#apiKey').addEventListener('blur', () => updateKeyPanel(false));

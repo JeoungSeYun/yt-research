@@ -49,17 +49,14 @@
   .badge { display: inline-block; background: #2a1a1a; color: var(--gold); border: 1px solid #5a3a1a; border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; }
   .mini { padding: 5px 14px; font-size: 12px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); color: var(--sub); font-weight: 500; }
   .mini:hover { color: var(--text); border-color: var(--accent); filter: none; }
-  /* 탭 — 세그먼트 컨트롤 스타일 */
-  .tabs { display: inline-flex; gap: 4px; margin-bottom: 18px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 4px; }
-  .tab { padding: 8px 18px; border-radius: 980px; color: var(--sub); font-weight: 600; font-size: 13.5px; cursor: pointer; transition: background .2s, color .2s; }
+  /* 탭 — 세그먼트 컨트롤 (활성 표시가 미끄러짐) */
+  .tabs { display: inline-flex; gap: 4px; margin-bottom: 18px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 4px; position: relative; }
+  .tab-indicator { position: absolute; top: 4px; bottom: 4px; border-radius: 980px; background: var(--accent); z-index: 0; transition: left .3s cubic-bezier(.4,.9,.3,1), width .3s cubic-bezier(.4,.9,.3,1); pointer-events: none; }
+  .tab { padding: 8px 18px; border-radius: 980px; color: var(--sub); font-weight: 600; font-size: 13.5px; cursor: pointer; transition: color .25s; position: relative; z-index: 1; white-space: nowrap; }
   .tab:hover { color: var(--text); }
-  .tab.active { background: var(--accent); color: #fff; }
+  .tab.active { color: #fff; }
   .view { display: none; }
   .view.active { display: block; }
-  .view.slide-right { animation: slideR .28s cubic-bezier(.22,.61,.36,1); }
-  .view.slide-left { animation: slideL .28s cubic-bezier(.22,.61,.36,1); }
-  @keyframes slideR { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
-  @keyframes slideL { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
   /* 스탯 타일 */
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
   .tile { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
@@ -159,6 +156,7 @@
 </div>
 
 <div class="tabs">
+  <div class="tab-indicator" id="tabIndicator"></div>
   <div class="tab active" data-view="home">홈</div>
   <div class="tab" data-view="search">검색</div>
   <div class="tab" data-view="keyword">키워드</div>
@@ -1126,22 +1124,27 @@ function buildInsight() {
     괄호 ( ) 사용: <b>${pct(r => /[()]/.test(r.title))}</b> · "..." 말줄임: <b>${pct(r => /\.\.\.|…/.test(r.title))}</b>`;
 }
 
-// ═══════════ 탭 전환 (방향에 맞춰 슬라이드) ═══════════
-const TAB_ORDER = ['home', 'search', 'keyword', 'track', 'insight', 'saved'];
-let curTab = 'home';
+// ═══════════ 탭 전환 (활성 표시가 옆으로 미끄러짐) ═══════════
+function moveIndicator() {
+  const active = document.querySelector('.tab.active');
+  const ind = $('#tabIndicator');
+  if (!active || !ind) return;
+  ind.style.left = active.offsetLeft + 'px';
+  ind.style.width = active.offsetWidth + 'px';
+}
 function switchTab(name) {
-  if (name === curTab) return;
-  const dir = TAB_ORDER.indexOf(name) >= TAB_ORDER.indexOf(curTab) ? 'slide-right' : 'slide-left';
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.view === name));
-  document.querySelectorAll('.view').forEach(x => x.classList.remove('active', 'slide-right', 'slide-left'));
-  const v = $('#view-' + name);
-  v.classList.add('active', dir);
-  curTab = name;
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  $('#view-' + name).classList.add('active');
+  moveIndicator();
   if (name === 'track') refreshTracked();
   if (name === 'saved') renderSaved();
   if (name === 'home') renderHome();
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.view)));
+window.addEventListener('resize', moveIndicator);
+window.addEventListener('load', moveIndicator);
+moveIndicator();
 document.querySelectorAll('[data-go]').forEach(el => el.addEventListener('click', () => switchTab(el.dataset.go)));
 
 // 홈 검색바: 검색 탭으로 넘어가서 바로 검색

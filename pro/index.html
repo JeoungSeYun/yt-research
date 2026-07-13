@@ -114,14 +114,22 @@
   .filters select { border-radius: 980px; font-size: 13px; padding: 7px 14px; color: var(--sub); cursor: pointer; }
   .filters select:hover { color: var(--text); }
   .resultsbar { display: flex; align-items: center; margin-bottom: 10px; }
+  /* 로그인 */
+  .autharea { display: flex; align-items: center; gap: 8px; }
+  .autharea img { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); }
+  .autharea .uname { font-size: 13px; color: var(--text); font-weight: 500; }
 </style>
 </head>
 <body>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <div class="topbar">
   <h1>YT <span>떡상</span> 리서치<span class="pro">PRO</span></h1>
-  <div class="keymini" id="keyMini" style="display:none">
-    <span class="good" style="font-size:12.5px">API 키 저장됨 ✓</span>
-    <button class="mini" id="keyEdit">변경</button>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div class="keymini" id="keyMini" style="display:none">
+      <span class="good" style="font-size:12.5px">API 키 저장됨 ✓</span>
+      <button class="mini" id="keyEdit">변경</button>
+    </div>
+    <div id="authArea" class="autharea"></div>
   </div>
 </div>
 
@@ -1172,6 +1180,46 @@ const PRESETS = ['마인크래프트 미니게임', '마인크래프트 정보',
 $('#presets').innerHTML = PRESETS.map(p => `<button class="mini preset" data-q="${p}">${p}</button>`).join('');
 document.querySelectorAll('.preset').forEach(b =>
   b.addEventListener('click', () => { $('#query').value = b.dataset.q; search(); }));
+
+// ═══════════ Google 로그인 (클라이언트 사이드 · 백엔드 없음) ═══════════
+const GOOGLE_CLIENT_ID = '662051378413-d5hlqc1h7r7dkpl5dq4k5kto603ipmfa.apps.googleusercontent.com';
+const USER_KEY = 'yt_user';
+const loadUser = () => { try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; } catch { return null; } };
+function decodeJwt(t) {
+  try { return JSON.parse(decodeURIComponent(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''))); }
+  catch { return {}; }
+}
+function onGoogleLogin(resp) {
+  const p = decodeJwt(resp.credential);
+  localStorage.setItem(USER_KEY, JSON.stringify({ name: p.name || p.email, email: p.email, picture: p.picture }));
+  renderAuth();
+}
+function renderAuth() {
+  const el = $('#authArea');
+  const u = loadUser();
+  if (u) {
+    el.innerHTML = `${u.picture ? `<img src="${u.picture}" referrerpolicy="no-referrer">` : ''}<span class="uname">${u.name}</span><button class="mini" id="logoutBtn">로그아웃</button>`;
+    $('#logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem(USER_KEY);
+      if (window.google?.accounts) google.accounts.id.disableAutoSelect();
+      renderAuth();
+    });
+  } else {
+    el.innerHTML = '<div id="gbtn"></div>';
+    if (window.google?.accounts?.id) {
+      google.accounts.id.renderButton($('#gbtn'), { theme: 'filled_black', size: 'medium', type: 'standard', shape: 'pill', text: 'signin_with' });
+    } else {
+      el.innerHTML = '<span class="ch" style="font-size:12px">로그인 로딩 중…</span>';
+    }
+  }
+}
+function initGoogle() {
+  if (!window.google?.accounts?.id) { setTimeout(initGoogle, 300); return; }
+  if (GOOGLE_CLIENT_ID.startsWith('GOOGLE_CLIENT_ID')) { renderAuth(); return; }
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin, auto_select: true });
+  renderAuth();
+}
+initGoogle();
 </script>
 </body>
 </html>

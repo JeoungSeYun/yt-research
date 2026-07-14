@@ -99,13 +99,26 @@
   textarea.memo { width: 100%; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 7px 10px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
   .vtitle:hover { color: var(--accent); }
   /* 홈 랜딩 */
-  .hero { text-align: left; padding: 52px 6px 40px; }
+  /* 히어로 2단 (오른쪽에 요약 카드) */
+  .herowrap { display: grid; grid-template-columns: 1fr; gap: 22px; align-items: center; }
+  @media (min-width: 900px) { .herowrap { grid-template-columns: 1fr 310px; gap: 34px; } }
+  .hero-side { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+  .hero-side .hs-title { font-size: 13px; color: var(--sub); font-weight: 600; margin-bottom: 12px; }
+  .hero-side .hs-stat { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .hero-side .hs-stat:last-child { border-bottom: none; padding-bottom: 0; }
+  .hero-side .hs-k { font-size: 13px; color: var(--sub); }
+  .hero-side .hs-v { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+  .hero-side .hs-login { background: rgba(41,151,255,.08); border: 1px solid rgba(41,151,255,.3); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .hero-side .hs-login b { font-size: 13.5px; } .hero-side .hs-login p { font-size: 12px; color: var(--sub); margin: 4px 0 10px; }
+  .hero-side .hs-login button { width: 100%; }
+  .hero-side .hs-welcome { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .hero-side .hs-welcome img { width: 34px; height: 34px; border-radius: 50%; }
+  .hero { text-align: left; padding: 20px 0; }
   .hero h2 { font-size: 34px; line-height: 1.28; margin-bottom: 12px; letter-spacing: -.02em; font-weight: 700; }
   .hero h2 em { font-style: normal; color: var(--accent); }
-  .hero p { color: var(--sub); font-size: 15px; margin-bottom: 24px; max-width: 560px; }
-  .hero .searchbar { max-width: 720px; }
+  .hero p { color: var(--sub); font-size: 15px; margin-bottom: 24px; }
   .hero button { font-size: 14px; padding: 10px 22px; }
-  .quickstart { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; max-width: 720px; }
+  .quickstart { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
   .quickstart .qc { background: rgba(255,255,255,.06); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 14px; font-size: 12.5px; cursor: pointer; transition: color .15s, border-color .15s; }
   .quickstart .qc:hover { color: var(--text); border-color: var(--accent); }
   /* 홈 대시보드 */
@@ -228,16 +241,18 @@
 
 <!-- ═══════════ 홈 탭 ═══════════ -->
 <div class="view active" id="view-home">
-  <div class="hero">
-    <h2>어떤 영상이 <em>떡상</em>하는지,<br>감이 아니라 데이터로.</h2>
-    <p>장르를 검색하면 채널 규모 대비 터진 영상을 찾아주고, 제목·업로드 패턴까지 분석합니다.</p>
-    <div class="searchbar">
-      <input id="homeQuery" autocomplete="off" placeholder="어떤 장르를 벤치마킹할까요? — 예: 마인크래프트 미니게임">
-      <button id="homeSearchBtn">검색</button>
+  <div class="herowrap">
+    <div class="hero">
+      <h2>어떤 영상이 <em>떡상</em>하는지,<br>감이 아니라 데이터로.</h2>
+      <p>장르를 검색하면 채널 규모 대비 터진 영상을 찾아주고, 제목·업로드 패턴까지 분석합니다.</p>
+      <div class="searchbar">
+        <input id="homeQuery" autocomplete="off" placeholder="어떤 장르를 벤치마킹할까요? — 예: 마인크래프트 미니게임">
+        <button id="homeSearchBtn">검색</button>
+      </div>
+      <div class="quickstart" id="quickstart"></div>
     </div>
-    <div class="quickstart" id="quickstart"></div>
+    <aside class="hero-side" id="heroSide"></aside>
   </div>
-  <div id="syncBanner"></div>
   <div class="dash-sec" id="dashSaved" style="display:none"></div>
   <div class="dash-sec" id="dashTracked" style="display:none"></div>
   <div class="dash-head" style="margin-top:26px"><h3>떡상 리서치로 할 수 있는 것</h3></div>
@@ -247,7 +262,6 @@
     <div class="feat" data-go="track"><div class="ft">채널 추적</div><div class="fd">경쟁 채널을 등록하면 최신 영상의 떡상 여부를 자동 감지.</div></div>
     <div class="feat" data-go="insight"><div class="ft">트렌드 분석</div><div class="fd">떡상 제목 단어, 업로드 요일·시간대, 진입 난이도까지 자동 리포트.</div></div>
   </div>
-  <div class="tiles" id="homeStats" style="margin-top:22px"></div>
   <div class="panel" id="historyPanel" style="display:none"><h3>최근 검색어</h3><div id="history"></div></div>
 </div>
 
@@ -1257,18 +1271,21 @@ function renderHome() {
   document.querySelectorAll('[data-qs]').forEach(c =>
     c.addEventListener('click', () => { $('#query').value = c.dataset.qs; switchTab('search'); search(); }));
 
-  // 로그인/동기화 배너 — 비로그인 시에만
-  const sb = $('#syncBanner');
-  if (!loadUser()) {
-    sb.innerHTML = `<div class="sync-banner">
-      <div class="st"><b>☁ Google 로그인으로 데이터 동기화</b><div>저장한 영상·추적 채널·검색 기록이 모든 기기에서 이어집니다.</div></div>
-      <button class="mini" id="bannerLogin" style="border-color:var(--accent);color:var(--accent)">Google 계정으로 로그인</button>
-    </div>`;
-    $('#bannerLogin').addEventListener('click', () => window.tsAuth?.login());
-  } else sb.innerHTML = '';
+  const bm = loadBM();
+  const tr = loadTracked();
+
+  // 히어로 오른쪽 요약 카드 (로그인 CTA 또는 환영 + 내 활동)
+  const u = loadUser();
+  const head = u
+    ? `<div class="hs-welcome">${u.picture ? `<img src="${u.picture}" referrerpolicy="no-referrer">` : ''}<span><b style="font-size:14px">${u.name}</b><div class="ch" style="font-size:11.5px">클라우드 동기화 중 ✓</div></span></div>`
+    : `<div class="hs-login"><b>☁ 로그인하고 동기화</b><p>저장·추적 데이터를 모든 기기에서 이어보기</p><button class="mini" id="sideLogin" style="border-color:var(--accent);color:var(--accent)">Google 계정으로 로그인</button></div>`;
+  $('#heroSide').innerHTML = head + `<div class="hs-title">내 활동</div>
+    <div class="hs-stat"><span class="hs-k">저장한 영상</span><span class="hs-v">${bm.length}</span></div>
+    <div class="hs-stat"><span class="hs-k">추적 중인 채널</span><span class="hs-v">${tr.length}</span></div>
+    <div class="hs-stat"><span class="hs-k">발굴한 채널 DB</span><span class="hs-v">${Object.keys(loadDB()).length}</span></div>`;
+  if (!u) $('#sideLogin').addEventListener('click', () => window.tsAuth?.login());
 
   // 저장한 영상 미리보기
-  const bm = loadBM();
   const ds = $('#dashSaved');
   if (bm.length) {
     ds.style.display = 'block';
@@ -1281,7 +1298,6 @@ function renderHome() {
   } else ds.style.display = 'none';
 
   // 추적 중인 채널
-  const tr = loadTracked();
   const dt = $('#dashTracked');
   if (tr.length) {
     dt.style.display = 'block';
@@ -1290,13 +1306,6 @@ function renderHome() {
         <img src="${t.thumb || ''}" loading="lazy"><span>${t.name}</span></span>`).join('')}</div>`;
     dt.querySelectorAll('[data-gochan]').forEach(c => c.addEventListener('click', () => switchTab('track')));
   } else dt.style.display = 'none';
-
-  // 내 활동 통계
-  $('#homeStats').innerHTML = [
-    ['발굴한 채널 DB', Object.keys(loadDB()).length + '개'],
-    ['저장한 영상', bm.length + '개'],
-    ['추적 중인 채널', tr.length + '개'],
-  ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 
   // 최근 검색어 — 있을 때만
   const h = loadHist();

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>떡상 리서치</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #181b22; --border: #2a2f3a;
+    --text: #e8eaf0; --sub: #9aa3b2; --accent: #ff4444; --gold: #ffb020; --green: #4caf7d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { font-size: 22px; margin-bottom: 16px; }
+  h1 span { color: var(--accent); }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--sub); }
+  input, select { background: #10131a; border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 14px; }
+  input:focus, select:focus { outline: 1px solid var(--accent); }
+  button { background: var(--accent); color: #fff; border: none; padding: 9px 18px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .5; cursor: wait; }
+  #status { font-size: 13px; color: var(--sub); margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+  th { color: var(--sub); font-size: 12px; cursor: pointer; user-select: none; white-space: nowrap; }
+  th:hover { color: var(--text); }
+  tr:hover td { background: #1e222b; }
+  .thumb { width: 120px; border-radius: 6px; display: block; }
+  .cthumb { width: 56px; height: 56px; border-radius: 50%; display: block; }
+  .vtitle { max-width: 340px; font-weight: 600; color: var(--text); text-decoration: none; display: block; }
+  .vtitle:hover { color: var(--accent); }
+  .ch { color: var(--sub); font-size: 12px; text-decoration: none; }
+  .ch:hover { color: var(--text); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hot { color: var(--gold); font-weight: 700; }
+  .good { color: var(--green); font-weight: 600; }
+  .badge { display: inline-block; background: #2a1a1a; color: var(--gold); border: 1px solid #5a3a1a; border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; }
+  .mini { padding: 5px 12px; font-size: 12px; background: #10131a; border: 1px solid var(--border); color: var(--sub); font-weight: 400; }
+  .mini:hover { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>▶ <span>떡상</span> 리서치 <small style="color:var(--sub);font-size:13px;font-weight:400">— 아무 장르나 검색해서 벤치마킹</small></h1>
+
+<div class="panel">
+  <div class="row">
+    <div class="field" style="flex:1;min-width:280px">
+      <label>내 YouTube API 키 (브라우저에만 저장됨)</label>
+      <input type="password" id="apiKey" placeholder="AIza... 키를 붙여넣으면 자동 저장">
+    </div>
+  </div>
+  <details style="margin-top:8px;font-size:13px;color:var(--sub)">
+    <summary style="cursor:pointer">🔑 API 키 무료 발급 방법 (5분)</summary>
+    <ol style="margin:8px 0 0 20px;line-height:1.9">
+      <li><a href="https://console.cloud.google.com/projectcreate" target="_blank" style="color:var(--accent)">Google Cloud Console</a>에서 새 프로젝트 만들기</li>
+      <li>상단 검색창에 <b>YouTube Data API v3</b> 검색 → <b>사용</b> 버튼 클릭</li>
+      <li>왼쪽 <b>사용자 인증 정보</b> → <b>+ 사용자 인증 정보 만들기</b> → <b>API 키</b></li>
+      <li>API 제한사항에서 <b>YouTube Data API v3</b> 선택 → 만들기</li>
+      <li>생성된 키를 복사해서 위 칸에 붙여넣기 (이 브라우저에만 저장, 서버 전송 없음)</li>
+    </ol>
+    <div style="margin-top:6px">무료 할당량: 하루 검색 약 10~30회 (자정 태평양시간 리셋)</div>
+  </details>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <div class="field">
+      <label>대상</label>
+      <select id="mode">
+        <option value="video" selected>영상</option>
+        <option value="channel">채널</option>
+      </select>
+    </div>
+    <div class="field" style="flex:2;min-width:220px">
+      <label>검색어 (아무거나)</label>
+      <input id="query" value="" placeholder="예: 마인크래프트 정보, 미니게임, 마크 야생, roblox obby">
+    </div>
+    <div class="field">
+      <label>기간</label>
+      <select id="period">
+        <option value="7">최근 1주</option>
+        <option value="30" selected>최근 1개월</option>
+        <option value="90">최근 3개월</option>
+        <option value="365">최근 1년</option>
+        <option value="0">전체</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>지역</label>
+      <select id="region">
+        <option value="KR" selected>🇰🇷 한국</option>
+        <option value="US">🇺🇸 미국</option>
+        <option value="JP">🇯🇵 일본</option>
+        <option value="GB">🇬🇧 영국</option>
+        <option value="DE">🇩🇪 독일</option>
+        <option value="FR">🇫🇷 프랑스</option>
+        <option value="ES">🇪🇸 스페인</option>
+        <option value="BR">🇧🇷 브라질</option>
+        <option value="ID">🇮🇩 인도네시아</option>
+        <option value="VN">🇻🇳 베트남</option>
+        <option value="TH">🇹🇭 태국</option>
+        <option value="RU">🇷🇺 러시아</option>
+        <option value="">🌍 전체</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>영상 길이</label>
+      <select id="duration">
+        <option value="any" selected>전체</option>
+        <option value="short">쇼츠 (≤3분)</option>
+        <option value="medium">4~20분</option>
+        <option value="long">20분+</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>개수</label>
+      <select id="count">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+    <div class="field">
+      <button id="searchBtn">검색</button>
+    </div>
+  </div>
+  <div id="presets" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="status"></div>
+</div>
+
+<div class="panel" style="overflow-x:auto">
+  <table id="results">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let rows = [], mode = 'video', sortKey = 'ratio', sortDesc = true;
+
+// ─── 동의어: 검색 키워드를 같은 뜻의 표현들로 확장해서 매칭 정확도를 올림 ───
+const SYN = {
+  '마인크래프트': ['마인크래프트', '마크', 'minecraft'],
+  '마크': ['마인크래프트', '마크', 'minecraft'],
+  '정보': ['정보', '팁', '꿀팁', 'tip', '지식', '상식', '사실', '공략', '업데이트', '스냅샷', '리뷰'],
+  '미니게임': ['미니게임', 'minigame', 'mini game', '술래잡기', '숨바꼭질', 'pvp'],
+  '야생': ['야생', '생존', 'survival', '하드코어', 'hardcore', '100일'],
+  '건축': ['건축', 'build', '인테리어', '집 짓'],
+  '모드': ['모드', 'mod', '애드온', 'addon'],
+  '레드스톤': ['레드스톤', 'redstone', '자동화', '회로'],
+};
+// ─── 국가별 설정: 우선 언어 + 그 나라 문자 감지 정규식 ───
+const REGION_LANG = { KR: 'ko', US: 'en', GB: 'en', JP: 'ja', DE: 'de', FR: 'fr', ES: 'es', BR: 'pt', ID: 'id', VN: 'vi', TH: 'th', RU: 'ru' };
+// 고유 문자가 있는 언어: 제목에 그 문자가 있어야 그 나라 콘텐츠로 인정
+const NATIVE_SCRIPT = { KR: /[가-힣]/, JP: /[ぁ-んァ-ヶ一-龯]/, TH: /[ก-๙]/, RU: /[а-яА-Я]/ };
+// 라틴 문자권 국가에서는 한글/일본어/태국어/키릴 문자가 섞인 영상 제외
+const NON_LATIN = /[가-힣ぁ-んァ-ヶ一-龯ก-๙а-яА-Я]/;
+const regionLang = () => REGION_LANG[$('#region').value] || '';
+function regionFilter(list, textOf) {
+  const region = $('#region').value;
+  if (NATIVE_SCRIPT[region]) return list.filter(r => NATIVE_SCRIPT[region].test(textOf(r)));
+  if (region) return list.filter(r => !NON_LATIN.test(textOf(r)));
+  return list;
+}
+
+// 튜토리얼/제작성 키워드: 검색어에 직접 안 썼으면 결과에서 제외 (플레이 영상만 남김)
+const OFFTOPIC = ['만들기', '만드는', '제작', '커맨드', '명령어', '애드온', '다운로드', '설치법', '서버 만', '맵 만', '강좌'];
+
+const tokenGroups = q => q.trim().split(/\s+/).filter(Boolean).map(t => SYN[t] || [t]);
+const groupIn = (text, alts) => {
+  const s = text.toLowerCase();
+  return alts.some(a => s.includes(a.toLowerCase()));
+};
+
+// 유튜브 자동완성 API(JSONP, 할당량 무료): 실제 사람들이 검색하는 연관 검색어를 가져옴
+function getSuggestions(q) {
+  return new Promise(resolve => {
+    const cb = '__sg' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    const timer = setTimeout(() => { cleanup(); resolve([]); }, 3000);
+    function cleanup() { delete window[cb]; s.remove(); clearTimeout(timer); }
+    window[cb] = data => { cleanup(); resolve((data[1] || []).map(x => x[0])); };
+    s.onerror = () => { cleanup(); resolve([]); };
+    s.src = 'https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&hl=' + (regionLang() || 'ko')
+      + '&gl=' + ($('#region').value || 'US') + '&q=' + encodeURIComponent(q) + '&jsonp=' + cb;
+    document.head.appendChild(s);
+  });
+}
+
+// 검색어 자동 변형: 자동완성 + 동의어 치환 + 서브장르로 후보 폭을 넓힘
+async function queryVariants(q) {
+  q = q.trim();
+  const variants = new Set([q]);
+  const groups = tokenGroups(q);
+  // 연관 검색어는 원 검색어의 의미를 전부 담고, 튜토리얼성 단어가 없을 때만 채택 (과확장 방지)
+  (await getSuggestions(q)).slice(0, 10).forEach(s => {
+    if (s.length <= 30
+      && groups.every(g => groupIn(s, g))
+      && !OFFTOPIC.some(o => s.replace(/\s/g, '').includes(o.replace(/\s/g, ''))))
+      variants.add(s);
+  });
+  const toks = q.split(/\s+/).filter(Boolean);
+  if (SYN[toks[0]]) SYN[toks[0]].slice(0, 2).forEach(s => variants.add([s, ...toks.slice(1)].join(' ')));
+  if (toks.length === 1 && ['마인크래프트', '마크'].includes(toks[0]))
+    ['유튜버', '야생', '건축', '미니게임', '정보'].forEach(s => variants.add('마인크래프트 ' + s));
+  return [...variants].slice(0, 8);
+}
+
+// ─── 누적 채널 DB: 한 번 발견한 채널은 저장해서 다음 검색의 후보로 재활용 ───
+const DB_KEY = 'yt_channel_db';
+const loadDB = () => { try { return JSON.parse(localStorage.getItem(DB_KEY)) || {}; } catch { return {}; } };
+const saveDB = db => {
+  const entries = Object.entries(db);
+  // 500개 초과 시 오래된 것부터 정리
+  if (entries.length > 500) {
+    entries.sort((a, b) => b[1].fetchedAt - a[1].fetchedAt);
+    db = Object.fromEntries(entries.slice(0, 500));
+  }
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+};
+
+async function yt(endpoint, params) {
+  const key = ($('#apiKey').value || '').trim();
+  if (!key) throw new Error('먼저 API 키를 입력해줘 — 위의 "발급 방법" 참고 (무료 5분)');
+  const url = new URL('https://www.googleapis.com/youtube/v3/' + endpoint);
+  Object.entries({ ...params, key }).forEach(([k, v]) => v !== '' && url.searchParams.set(k, v));
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data;
+}
+
+function chunk(arr, n) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
+
+function parseDur(iso) {
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/) || [];
+  return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+}
+
+function fmtDur(s) {
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0');
+}
+
+function fmtNum(n) {
+  if (n >= 1e8) return (n / 1e8).toFixed(1) + '억';
+  if (n >= 1e4) return (n / 1e4).toFixed(1) + '만';
+  return n.toLocaleString();
+}
+
+async function buildVideoRows(items) {
+  const vids = {}, chans = {};
+  for (const ids of chunk(items.map(i => i.id.videoId), 50)) {
+    const d = await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') });
+    d.items.forEach(v => vids[v.id] = v);
+  }
+  for (const ids of chunk([...new Set(items.map(i => i.snippet.channelId))], 50)) {
+    const d = await yt('channels', { part: 'statistics,contentDetails', id: ids.join(',') });
+    d.items.forEach(c => chans[c.id] = c);
+  }
+  return items.map(i => {
+    const v = vids[i.id.videoId], c = chans[i.snippet.channelId];
+    if (!v) return null;
+    const views = +v.statistics.viewCount || 0;
+    const subs = +(c?.statistics.subscriberCount) || 0;
+    const ageDays = Math.max(1, (Date.now() - new Date(i.snippet.publishedAt)) / 864e5);
+    return {
+      id: i.id.videoId,
+      title: i.snippet.title,
+      desc: i.snippet.description || '',
+      tags: v.snippet?.tags || [],
+      uploads: c?.contentDetails?.relatedPlaylists?.uploads,
+      channel: i.snippet.channelTitle,
+      channelId: i.snippet.channelId,
+      thumb: i.snippet.thumbnails.medium?.url,
+      views, subs,
+      ratio: subs ? views / subs : 0,
+      vpd: Math.round(views / ageDays),
+      likes: +v.statistics.likeCount || 0,
+      published: i.snippet.publishedAt,
+      dur: parseDur(v.contentDetails.duration),
+    };
+  }).filter(Boolean);
+}
+
+function applyVideoFilters(list) {
+  if ($('#duration').value === 'short') list = list.filter(r => r.dur <= 180);
+  list = regionFilter(list, r => r.title + ' ' + r.channel);
+  const q = $('#query').value;
+  const groups = tokenGroups(q);
+  // 튜토리얼/제작성 영상 컷 (검색어에 직접 쓴 경우는 예외)
+  const qFlat = q.replace(/\s/g, '');
+  list = list.filter(r => {
+    const tFlat = r.title.replace(/\s/g, '');
+    return !OFFTOPIC.some(o => !qFlat.includes(o.replace(/\s/g, '')) && tFlat.includes(o.replace(/\s/g, '')));
+  });
+  // 3중 검증: 각 키워드가 ①제목 ②태그에 있거나, ③그 채널 최근 영상의 30% 이상이 해당 장르여야 통과
+  if (groups.length) list = list.filter(r =>
+    groups.every((g, i) => groupIn(r.title + ' ' + r.tags.join(' '), g) || (r.chanRatios && r.chanRatios[i] >= 0.3)));
+  return list;
+}
+
+async function searchVideos(status) {
+  const days = +$('#period').value;
+  const want = +$('#count').value;
+  const base = {
+    part: 'snippet', type: 'video', maxResults: 50,
+    q: $('#query').value,
+    regionCode: $('#region').value,
+    videoDuration: $('#duration').value === 'any' ? '' : $('#duration').value,
+    relevanceLanguage: regionLang(),
+  };
+  if (days) base.publishedAfter = new Date(Date.now() - days * 864e5).toISOString();
+
+  // 조회수순 검색은 API 품질이 나빠서, 정렬 2종 + 자동완성 연관 검색어를 섞어 수집 후 자체 정렬
+  const variants = await queryVariants($('#query').value);
+  status.textContent = `검색어 ${variants.length}종으로 수집 중... (${variants.slice(0, 5).join(', ')}…)`;
+  const pools = await Promise.all([
+    // 조회수순은 필터로 걸러질 것을 감안해 2배 깊게 수집
+    ...[['relevance', want], ['viewCount', want * 2]].map(async ([order, target]) => {
+      let items = [], pageToken = '';
+      while (items.length < target) {
+        const data = await yt('search', { ...base, order, ...(pageToken && { pageToken }) });
+        items.push(...data.items);
+        pageToken = data.nextPageToken;
+        if (!pageToken) break;
+      }
+      return items;
+    }),
+    // 연관 검색어는 가볍게 1페이지씩만
+    ...variants.slice(1, 5).map(q =>
+      yt('search', { ...base, q, order: 'relevance' }).then(d => d.items).catch(() => [])),
+  ]);
+  const seen = new Set();
+  const items = pools.flat().filter(i => {
+    if (!i.id.videoId || seen.has(i.id.videoId)) return false;
+    seen.add(i.id.videoId);
+    return true;
+  });
+  if (!items.length) { rows = []; status.textContent = '결과 없음'; renderVideos(); return; }
+
+  status.textContent = '통계 수집 중...';
+  rows = await buildVideoRows(items);
+
+  // 채널 프로필 검증: 각 채널의 최근 업로드 20개로 장르 비율 계산 (누적 DB에 7일 캐시)
+  status.textContent = `채널 ${new Set(rows.map(r => r.channelId)).size}개 프로필 검증 중...`;
+  const groups = tokenGroups($('#query').value);
+  const db = loadDB();
+  const WEEK = 7 * 864e5;
+  const uniq = [...new Map(rows.map(r => [r.channelId, r.uploads])).entries()].slice(0, 120);
+  const profile = {};
+  await Promise.all(uniq.map(async ([cid, up]) => {
+    try {
+      let titles;
+      const cached = db[cid];
+      if (cached && Date.now() - cached.at < WEEK) titles = cached.t;
+      else {
+        const d = await yt('playlistItems', { part: 'snippet', playlistId: up, maxResults: 20 });
+        titles = d.items.map(i => i.snippet.title);
+        db[cid] = { t: titles, at: Date.now() };
+      }
+      profile[cid] = groups.map(g => titles.length ? titles.filter(t => groupIn(t, g)).length / titles.length : 0);
+    } catch { profile[cid] = null; }
+  }));
+  saveDB(db);
+  rows.forEach(r => r.chanRatios = profile[r.channelId]);
+
+  rows.sort((a, b) => b.views - a.views);
+  rows = applyVideoFilters(rows).slice(0, want);
+
+  let note = '';
+  if ($('#region').value && $('#region').value !== 'KR' && /[가-힣]/.test($('#query').value))
+    note = ' · ⚠ 해외 영상은 그 나라 언어 검색어(예: minecraft minigame)로 검색해야 잘 나옴';
+  status.textContent = `${rows.length}개 영상 (조회수순) · 배율 헤더 클릭 시 떡상순 정렬` + note;
+  mode = 'video'; sortKey = 'views'; sortDesc = true;
+  renderVideos();
+}
+
+async function searchChannels(status) {
+  const want = +$('#count').value;
+  const groups = tokenGroups($('#query').value);
+  const common = {
+    part: 'snippet', maxResults: 50,
+    q: $('#query').value,
+    regionCode: $('#region').value,
+    relevanceLanguage: regionLang(),
+  };
+  // 유튜브 채널 검색이 부실해서: 검색어 변형 여러 개 × (채널 검색 + 영상 검색)으로 폭넓게 후보 수집
+  const variants = await queryVariants($('#query').value);
+  status.textContent = `검색어 ${variants.length}종으로 후보 수집 중... (${variants.join(', ')})`;
+  // 원 검색어는 채널+영상 풀검색, 변형 검색어는 영상 검색 1회씩만 (할당량 절약)
+  const results = await Promise.all(variants.flatMap((q, i) => i === 0 ? [
+    yt('search', { ...common, q, type: 'channel' }).catch(() => ({ items: [] })),
+    yt('search', { ...common, q, type: 'video', order: 'relevance' }).catch(() => ({ items: [] })),
+    yt('search', { ...common, q, type: 'video', order: 'viewCount' }).catch(() => ({ items: [] })),
+  ] : [
+    yt('search', { ...common, q, type: 'video', order: 'relevance' }).catch(() => ({ items: [] })),
+  ]));
+  const hits = {};
+  results.flatMap(r => r.items).forEach(i => {
+    const id = i.id.channelId || i.snippet.channelId;
+    if (id) hits[id] = (hits[id] || 0) + 1;
+  });
+  // 누적 DB의 채널도 후보에 포함 (이전 검색에서 발견한 채널 재활용)
+  const db = loadDB();
+  Object.keys(db).forEach(id => { if (!hits[id]) hits[id] = 0; });
+  const ids = Object.keys(hits);
+  if (!ids.length) { rows = []; status.textContent = '결과 없음'; renderChannels(); return; }
+
+  status.textContent = `후보 채널 ${ids.length}개 통계 수집 중...`;
+  const chans = {};
+  for (const c of chunk(ids, 50)) {
+    const d = await yt('channels', { part: 'statistics,snippet,contentDetails', id: c.join(',') });
+    d.items.forEach(x => chans[x.id] = x);
+  }
+  let cands = ids.map(id => {
+    const c = chans[id];
+    if (!c) return null;
+    const subs = +c.statistics.subscriberCount || 0;
+    const totalViews = +c.statistics.viewCount || 0;
+    const videos = +c.statistics.videoCount || 0;
+    return {
+      channelId: id,
+      channel: c.snippet.title,
+      fullDesc: c.snippet.title + ' ' + c.snippet.description,
+      desc: c.snippet.description.slice(0, 60),
+      thumb: c.snippet.thumbnails.default?.url,
+      uploads: c.contentDetails?.relatedPlaylists?.uploads,
+      subs, totalViews, videos,
+      avgViews: videos ? Math.round(totalViews / videos) : 0,
+      hits: hits[id] || 0,
+    };
+  }).filter(Boolean).filter(r => r.subs > 0 && r.videos > 0 && !r.channel.endsWith(' - Topic'));
+
+  cands = regionFilter(cands, r => r.fullDesc);
+
+  // ─── 핵심: 각 채널의 최근 업로드 20개를 실제로 열어서 장르 일치 비율을 계산 ───
+  // 제목 목록은 누적 DB에 7일간 캐시해서 할당량 절약
+  cands.sort((a, b) => (b.hits - a.hits) || (b.subs - a.subs));
+  cands = cands.slice(0, 150);
+  status.textContent = `채널 ${cands.length}개의 최근 영상 분석 중...`;
+  const WEEK = 7 * 864e5;
+  await Promise.all(cands.map(async ch => {
+    try {
+      let titles;
+      const cached = db[ch.channelId];
+      if (cached && Date.now() - cached.at < WEEK) {
+        titles = cached.t;
+      } else {
+        const d = await yt('playlistItems', { part: 'snippet', playlistId: ch.uploads, maxResults: 20 });
+        titles = d.items.map(i => i.snippet.title);
+        db[ch.channelId] = { t: titles, at: Date.now() };
+      }
+      ch.recent = titles.length;
+      // 그룹별 매칭 비율: 최근 영상 제목 중 해당 키워드(동의어 포함)가 들어간 비율
+      ch.ratios = groups.map(g => titles.length ? titles.filter(t => groupIn(t, g)).length / titles.length : 0);
+      // 그룹 통과 조건: 최근 영상의 25% 이상이 매칭되거나, 채널명/소개에 키워드가 있음
+      ch.pass = groups.every((g, i) => ch.ratios[i] >= 0.25 || groupIn(ch.fullDesc, g));
+      ch.score = Math.round(ch.ratios.reduce((a, b) => a + b, 0) / Math.max(1, groups.length) * 100);
+    } catch {
+      ch.pass = false; ch.score = 0;
+    }
+  }));
+  saveDB(db);
+
+  rows = cands.filter(c => c.pass);
+  rows.sort((a, b) => b.subs - a.subs);
+  rows = rows.slice(0, want);
+
+  status.textContent = `${rows.length}개 채널 (구독자순) · 후보 ${cands.length}개 분석, 누적 DB ${Object.keys(db).length}개 · 관련도 = 최근 20개 영상 중 장르 일치 비율`;
+  mode = 'channel'; sortKey = 'subs'; sortDesc = true;
+  renderChannels();
+}
+
+async function channelVideos(channelId, channelTitle) {
+  const btn = $('#searchBtn'), status = $('#status');
+  btn.disabled = true;
+  status.textContent = `"${channelTitle}" 인기 영상 검색 중...`;
+  try {
+    const days = +$('#period').value;
+    const base = { part: 'snippet', type: 'video', maxResults: 50, channelId, order: 'viewCount' };
+    if (days) base.publishedAfter = new Date(Date.now() - days * 864e5).toISOString();
+    let items = (await yt('search', base)).items;
+    let note = '';
+    if (!items.length && days) {
+      // 설정한 기간 내 영상이 없으면 전체 기간으로 자동 확장
+      delete base.publishedAfter;
+      const data = await yt('search', base);
+      items = data.items;
+      note = ' (기간 내 영상 없음 → 전체 기간으로 표시)';
+    }
+    if (!items.length) { status.textContent = `"${channelTitle}" 영상 없음`; return; }
+    rows = await buildVideoRows(items);
+    rows.sort((a, b) => b.views - a.views);
+    if ($('#duration').value === 'short') rows = rows.filter(r => r.dur <= 180);
+    status.textContent = `"${channelTitle}" 인기 영상 ${rows.length}개` + note;
+    mode = 'video'; sortKey = 'views'; sortDesc = true;
+    renderVideos();
+  } catch (e) {
+    status.textContent = '⚠ ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function search() {
+  const btn = $('#searchBtn'), status = $('#status');
+  btn.disabled = true;
+  status.textContent = '검색 중...';
+  try {
+    if ($('#mode').value === 'channel') await searchChannels(status);
+    else await searchVideos(status);
+  } catch (e) {
+    status.textContent = /quota/i.test(e.message)
+      ? '⚠ 오늘 API 무료 할당량을 다 썼어. 한국시간 오후 4~5시(태평양 자정)에 리셋됨.'
+      : '⚠ ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function sortRows() {
+  rows.sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    const cmp = typeof x === 'string' ? x.localeCompare(y) : x - y;
+    return sortDesc ? -cmp : cmp;
+  });
+}
+
+function markSort() {
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.textContent = th.textContent.replace(/ [▼▲]$/, '');
+    if (th.dataset.sort === sortKey) th.textContent += sortDesc ? ' ▼' : ' ▲';
+  });
+}
+
+function renderVideos() {
+  $('#results thead').innerHTML = `<tr>
+    <th></th>
+    <th data-sort="title">제목</th>
+    <th data-sort="views" class="num">조회수</th>
+    <th data-sort="subs" class="num">구독자</th>
+    <th data-sort="ratio" class="num">조회/구독 배율</th>
+    <th data-sort="vpd" class="num">일평균 조회</th>
+    <th data-sort="likes" class="num">좋아요</th>
+    <th data-sort="published" class="num">업로드</th>
+    <th data-sort="dur" class="num">길이</th>
+  </tr>`;
+  sortRows();
+  $('#results tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td><a href="https://youtu.be/${r.id}" target="_blank"><img class="thumb" src="${r.thumb}" loading="lazy"></a></td>
+      <td>
+        <a class="vtitle" href="https://youtu.be/${r.id}" target="_blank">${r.title}${r.ratio >= 5 ? '<span class="badge">🔥 떡상</span>' : ''}</a>
+        <a class="ch" href="https://youtube.com/channel/${r.channelId}" target="_blank">${r.channel}</a>
+      </td>
+      <td class="num">${fmtNum(r.views)}</td>
+      <td class="num">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
+      <td class="num ${r.ratio >= 5 ? 'hot' : ''}">${r.ratio ? r.ratio.toFixed(1) + '×' : '-'}</td>
+      <td class="num">${fmtNum(r.vpd)}</td>
+      <td class="num">${fmtNum(r.likes)}</td>
+      <td class="num">${new Date(r.published).toLocaleDateString('ko-KR')}</td>
+      <td class="num">${fmtDur(r.dur)}</td>
+    </tr>`).join('');
+  markSort();
+}
+
+function renderChannels() {
+  $('#results thead').innerHTML = `<tr>
+    <th></th>
+    <th data-sort="channel">채널</th>
+    <th data-sort="subs" class="num">구독자</th>
+    <th data-sort="score" class="num">관련도</th>
+    <th data-sort="totalViews" class="num">총 조회수</th>
+    <th data-sort="videos" class="num">영상 수</th>
+    <th data-sort="avgViews" class="num">영상당 평균 조회</th>
+    <th></th>
+  </tr>`;
+  sortRows();
+  $('#results tbody').innerHTML = rows.map((r, idx) => `
+    <tr>
+      <td><a href="https://youtube.com/channel/${r.channelId}" target="_blank"><img class="cthumb" src="${r.thumb}" loading="lazy"></a></td>
+      <td>
+        <a class="vtitle" href="https://youtube.com/channel/${r.channelId}" target="_blank">${r.channel}</a>
+        <span class="ch">${r.desc}</span>
+      </td>
+      <td class="num">${fmtNum(r.subs)}</td>
+      <td class="num ${r.score >= 50 ? 'good' : ''}">${r.score}%</td>
+      <td class="num">${fmtNum(r.totalViews)}</td>
+      <td class="num">${fmtNum(r.videos)}</td>
+      <td class="num">${fmtNum(r.avgViews)}</td>
+      <td><button class="mini" data-ch="${idx}">인기 영상</button></td>
+    </tr>`).join('');
+  document.querySelectorAll('button[data-ch]').forEach(b =>
+    b.addEventListener('click', () => {
+      const r = rows[+b.dataset.ch];
+      channelVideos(r.channelId, r.channel);
+    }));
+  markSort();
+}
+
+$('#results thead').addEventListener('click', e => {
+  const th = e.target.closest('th[data-sort]');
+  if (!th) return;
+  if (sortKey === th.dataset.sort) sortDesc = !sortDesc;
+  else { sortKey = th.dataset.sort; sortDesc = true; }
+  mode === 'video' ? renderVideos() : renderChannels();
+});
+
+$('#apiKey').value = localStorage.getItem('yt_api_key') || '';
+$('#apiKey').addEventListener('input', e => localStorage.setItem('yt_api_key', e.target.value.trim()));
+
+$('#searchBtn').addEventListener('click', search);
+$('#query').addEventListener('keydown', e => e.key === 'Enter' && search());
+
+const PRESETS = ['마인크래프트 미니게임', '마인크래프트 정보', '미니게임', '마크 야생', '마크 건축', 'minecraft minigame'];
+$('#presets').innerHTML = PRESETS.map(p =>
+  `<button class="mini preset" data-q="${p}">${p}</button>`).join('');
+document.querySelectorAll('.preset').forEach(b =>
+  b.addEventListener('click', () => { $('#query').value = b.dataset.q; search(); }));
+</script>
+</body>
+</html>

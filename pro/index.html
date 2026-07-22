@@ -1506,9 +1506,31 @@ const USER_KEY = 'yt_user';
       });
     });
   }
+  // 여러 태그로 쪼개진 제목·칩은 통째로 교체
+  const CHIP = {
+    '마인크래프트 미니게임': 'minecraft minigame', '마인크래프트 정보': 'minecraft tips',
+    '마크 야생': 'minecraft survival', '로블록스': 'roblox', 'ASMR': 'ASMR', '브이로그': 'vlog',
+    '미니게임': 'minigame', '마크 건축': 'minecraft build',
+  };
+  function fixComposites() {
+    const h1 = document.querySelector('.topbar h1');
+    if (h1 && /[가-힣]/.test(h1.textContent)) h1.innerHTML = '<span>Tteoksang</span> Research<span class="pro">PRO</span>';
+    const h2 = document.querySelector('.hero h2');
+    if (h2 && /[가-힣]/.test(h2.textContent)) h2.innerHTML = 'Find which videos <em>break out</em>,<br>with data — not guesswork.';
+    // 추천/프리셋 칩: 표시 문구와 실제 검색어 모두 영어로
+    document.querySelectorAll('[data-qs],[data-q]').forEach(el => {
+      const k = el.dataset.qs || el.dataset.q;
+      if (CHIP[k]) {
+        if (el.dataset.qs) el.dataset.qs = CHIP[k]; else el.dataset.q = CHIP[k];
+        el.textContent = CHIP[k];
+      }
+    });
+  }
   function enable() {
     document.documentElement.lang = 'en';
     walk(document.body);
+    fixComposites();
+    setInterval(fixComposites, 1200);
     new MutationObserver(ms => { for (const m of ms) { m.addedNodes.forEach(n => { if (n.nodeType === 1) walk(n); else if (n.nodeType === 3 && /[가-힣]/.test(n.nodeValue)) { const t = n.nodeValue.trim(); const o = tr(t); if (o !== null) n.nodeValue = n.nodeValue.replace(t, o); } }); if (m.type === 'characterData' && /[가-힣]/.test(m.target.nodeValue)) { const t = m.target.nodeValue.trim(); const o = tr(t); if (o !== null) m.target.nodeValue = m.target.nodeValue.replace(t, o); } } })
       .observe(document.body, { childList: true, subtree: true, characterData: true });
     // 영어 모드에서는 추천 검색어도 영어로

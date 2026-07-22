@@ -1480,7 +1480,9 @@ const USER_KEY = 'yt_user';
     [/^결과 없음$/, () => 'No results'],
     [/^(\d+)개$/, (_, n) => n],
     [/^구독자 (.+)$/, (_, v) => `${v} subscribers`],
-    [/^([\d.]+만|[\d.]+억|[\d,]+)회$/, (_, v) => `${v} views`],
+    [/^([\d.]+[만억KMB]?|[\d,]+)회$/, (_, v) => `${v} views`],
+    [/^([\d.,]+[만억KMB]?)회 · (.+)$/, (_, v, rest) => `${v} views · ${rest}`],
+    [/^(.+) · ([\d.,]+[만억KMB]?)회 · 구독자 (.+)$/, (_, c, v, s) => `${c} · ${v} views · ${s} subs`],
     [/^저장한 영상 (\d+)개 · 메모는 자동 저장됨$/, (_, n) => `${n} saved videos · Notes save automatically`],
   ];
   const tr = t => {
@@ -1528,6 +1530,12 @@ const USER_KEY = 'yt_user';
   }
   function enable() {
     document.documentElement.lang = 'en';
+    window.fmtNum = n => {
+      if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return n.toLocaleString();
+    };
     walk(document.body);
     fixComposites();
     setInterval(fixComposites, 1200);

@@ -1369,5 +1369,166 @@ onAuthStateChanged(auth, async (user) => {
 // USER_KEY 참조용 (모듈 스코프)
 const USER_KEY = 'yt_user';
 </script>
+
+<!-- ═══════════ English UI (?lang=en 또는 헤더 토글) ═══════════ -->
+<script>
+(function () {
+  const M = {
+    // 헤더 · 공통
+    '떡상 리서치': 'Tteoksang Research', 'API 키 저장됨 ✓': 'API key saved ✓', '변경': 'Change',
+    'Google 계정으로 로그인': 'Sign in with Google', '로그아웃': 'Sign out', '클라우드 동기화 중 ✓': 'Cloud sync on ✓',
+    '내 YouTube API 키 (브라우저에만 저장됨)': 'My YouTube Data API key (stored in your browser only)',
+    'AIza... 키를 붙여넣으면 자동 저장': 'Paste your AIza... key — saved automatically',
+    'API 키 무료 발급 방법 (5분)': 'How to get a free API key (5 min)',
+    'Google Cloud Console': 'Google Cloud Console', '에서 새 프로젝트 만들기': ' — create a new project',
+    '검색 → ': 'search → ', ' 버튼 클릭': ' and click Enable',
+    '생성된 키를 복사해서 위 칸에 붙여넣기': 'Copy the generated key and paste it above',
+    // 탭
+    '홈': 'Home', '검색': 'Search', '키워드': 'Keywords', '채널 추적': 'Channel Tracking',
+    '트렌드 분석': 'Trends', '저장함': 'Saved',
+    // 히어로
+    '어떤 영상이 떡상하는지,': "Find which videos break out —", '감이 아니라 데이터로.': 'with data, not guesswork.',
+    '떡상': 'Breakout',
+    '장르를 검색하면 채널 규모 대비 터진 영상을 찾아주고, 제목·업로드 패턴까지 분석합니다.':
+      'Search a genre to surface videos that over-performed relative to channel size, and analyze title & upload patterns.',
+    '어떤 장르를 벤치마킹할까요? — 예: 마인크래프트 미니게임': 'Which genre do you want to benchmark? — e.g. minecraft minigame',
+    // 기능 카드
+    '떡상 영상 검색': 'Breakout video search', '키워드 분석': 'Keyword analysis',
+    '조회수÷구독자 배율로 채널 체급 대비 터진 영상만 골라냄. 12개국 지원.':
+      'Ranks videos by views ÷ subscribers to isolate breakouts relative to channel size. 12 countries supported.',
+    '기회 점수와 연관 키워드로 어떤 주제를 팔지 결정.': 'Decide which topic to pursue using an opportunity score and related keywords.',
+    '경쟁 채널을 등록하면 최신 영상의 떡상 여부를 자동 감지.': 'Add competitor channels to auto-detect breakouts in their latest uploads.',
+    '떡상 제목 단어, 업로드 요일·시간대, 진입 난이도까지 자동 리포트.': 'Auto report on title words, upload day/time, and entry difficulty.',
+    // 검색 필터
+    '영상': 'Videos', '채널': 'Channels',
+    '최근 1주': 'Last week', '최근 1개월': 'Last month', '최근 3개월': 'Last 3 months', '최근 1년': 'Last year', '전체 기간': 'All time',
+    '한국': 'Korea', '미국': 'United States', '일본': 'Japan', '영국': 'United Kingdom', '독일': 'Germany',
+    '프랑스': 'France', '스페인': 'Spain', '브라질': 'Brazil', '인도네시아': 'Indonesia', '베트남': 'Vietnam',
+    '태국': 'Thailand', '러시아': 'Russia', '모든 지역': 'All regions',
+    '모든 길이': 'Any length', '쇼츠 (≤3분)': 'Shorts (≤3 min)', '4~20분': '4–20 min', '20분 이상': '20+ min',
+    '25개': '25 results', '50개': '50 results', '100개': '100 results',
+    '결과': 'Results', '갤러리 보기': 'Gallery view', '목록 보기': 'List view', 'CSV 저장': 'Export CSV',
+    // 표 헤더
+    '제목': 'Title', '조회수': 'Views', '구독자': 'Subscribers', '조회/구독 배율': 'Views ÷ Subs',
+    '일평균 조회': 'Views/day', '시간당 조회': 'Views/hour', '좋아요': 'Likes', '업로드': 'Published', '길이': 'Length',
+    '관련도': 'Relevance', '총 조회수': 'Total views', '영상 수': 'Videos', '영상당 평균 조회': 'Avg views/video',
+    '인기 영상': 'Top videos', '삭제': 'Remove', '+ 채널 추적': '+ Track channel', '+ 추적': '+ Track', '추가됨': 'Added',
+    '비공개': 'hidden',
+    // 트렌드
+    '평균 조회수': 'Average views', '중앙값 조회수': 'Median views', '떡상 영상 (5×+)': 'Breakout videos (5×+)',
+    '쇼츠 비율': 'Shorts share', '참여 채널 수': 'Channels involved', '중앙값 구독자': 'Median subscribers',
+    '진입 난이도': 'Entry difficulty', '낮음': 'Low', '보통': 'Medium', '높음': 'High',
+    '떡상 제목에 많이 쓰인 단어': 'Most-used words in breakout titles', '업로드 요일 분포': 'Upload day distribution',
+    '영상 길이 분포': 'Video length distribution', '제목 패턴': 'Title patterns',
+    '업로드 시간대 분포': 'Upload time-of-day distribution', '떡상 제목 TOP 5 (조회/구독 배율순)': 'Top 5 breakout titles (by views ÷ subs)',
+    '상위 영상들이 쓰는 태그 (클릭하면 검색)': 'Tags used by top videos (click to search)',
+    '일': 'Sun', '월': 'Mon', '화': 'Tue', '수': 'Wed', '목': 'Thu', '금': 'Fri', '토': 'Sat',
+    '쇼츠 ≤1분': 'Shorts ≤1 min', '1~3분': '1–3 min', '3~10분': '3–10 min', '10~20분': '10–20 min', '20분+': '20+ min',
+    '~15초': '≤15s', '15~30초': '15–30s', '30~45초': '30–45s', '45~60초': '45–60s',
+    '1분~1분30': '60–90s', '1분30~2분': '90–120s', '2~3분': '2–3 min',
+    '0~3시': '00–03h', '3~6시': '03–06h', '6~9시': '06–09h', '9~12시': '09–12h',
+    '12~15시': '12–15h', '15~18시': '15–18h', '18~21시': '18–21h', '21~24시': '21–24h',
+    // 키워드
+    '분석할 키워드 — 예: 마인크래프트 미니게임': 'Keyword to analyze — e.g. minecraft minigame', '분석': 'Analyze',
+    '키워드의 기회 점수·경쟁 현황·연관 키워드를 분석해줘요.': 'Analyzes a keyword’s opportunity score, competition level and related keywords.',
+    '기회 점수 (추정)': 'Opportunity score (est.)', '최근 3개월 상위 평균 조회': 'Avg views of top videos (90d)',
+    '중앙값 구독자 (경쟁 체급)': 'Median subscribers (competition)', '상위 25개 중 떡상 비율': 'Breakout share in top 25',
+    '연관 키워드 — 클릭하면 바로 검색': 'Related keywords — click to search', '좋음': 'Good', '어려움': 'Hard',
+    // 채널 추적
+    '추적할 채널 이름 — 예: 구릉다': 'Channel name to track — e.g. Minecraft', '채널 찾기': 'Find channels',
+    '추적 중인 채널': 'Tracked channels', '새로고침': 'Refresh',
+    '채널을 추가하면 최신 영상과 떡상 여부를 한눈에 볼 수 있어요.': 'Add a channel to see its latest videos and breakout status at a glance.',
+    '아직 추적 중인 채널이 없어요. 위에서 채널을 검색해 추가하세요.': 'No channels tracked yet — search above to add one.',
+    '영상 없음': 'No videos',
+    // 저장함
+    '저장한 영상': 'Saved videos', '메모': 'Notes', '벤치마킹 포인트 메모...': 'Benchmarking notes...',
+    '검색 결과의 ⭐ 버튼으로 영상을 저장하고 메모를 남길 수 있어요.': 'Use the ★ button in results to save videos and add notes.',
+    '최근 검색어': 'Recent searches', '아직 검색 기록이 없어요.': 'No search history yet.',
+    '발굴한 채널 DB': 'Discovered channels', '추적 중인 채널 ': 'Tracked channels ',
+    // 푸터
+    '떡상 리서치 PRO · Powered by YouTube Data API · 키는 브라우저에만 저장되며 서버로 전송되지 않습니다':
+      'Tteoksang Research PRO · Powered by YouTube Data API · Your key stays in your browser and is never sent to any server',
+    '개인정보처리방침': 'Privacy Policy', '서비스 약관': 'Terms of Service',
+    'Google 개인정보처리방침': 'Google Privacy Policy', 'YouTube 서비스 약관': 'YouTube Terms of Service',
+  };
+  // 동적 문장 (정규식)
+  const R = [
+    [/^(\d+)개 영상 \(조회수순\).*$/, (_, n) => `${n} videos (sorted by views) · See the patterns in the Trends tab`],
+    [/^(\d+)개 채널 \(구독자순\).*관련도.*$/, (_, n) => `${n} channels (by subscribers) · Relevance = share of recent uploads matching the genre`],
+    [/^(\d+)개 채널 \(구독자순\).*$/, (_, n) => `${n} channels (by subscribers) · Ratio = views ÷ subscribers; ≥1× is a breakout; NEW = uploaded within 3 days`],
+    [/^"(.+)" 인기 영상 검색 중\.\.\.$/, (_, c) => `Loading top videos for "${c}"...`],
+    [/^"(.+)" 역대 인기 영상 (\d+)개.*$/, (_, c, n) => `Top ${n} all-time videos for "${c}" (by views)`],
+    [/^"(.+)" 검색 결과 (\d+)개.*$/, (_, q, n) => `${n} results for "${q}" · Click "+ Track" to follow a channel`],
+    [/^"(.+)" 분석 완료.*$/, (_, q) => `Analysis complete for "${q}" · The opportunity score is an estimate based on top-video data.`],
+    [/^최근 검색 결과 (\d+)개 영상 기준 분석.*$/, (_, n) => `Analysis based on the latest ${n} search results (auto-updates on each search)`],
+    [/^검색어 (\d+)종으로 수집 중.*$/, (_, n) => `Collecting with ${n} query variations...`],
+    [/^검색어 (\d+)종으로 후보 수집 중.*$/, (_, n) => `Collecting candidates with ${n} query variations...`],
+    [/^후보 채널 (\d+)개 통계 수집 중.*$/, (_, n) => `Fetching statistics for ${n} candidate channels...`],
+    [/^채널 (\d+)개의 최근 영상 분석 중.*$/, (_, n) => `Analyzing recent uploads of ${n} channels...`],
+    [/^채널 (\d+)개 프로필 검증 중.*$/, (_, n) => `Verifying ${n} channel profiles...`],
+    [/^(\d+)개 채널 불러오는 중.*$/, (_, n) => `Loading ${n} channels...`],
+    [/^쇼츠 길이 분포 \(초 단위 · (\d+)개\)$/, (_, n) => `Shorts length distribution (seconds · ${n})`],
+    [/^평균 제목 길이: (\d+)자$/, (_, n) => `Average title length: ${n} chars`],
+    [/^숫자 포함: (\S+) · 대괄호 \[ \] 사용: (\S+)$/, (_, a, b) => `Contains numbers: ${a} · Uses [brackets]: ${b}`],
+    [/^이모지 포함: (\S+) · 물음표\/느낌표: (\S+)$/, (_, a, b) => `Contains emoji: ${a} · ? or !: ${b}`],
+    [/^괄호 \(\) 사용: (\S+) · "\.\.\." 말줄임: (\S+)$/, (_, a, b) => `Uses (parentheses): ${a} · Ellipsis "...": ${b}`],
+    [/^통계 수집 중\.\.\.$/, () => 'Fetching statistics...'],
+    [/^검색 중\.\.\.$/, () => 'Searching...'],
+    [/^채널 찾는 중\.\.\.$/, () => 'Finding channels...'],
+    [/^연관 키워드 수집 중.*$/, () => 'Collecting related keywords... (no quota cost)'],
+    [/^상위 영상 경쟁 분석 중\.\.\.$/, () => 'Analyzing competition among top videos...'],
+    [/^결과 없음$/, () => 'No results'],
+    [/^(\d+)개$/, (_, n) => n],
+    [/^구독자 (.+)$/, (_, v) => `${v} subscribers`],
+    [/^([\d.]+만|[\d.]+억|[\d,]+)회$/, (_, v) => `${v} views`],
+    [/^저장한 영상 (\d+)개 · 메모는 자동 저장됨$/, (_, n) => `${n} saved videos · Notes save automatically`],
+  ];
+  const tr = t => {
+    if (M[t] !== undefined) return M[t];
+    for (const [re, fn] of R) { const m = t.match(re); if (m) return fn(...m); }
+    return null;
+  };
+  function walk(root) {
+    if (!root) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+    for (const n of nodes) {
+      const raw = n.nodeValue, t = raw.trim();
+      if (!t || !/[가-힣]/.test(t)) continue;
+      const out = tr(t);
+      if (out !== null) n.nodeValue = raw.replace(t, out);
+    }
+    const els = root.querySelectorAll ? root.querySelectorAll('[placeholder],[title]') : [];
+    els.forEach(el => {
+      ['placeholder', 'title'].forEach(a => {
+        const v = el.getAttribute(a); if (!v || !/[가-힣]/.test(v)) return;
+        const out = tr(v.trim()); if (out !== null) el.setAttribute(a, out);
+      });
+    });
+  }
+  function enable() {
+    document.documentElement.lang = 'en';
+    walk(document.body);
+    new MutationObserver(ms => { for (const m of ms) { m.addedNodes.forEach(n => { if (n.nodeType === 1) walk(n); else if (n.nodeType === 3 && /[가-힣]/.test(n.nodeValue)) { const t = n.nodeValue.trim(); const o = tr(t); if (o !== null) n.nodeValue = n.nodeValue.replace(t, o); } }); if (m.type === 'characterData' && /[가-힣]/.test(m.target.nodeValue)) { const t = m.target.nodeValue.trim(); const o = tr(t); if (o !== null) m.target.nodeValue = m.target.nodeValue.replace(t, o); } } })
+      .observe(document.body, { childList: true, subtree: true, characterData: true });
+    // 영어 모드에서는 추천 검색어도 영어로
+    try {
+      window.QUICKSTART && QUICKSTART.splice(0, QUICKSTART.length, 'minecraft minigame', 'minecraft tips', 'minecraft survival', 'roblox', 'ASMR', 'vlog');
+      window.renderHome && renderHome();
+    } catch (e) {}
+  }
+  const isEN = new URLSearchParams(location.search).get('lang') === 'en' || localStorage.getItem('yt_lang') === 'en';
+  // 헤더 언어 토글
+  const bar = document.querySelector('.topbar > div');
+  if (bar) {
+    const b = document.createElement('button');
+    b.className = 'mini'; b.style.marginLeft = '2px';
+    b.textContent = isEN ? '한국어' : 'EN';
+    b.onclick = () => { localStorage.setItem('yt_lang', isEN ? 'ko' : 'en'); location.href = location.pathname + (isEN ? '' : '?lang=en'); };
+    bar.appendChild(b);
+  }
+  if (isEN) enable();
+})();
+</script>
 </body>
 </html>

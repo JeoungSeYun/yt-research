@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI AI, 나는 빼 — Lyric Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Gothic+Coding:wght@400;700&family=Noto+Sans+KR:wght@300;700&display=block">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: #f5efe4; font-family: 'Noto Sans KR', system-ui, sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  canvas { display: block; width: min(100vw, 177.78vh); height: auto; aspect-ratio: 16 / 9; background: #07070a; }
+  #ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px; display: flex; gap: 10px; align-items: center;
+        background: linear-gradient(transparent, rgba(0,0,0,.85)); transition: opacity .3s; font-size: 14px; }
+  body.playing:not(:hover) #ui { opacity: 0; }
+  #ui button, #ui label { font: inherit; color: inherit; background: #1b1a1f; border: 1px solid #333; border-radius: 999px;
+        padding: 6px 14px; cursor: pointer; }
+  #ui input[type=range] { flex: 1; accent-color: #ff2a3d; }
+  #ui input[type=file] { display: none; }
+  #hint { color: #9a948a; }
+  body.render #ui { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="ui">
+  <button id="play" type="button">▶ 재생</button>
+  <label>🎵 노래 파일 열기<input id="file" type="file" accept="audio/*"></label>
+  <input id="seek" type="range" min="0" max="137.48" step="0.01" value="0">
+  <span id="time">0:00</span>
+  <span id="hint">song.mp3를 같은 폴더에 두거나 파일을 열어 주세요</span>
+</div>
+<audio id="audio" preload="auto"></audio>
+<script src="timing.js"></script>
+<script src="motion.js"></script>
+</body>
+</html>

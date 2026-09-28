@@ -1,0 +1,6 @@
+# the song and rendered videos stay out of this public repo
+*.mp3
+*.wav
+*.m4a
+*.mp4
+node_modules/

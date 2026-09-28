@@ -135,14 +135,14 @@
     FX.flash.push([tW, 0.22, 0.3, C.amber]);
     S(o.sid || `crown-${id}`, t0, t1, { label: o.label || '왕좌', sec: o.sec || 'CHORUS', tin: o.tin || 'whip', dir: -1, push: 0.03, kick: 1 }, (g, t) => {
       K.fill(g, Pl.bg);
-      K.rays(g, W / 2, 560, 28, 1400, t * 0.25, Pl.v === 2 ? '#ff4a3a' : C.amber, Pl.v === 2 ? 0.18 : 0.08 + K.hit(t, tW, 0.6) * 0.1);
-      glow(g, W / 2, 560, 600, Pl.v === 2 ? '#ffd23d' : C.amber, 0.12 + K.hit(t, tW, 0.8) * 0.3);
+      K.rays(g, W / 2, 620, 28, 1400, t * 0.25, Pl.v === 2 ? '#ff4a3a' : C.amber, Pl.v === 2 ? 0.18 : 0.08 + K.hit(t, tW, 0.6) * 0.1);
+      glow(g, W / 2, 620, 600, Pl.v === 2 ? '#ffd23d' : C.amber, 0.12 + K.hit(t, tW, 0.8) * 0.3);
       if (o.prop) o.prop(g, t, tW);
       else {
-        PT.eye(g, t, W / 2, 575, 145, { mood: t > tW ? 'happy' : 'normal', moodK: E.outCubic(inv(tW, tW + 0.3, t)) });
-        const cy = lerp(-200, 575 - 145 - 58, E.outBounce(inv(tW - 0.25, tW + 0.12, t)));
-        PT.crown(g, W / 2, cy, 1.3, C.amber, Math.sin(t * 3) * 0.05 * inv(tW, tW + 0.5, t));
-        if (t > tW) { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t, r = 220 + Math.sin(t * 4 + i) * 20; g.fillStyle = C.amber; K.dot(g, W / 2 + Math.cos(a) * r * 1.5, 575 + Math.sin(a) * r, 18, C.amber, 0.8 * inv(tW, tW + 0.2, t)); } }
+        PT.eye(g, t, W / 2, 620, 145, { mood: t > tW ? 'happy' : 'normal', moodK: E.outCubic(inv(tW, tW + 0.3, t)) });
+        const land = inv(tW - 0.25, tW + 0.12, t), cy = lerp(-160, 620 - 145 * 0.72, E.outBounce(land));
+        PT.crown(g, W / 2, cy, 1.3, C.amber, -0.08 + Math.sin(t * 3) * 0.04 * inv(tW, tW + 0.5, t), { t });
+        if (t > tW) { for (let i = 0; i < 10; i++) { const a = i / 10 * TAU + t, r = 220 + Math.sin(t * 4 + i) * 20; K.dot(g, W / 2 + Math.cos(a) * r * 1.5, 620 + Math.sin(a) * r, 18, C.amber, 0.8 * inv(tW, tW + 0.2, t)); } }
       }
       drawR(g, rAI, t, W / 2, 190);
       drawR(g, rT, t, W / 2, 925);
@@ -178,19 +178,7 @@
     });
   }
 
-  function clapHands(g, x, y, s, t, t0, col, cuff) {
-    const on = t >= t0, e = on ? eighthPulse(t, 10) : 0;
-    const d = on ? lerp(230, 64, e) : 230;
-    for (const side of [-1, 1]) PT.hand(g, x + side * d * s, y + 250 * s, s, -side * lerp(0.42, 0.18, e), side > 0, { spread: 0.25, fill: col, cuff });
-    if (on && e > 0.45) {
-      g.save(); g.strokeStyle = C.amber; g.lineWidth = 7 * s; g.lineCap = 'round';
-      for (let i = 0; i < 9; i++) {
-        const a = -Math.PI / 2 + (i - 4) * 0.32, r0 = 250 * s + (1 - e) * 80 * s, r1 = r0 + 90 * e * s;
-        g.beginPath(); g.moveTo(x + Math.cos(a) * r0, y - 20 * s + Math.sin(a) * r0); g.lineTo(x + Math.cos(a) * r1, y - 20 * s + Math.sin(a) * r1); g.stroke();
-      }
-      g.restore();
-    }
-  }
+  function clapHands(g, x, y, s, t, t0, col, cuff) { PT.clapPair(g, x, y + 250 * s, s, t, t0, { cuff }); }
 
   // ───────── 인간 대표 누구냐고? / 일단 나는 아닌 것 같아: the stage ─────────
   function stageScene(Pl, idA, idB, t0, t1, o = {}) {

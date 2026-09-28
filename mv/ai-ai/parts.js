@@ -6,42 +6,110 @@ window.PARTS = (() => {
     txt, rrect, glow, star, V, P, segs3, G3, poly3, text3 } = window.MV;
 
   // ───────── hands ─────────
-  // one right hand, palm toward the viewer, wrist at (0,0), fingers pointing up (−y). spread 0..1, curl 0..1
-  function handPath(g, spread = 0.5, curl = 0) {
-    const pieces = [];
-    // forearm
-    pieces.push(gg => { gg.beginPath(); gg.moveTo(-58, -6); gg.lineTo(58, -6); gg.lineTo(80, 460); gg.lineTo(-80, 460); gg.closePath(); });
-    // palm
-    pieces.push(gg => { rrect(gg, -74, -176, 148, 182, 44); });
-    // fingers: [x, width, length, angle]
-    const F = [[-52, 34, 150, -0.14], [-16, 36, 176, -0.04], [21, 34, 160, 0.06], [55, 29, 118, 0.17]];
-    for (const [x, w, len, a] of F) {
-      const L = len * (1 - curl * 0.55);
-      pieces.push(gg => {
-        gg.save(); gg.translate(x, -150); gg.rotate(a * (0.4 + spread));
-        rrect(gg, -w / 2, -L, w, L + 26, w / 2); gg.restore();
-      });
-    }
-    // thumb
-    pieces.push(gg => { gg.save(); gg.translate(-62, -52); gg.rotate(-0.72 - spread * 0.35); rrect(gg, -19, -118, 38, 132, 19); gg.restore(); });
-    return pieces;
-  }
-  function hand(g, x, y, s, rot, flip, o = {}) {
-    const fill = o.fill || C.ink, line = o.line || C.bg;
-    g.save(); g.translate(x, y); g.rotate(rot); g.scale(s * (flip ? -1 : 1), s);
-    const pcs = handPath(g, o.spread ?? 0.6, o.curl ?? 0);
-    const order = [0, 1, 6, 2, 3, 4, 5];
-    for (const i of order) {
-      pcs[i](g);
-      g.fillStyle = fill; g.fill();
-      g.lineWidth = 7; g.strokeStyle = line; g.lineJoin = 'round'; g.stroke();
-    }
-    // palm crease & shading
-    g.strokeStyle = rgba(C.bg, 0.35); g.lineWidth = 4; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(-40, -70); g.quadraticCurveTo(0, -40, 46, -86); g.stroke();
-    g.beginPath(); g.moveTo(-30, -24); g.quadraticCurveTo(10, -14, 40, -40); g.stroke();
-    if (o.cuff) { g.fillStyle = o.cuff; g.fillRect(-84, 200, 168, 60); g.strokeStyle = line; g.lineWidth = 7; g.strokeRect(-84, 200, 168, 60); }
+  // Hands are drawn as one silhouette: every piece is stroked twice as thick as the outline, then all
+  // pieces are filled on top, so only the outer contour stays visible (no seams between palm and fingers).
+  const SKIN = '#f2d4bc', HLINE = '#1b1411';
+  function capsule(g, x, y, ang, w0, w1, L) { // tapered finger shape from base (x, y) pointing along ang (0 = up)
+    g.save(); g.translate(x, y); g.rotate(ang);
+    const r = w1 / 2;
+    g.moveTo(-w0 / 2, 0); g.lineTo(-r, -L + r); g.arc(0, -L + r, r, Math.PI, TAU, false); g.lineTo(w0 / 2, 0); g.closePath();
     g.restore();
+  }
+  function oval(g, x, y, rx, ry) { g.moveTo(x + rx, y); g.ellipse(x, y, rx, ry, 0, 0, TAU); }
+  function silhouette(g, build, fill, lw = 4) {
+    g.beginPath(); build(g);
+    g.lineJoin = 'round'; g.lineWidth = lw * 2; g.strokeStyle = HLINE; g.stroke();
+    g.fillStyle = fill; g.fill();
+  }
+  function shade(g, build, x0, x1) { // soft light from the left, shadow on the right edge
+    g.save(); g.beginPath(); build(g); g.clip();
+    const gr = g.createLinearGradient(x0, 0, x1, 0);
+    gr.addColorStop(0, 'rgba(255,255,255,0.16)'); gr.addColorStop(0.55, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(140,70,40,0.28)');
+    g.fillStyle = gr; g.fillRect(-300, -420, 600, 700);
+    g.restore();
+  }
+  function sleeve(g, cuff, w0, w1, y0 = 140) {
+    g.beginPath(); g.moveTo(-w0, y0); g.lineTo(w0, y0); g.lineTo(w1, 640); g.lineTo(-w1, 640); g.closePath();
+    g.lineJoin = 'round'; g.lineWidth = 8; g.strokeStyle = HLINE; g.stroke(); g.fillStyle = cuff; g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(-w0, y0, w0 * 2, 26);
+    g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(-w0, y0 + 28); g.lineTo(w0, y0 + 28); g.stroke();
+  }
+  // [base x, base y, width, length, spread factor, rest angle] — index → pinky; the thumb is on the −x side
+  const FING = [[-42, -150, 34, 132, -0.12, -0.03], [-11, -154, 35, 146, -0.03, -0.005], [19, -150, 33, 136, 0.07, 0.02], [46, -138, 27, 104, 0.17, 0.05]];
+  function fingerGeo(i, o) {
+    const [bx, by, w, L, sp, rest] = FING[i], s = o.spread ?? 0.5;
+    const len = o.pose === 'point' && i > 0 ? L * 0.34 : L * (1 - (o.curl ?? 0) * 0.5);
+    return { bx, by, w, len, ang: rest + sp * s };
+  }
+  function handFront(g, o) {
+    const s = o.spread ?? 0.5, point = o.pose === 'point';
+    g.moveTo(-44, -4); g.lineTo(44, -4); g.lineTo(54, 240); g.lineTo(-54, 240); g.closePath();          // forearm
+    g.moveTo(-44, 6); g.bezierCurveTo(-60, -40, -70, -100, -66, -148); g.quadraticCurveTo(-62, -168, -40, -170);
+    g.lineTo(50, -162); g.quadraticCurveTo(68, -158, 68, -136); g.bezierCurveTo(70, -88, 64, -40, 46, 6); g.closePath(); // palm
+    oval(g, -36, -58, 32, 46);                                                                          // thumb ball
+    capsule(g, -48, -58, point ? -0.2 : -(0.3 + 0.55 * s), 44, 34, point ? 96 : 118);                   // thumb
+    for (let i = 0; i < 4; i++) { const f = fingerGeo(i, o); capsule(g, f.bx, f.by + 18, f.ang, f.w, f.w * 0.9, f.len + 18); }
+  }
+  // one hand, palm toward the viewer, wrist at (0,0), fingers up (−y). o: spread 0..1, curl 0..1, pose 'open'|'point', cuff (sleeve colour)
+  function hand(g, x, y, s, rot, flip, o = {}) {
+    const fill = o.fill || SKIN;
+    g.save(); g.translate(x, y); g.rotate(rot); g.scale(s * (flip ? -1 : 1), s);
+    const build = gg => handFront(gg, o);
+    silhouette(g, build, fill, 4);
+    shade(g, build, -80, 80);
+    g.lineCap = 'round';
+    // seams between the fingers and the finger joints
+    for (let i = 0; i < 4; i++) {
+      const f = fingerGeo(i, o);
+      g.save(); g.translate(f.bx, f.by); g.rotate(f.ang);
+      if (i > 0) { g.strokeStyle = 'rgba(27,20,17,0.6)'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(-f.w / 2 + 2, -6); g.lineTo(-f.w / 2 + 3, -f.len * 0.6); g.stroke(); }
+      g.strokeStyle = 'rgba(27,20,17,0.22)'; g.lineWidth = 2.5;
+      for (const q of [0.4, 0.68]) if (f.len > 60) { g.beginPath(); g.moveTo(-f.w * 0.22, -f.len * q); g.lineTo(f.w * 0.22, -f.len * q); g.stroke(); }
+      g.restore();
+    }
+    // palm lines
+    g.strokeStyle = 'rgba(27,20,17,0.22)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(-56, -120); g.quadraticCurveTo(-6, -140, 60, -124); g.stroke();
+    g.beginPath(); g.moveTo(-50, -106); g.quadraticCurveTo(-2, -70, -14, -8); g.stroke();
+    if (o.cuff) sleeve(g, o.cuff, 64, 80);
+    g.restore();
+  }
+  // side view (thumb toward the viewer), palm facing +x, wrist at (0,0), fingers up
+  function handSideShape(g) {
+    g.moveTo(-27, -4); g.lineTo(27, -4); g.lineTo(33, 240); g.lineTo(-31, 240); g.closePath();
+    g.moveTo(-26, 6); g.bezierCurveTo(-32, -40, -36, -95, -33, -140); g.bezierCurveTo(-31, -180, -22, -236, -9, -266);
+    g.quadraticCurveTo(6, -284, 19, -262); g.bezierCurveTo(27, -238, 31, -196, 33, -160); g.bezierCurveTo(42, -122, 45, -70, 35, -30);
+    g.lineTo(27, 6); g.closePath();
+    capsule(g, 4, -50, 0.3, 40, 30, 104);
+  }
+  function handSide(g, x, y, s, rot, flip, o = {}) {
+    g.save(); g.translate(x, y); g.rotate(rot); g.scale(s * (flip ? -1 : 1), s);
+    silhouette(g, handSideShape, o.fill || SKIN, 4);
+    shade(g, handSideShape, -40, 46);
+    g.lineCap = 'round';
+    // thumb edge over the palm, the index fingertip, a knuckle
+    g.save(); g.translate(4, -50); g.rotate(0.3); g.strokeStyle = 'rgba(27,20,17,0.65)'; g.lineWidth = 3.5;
+    g.beginPath(); g.moveTo(-20, -24); g.lineTo(-15, -86); g.arc(0, -89, 15, Math.PI, Math.PI * 1.55, false); g.stroke(); g.restore();
+    g.strokeStyle = 'rgba(27,20,17,0.4)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(24, -232); g.quadraticCurveTo(8, -248, -14, -236); g.stroke();
+    g.strokeStyle = 'rgba(27,20,17,0.22)'; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(-26, -196); g.lineTo(-12, -200); g.stroke();
+    if (o.cuff) sleeve(g, o.cuff, 44, 56, 120);
+    g.restore();
+  }
+  // two hands clapping on every eighth note from t0; (x, y) = midpoint between the wrists
+  function clapPair(g, x, y, s, t, t0, o = {}) {
+    const on = t >= t0, e = on ? eighthPulse(t, 10) : 0, open = on ? 1 - e : 1;
+    const gap = 30 + open * 150, ang = 0.03 + open * 0.34;
+    for (const side of [-1, 1]) handSide(g, x + side * gap * s, y, s, side * ang, side > 0, o);
+    if (on && e > 0.45) {
+      g.save(); g.strokeStyle = C.amber; g.lineWidth = 7 * s; g.lineCap = 'round';
+      for (let i = 0; i < 9; i++) {
+        const a = -Math.PI / 2 + (i - 4) * 0.3, r0 = 300 * s + (1 - e) * 60 * s, r1 = r0 + 80 * e * s;
+        g.beginPath(); g.moveTo(x + Math.cos(a) * r0, y - 150 * s + Math.sin(a) * r0); g.lineTo(x + Math.cos(a) * r1, y - 150 * s + Math.sin(a) * r1); g.stroke();
+      }
+      g.restore();
+    }
   }
   // two hands thrown up in surrender; k = rise 0..1, lift = extra "들고" lift, shake amplitude
   function surrender(g, cx, by, s, t, k, lift = 0, shake = 0) {
@@ -52,25 +120,6 @@ window.PARTS = (() => {
       const sy = y + noise(t * 16, side + 9) * shake;
       hand(g, sx, sy, s, side * (0.2 - lift * 0.08) + noise(t * 3, side) * 0.03, side < 0, { spread: 0.55 + lift * 0.45, cuff: C.acc });
     }
-  }
-  // side-view clapping hands (closes on every eighth note while active)
-  function clap(g, x, y, s, t, t0, t1, col = C.ink) {
-    const on = t >= t0 && t <= t1;
-    const e = on ? eighthPulse(t, 11) : 0;
-    const open = on ? 0.55 * (1 - e) + 0.05 : 0.35;
-    g.save(); g.translate(x, y); g.scale(s, s);
-    for (const side of [-1, 1]) {
-      g.save(); g.rotate(side * open);
-      g.fillStyle = col; g.strokeStyle = C.bg; g.lineWidth = 7; g.lineJoin = 'round';
-      g.beginPath(); rrect(g, side < 0 ? -64 : 4, -230, 60, 240, 30); g.fill(); g.stroke();
-      g.beginPath(); rrect(g, side < 0 ? -58 : 10, 0, 48, 180, 20); g.fill(); g.stroke();
-      g.restore();
-    }
-    if (on && e > 0.6) { // impact burst
-      g.strokeStyle = C.amber; g.lineWidth = 8; g.lineCap = 'round';
-      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; const r0 = 120 + (1 - e) * 60, r1 = r0 + 70 * e; g.beginPath(); g.moveTo(Math.cos(a) * r0, -120 + Math.sin(a) * r0); g.lineTo(Math.cos(a) * r1, -120 + Math.sin(a) * r1); g.stroke(); }
-    }
-    g.restore();
   }
 
   // ───────── people ─────────
@@ -192,12 +241,63 @@ window.PARTS = (() => {
     }
     g.restore();
   }
-  function crown(g, x, y, s, col = C.amber, rot = 0) {
+  // a gold crown; (x, y) is the bottom centre of the band. o.t makes the glints twinkle
+  function crown(g, x, y, s, col = C.amber, rot = 0, o = {}) {
+    const t = o.t ?? 0, OUT = '#4a2a00';
+    const yTop = x0 => -44 + 10 * (1 - (x0 / 100) ** 2);
     g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
-    g.fillStyle = col; g.strokeStyle = '#6b4300'; g.lineWidth = 6; g.lineJoin = 'round';
-    g.beginPath(); g.moveTo(-80, 40); g.lineTo(-92, -38); g.lineTo(-44, 2); g.lineTo(0, -58); g.lineTo(44, 2); g.lineTo(92, -38); g.lineTo(80, 40); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = C.red; for (const [cx, cy] of [[-92, -42], [0, -64], [92, -42]]) { g.beginPath(); g.arc(cx, cy, 11, 0, TAU); g.fill(); }
-    g.fillStyle = '#6b4300'; g.fillRect(-80, 22, 160, 8);
+    g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = OUT; g.lineWidth = 4;
+    // inside of the crown and the back points, seen between the front ones
+    g.fillStyle = '#5e3200'; g.beginPath(); g.ellipse(0, -44, 100, 12, 0, 0, TAU); g.fill(); g.stroke();
+    for (const [bx, h] of [[-66, 70], [-22, 86], [22, 86], [66, 70]]) {
+      const gr = g.createLinearGradient(0, -52 - h, 0, -44);
+      gr.addColorStop(0, '#f2b43a'); gr.addColorStop(1, '#8a4f00');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(bx - 22, -46); g.quadraticCurveTo(bx - 8, -52 - h * 0.5, bx, -52 - h); g.quadraticCurveTo(bx + 8, -52 - h * 0.5, bx + 22, -46); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#e8d9bf'; g.beginPath(); g.arc(bx, -52 - h, 7, 0, TAU); g.fill(); g.stroke();
+    }
+    // front points + band as one gold shape
+    const PTS = [[-88, 70], [-44, 94], [0, 118], [44, 94], [88, 70]];
+    const gold = g.createLinearGradient(0, -170, 0, 14);
+    gold.addColorStop(0, '#fff2ae'); gold.addColorStop(0.45, col); gold.addColorStop(1, '#b86a00');
+    g.fillStyle = gold; g.beginPath(); g.moveTo(-100, 0); g.lineTo(-100, -44);
+    PTS.forEach(([cx, h], i) => {
+      const tipY = yTop(cx) - h, xr = i < 4 ? (cx + PTS[i + 1][0]) / 2 : 100, yr = i < 4 ? yTop(xr) - 8 : -44;
+      g.quadraticCurveTo(cx - 12, (yTop(cx) + tipY) / 2 + 8, cx, tipY);
+      g.quadraticCurveTo(cx + 12, (yr + tipY) / 2 + 8, xr, yr);
+    });
+    g.lineTo(100, 0); g.quadraticCurveTo(0, 24, -100, 0); g.closePath(); g.fill(); g.stroke();
+    // band
+    const band = g.createLinearGradient(0, -44, 0, 14);
+    band.addColorStop(0, '#ffd45c'); band.addColorStop(1, '#a85c00');
+    g.fillStyle = band; g.beginPath(); g.moveTo(-100, -44); g.quadraticCurveTo(0, -24, 100, -44); g.lineTo(100, 0); g.quadraticCurveTo(0, 24, -100, 0); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,250,220,0.7)'; g.lineWidth = 3; g.beginPath(); g.moveTo(-94, -38); g.quadraticCurveTo(0, -20, 94, -38); g.stroke();
+    g.strokeStyle = 'rgba(74,42,0,0.45)'; g.beginPath(); g.moveTo(-96, -6); g.quadraticCurveTo(0, 14, 96, -6); g.stroke();
+    g.strokeStyle = OUT; g.lineWidth = 3;
+    // jewels
+    for (const sx of [-56, 56]) {
+      const gy = -22 + 11 * (1 - (sx / 100) ** 2), gr = g.createRadialGradient(sx - 3, gy - 3, 1, sx, gy, 10);
+      gr.addColorStop(0, '#d8fbff'); gr.addColorStop(0.4, C.cyan); gr.addColorStop(1, '#136f8c');
+      g.fillStyle = gr; g.beginPath(); g.arc(sx, gy, 10, 0, TAU); g.fill(); g.stroke();
+    }
+    for (const sx of [-82, -30, 30, 82]) { const gy = -22 + 11 * (1 - (sx / 100) ** 2); g.fillStyle = '#fff4dc'; g.beginPath(); g.arc(sx, gy, 5, 0, TAU); g.fill(); }
+    const rg = g.createRadialGradient(-5, -16, 1, 0, -11, 18);
+    rg.addColorStop(0, '#ffd0d0'); rg.addColorStop(0.35, '#ff3b4e'); rg.addColorStop(1, '#8a0014');
+    g.fillStyle = rg; g.beginPath(); g.ellipse(0, -11, 18, 14, 0, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.ellipse(-6, -16, 5, 3, -0.5, 0, TAU); g.fill();
+    // pearls on the tips, a glint on the tallest point
+    for (const [cx, h] of PTS) {
+      const py = yTop(cx) - h, pg = g.createRadialGradient(cx - 3, py - 4, 1, cx, py, 11);
+      pg.addColorStop(0, '#ffffff'); pg.addColorStop(1, '#d9c6a5');
+      g.fillStyle = pg; g.beginPath(); g.arc(cx, py, 11, 0, TAU); g.fill(); g.stroke();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.moveTo(-6, -60); g.quadraticCurveTo(-4, -110, 0, -140); g.quadraticCurveTo(-1, -100, 2, -60); g.fill();
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = '#ffffff';
+    [[0, -164, 0], [-88, -100, 2.1], [70, -24, 4.3]].forEach(([sx, sy, ph]) => {
+      const k = Math.max(0, Math.sin(t * 5 + ph)), R = 16 * k;
+      if (R < 1) return;
+      g.globalAlpha = 0.9 * k; g.beginPath(); g.moveTo(sx, sy - R); g.lineTo(sx + R * 0.18, sy); g.lineTo(sx, sy + R); g.lineTo(sx - R * 0.18, sy); g.closePath();
+      g.moveTo(sx - R, sy); g.lineTo(sx, sy - R * 0.18); g.lineTo(sx + R, sy); g.lineTo(sx, sy + R * 0.18); g.closePath(); g.fill();
+    });
     g.restore();
   }
   function sparks(g, x, y, t, t0, n = 18, spread = 260, col = C.amber, seed = 1) {
@@ -369,6 +469,6 @@ window.PARTS = (() => {
     g.restore();
   }
 
-  return { hand, surrender, clap, person, stick, note, odometer, panel, paper, bubble, progress, checkbox, crown, sparks, burst,
+  return { hand, handSide, clapPair, surrender, person, stick, note, odometer, panel, paper, bubble, progress, checkbox, crown, sparks, burst,
     city, floorGrid, vacuum, serverRack, globe, seats, curtains, spotlight, eye };
 })();

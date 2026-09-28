@@ -228,7 +228,7 @@
       if (p) {
         const r = 1.1 * cam.f / p[2];
         PT.eye(g, t, p[0], p[1], r, { look: [0.4, 0.3] });
-        PT.crown(g, p[0], p[1] - r * 1.5, r / 110, C.amber, 0.1);
+        PT.crown(g, p[0], p[1] - r * 0.8, r / 140, C.amber, 0.1, { t });
         g.fillStyle = 'rgba(0,0,0,0.5)'; g.beginPath(); g.ellipse(p[0], p[1] + r * 1.35, r * 1.1, r * 0.22, 0, 0, TAU); g.fill();
       }
       drawR(g, rA, t, 130, 190, { align: 'left' });

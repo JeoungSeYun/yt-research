@@ -167,7 +167,7 @@
         const hx = W / 2 + side * 480 + noise(t * 17, side + 3) * shake, hy = 1720 - rise * 1100 - lift * 110 + noise(t * 15, side + 9) * shake;
         const rot = side * (0.16 - lift * 0.07) + noise(t * 3, side) * 0.03, s = 0.98;
         PT.hand(g, hx, hy, s, rot, side < 0, { spread: 0.55 + lift * 0.45, cuff: C.acc });
-        const px = hx + Math.sin(rot) * 104 * s, py = hy - Math.cos(rot) * 104 * s;
+        const px = hx + Math.sin(rot) * 84 * s, py = hy - Math.cos(rot) * 84 * s;
         g.save(); g.translate(px, py); g.rotate(rot); drawR(g, side < 0 ? rDu : rSon, t, 0, 0); g.restore();
       }
       drawR(g, rDl, t, W / 2, 600, { shake: t > tDeul ? 2.5 : 0 });

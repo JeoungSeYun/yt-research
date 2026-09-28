@@ -247,7 +247,7 @@
         g.fillStyle = '#6b1017'; g.fillRect(-90, -300, 180, 300); g.fillStyle = C.amber; g.fillRect(-110, -110, 220, 36); g.fillRect(-100, -320, 200, 26);
         g.restore();
         PT.eye(g, t, pt[0], pt[1] - 190 * s, 52 * s, { look: [0, 0.6] });
-        PT.crown(g, pt[0], pt[1] - 280 * s, 0.5 * s, C.amber);
+        PT.crown(g, pt[0], pt[1] - 232 * s, 0.37 * s, C.amber, -0.1, { t });
       }
       drawR(g, rA, t, 130, 190, { align: 'left' });
       drawR(g, rB, t, W - 130, 920, { align: 'right' });
@@ -388,7 +388,7 @@
       g.fillStyle = '#7d0a14'; g.beginPath(); g.ellipse(bx, by + 30 + e * 18, 200, 70, 0, 0, TAU); g.fill();
       g.fillStyle = C.red; g.beginPath(); g.ellipse(bx, by + e * 18, 200, 70, 0, 0, TAU); g.fill();
       txt(g, '학습 금지', bx, by + 14 + e * 18, 44, '#fff4ea', 'bold', 'center');
-      PT.hand(g, bx + 40, by - 250 + e * 60, 0.8, Math.PI, false, { spread: 0.1, curl: 0.2, cuff: C.acc });
+      PT.hand(g, bx - 34, by - 250 + e * 60, 0.8, Math.PI, false, { pose: 'point', spread: 0.15, cuff: C.acc });
       drawR(g, rA, t, 130, 150, { align: 'left' });
       drawR(g, rB, t, 130, 890, { align: 'left', shake: K.hit(t, CT('outro-1', '마'), 0.3) * 8 });
     });

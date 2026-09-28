@@ -10,7 +10,7 @@
  * segments are then concatenated and muxed with the song.
  *
  * Fonts come from Google Fonts. To render offline, pass --fonts with a folder holding
- * BlackHanSans.woff2, NotoSansKR.woff2, NanumGothicCoding.woff2 and NanumGothicCoding-Bold.woff2;
+ * BlackHanSans.woff2, NotoSansKR.woff2 (variable), NanumGothicCoding-Bold.woff2 and Gaegu-Bold.woff2;
  * the Google Fonts stylesheet request is then answered with those files instead.
  */
 const { chromium } = require('playwright');
@@ -41,7 +41,7 @@ async function openPage(browser) {
   if (FONTS) {
     if (fontCss === null) {
       const faces = [['Black Han Sans', 400, 'BlackHanSans.woff2'], ['Noto Sans KR', '100 900', 'NotoSansKR.woff2'],
-        ['Nanum Gothic Coding', 400, 'NanumGothicCoding.woff2'], ['Nanum Gothic Coding', 700, 'NanumGothicCoding-Bold.woff2']];
+        ['Nanum Gothic Coding', 700, 'NanumGothicCoding-Bold.woff2'], ['Gaegu', 700, 'Gaegu-Bold.woff2']];
       fontCss = faces.map(([fam, wt, file]) => {
         const data = fs.readFileSync(path.join(FONTS, file)).toString('base64');
         return `@font-face{font-family:'${fam}';font-weight:${wt};font-display:block;src:url(data:font/woff2;base64,${data}) format('woff2')}`;
@@ -53,7 +53,7 @@ async function openPage(browser) {
   await page.evaluate(() => window.__ready);
   const ok = await page.evaluate(() => {
     const loaded = new Set([...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/["']/g, '')));
-    return ['Black Han Sans', 'Noto Sans KR', 'Nanum Gothic Coding'].every(f => loaded.has(f));
+    return ['Black Han Sans', 'Noto Sans KR', 'Nanum Gothic Coding', 'Gaegu'].every(f => loaded.has(f));
   });
   if (!ok) throw new Error('web fonts did not load — check the network, or render offline with --fonts <dir>');
   return page;

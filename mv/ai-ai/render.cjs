@@ -9,9 +9,9 @@
  * Chromium, draws frames with window.renderFrame(t) and pipes JPEGs into its own ffmpeg; the
  * segments are then concatenated and muxed with the song.
  *
- * Fonts come from Google Fonts. To render offline, pass --fonts with a folder holding
- * BlackHanSans.woff2, NotoSansKR.woff2 (variable), NanumGothicCoding-Bold.woff2 and Gaegu-Bold.woff2;
- * the Google Fonts stylesheet request is then answered with those files instead.
+ * Fonts come from Google Fonts. To render offline, pass --fonts with a folder holding the files named
+ * in FACES below (NotoSansKR/NotoSerifKR as variable fonts); the Google Fonts stylesheet request is then
+ * answered with those files instead.
  */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
@@ -35,14 +35,17 @@ const T_TO = args.to ? +args.to : null;
 const FONTS = args.fonts ? path.resolve(args.fonts) : null;
 
 // Serve local font files in place of the Google Fonts stylesheet (see --fonts above).
+const FACES = [['Black Han Sans', 400, 'BlackHanSans.woff2'], ['Noto Sans KR', '100 900', 'NotoSansKR.woff2'],
+  ['Noto Serif KR', '200 900', 'NotoSerifKR.woff2'], ['IBM Plex Mono', 400, 'IBMPlexMono-Regular.woff2'],
+  ['IBM Plex Mono', 500, 'IBMPlexMono-Medium.woff2'], ['IBM Plex Mono', 700, 'IBMPlexMono-Bold.woff2'],
+  ['Nanum Gothic Coding', 700, 'NanumGothicCoding-Bold.woff2'], ['Gaegu', 700, 'Gaegu-Bold.woff2']];
+const FAMILIES = [...new Set(FACES.map(f => f[0]))];
 let fontCss = null;
 async function openPage(browser) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (FONTS) {
     if (fontCss === null) {
-      const faces = [['Black Han Sans', 400, 'BlackHanSans.woff2'], ['Noto Sans KR', '100 900', 'NotoSansKR.woff2'],
-        ['Nanum Gothic Coding', 700, 'NanumGothicCoding-Bold.woff2'], ['Gaegu', 700, 'Gaegu-Bold.woff2']];
-      fontCss = faces.map(([fam, wt, file]) => {
+      fontCss = FACES.map(([fam, wt, file]) => {
         const data = fs.readFileSync(path.join(FONTS, file)).toString('base64');
         return `@font-face{font-family:'${fam}';font-weight:${wt};font-display:block;src:url(data:font/woff2;base64,${data}) format('woff2')}`;
       }).join('\n');
@@ -51,10 +54,10 @@ async function openPage(browser) {
   }
   await page.goto('file://' + path.join(DIR, 'index.html') + '?render');
   await page.evaluate(() => window.__ready);
-  const ok = await page.evaluate(() => {
+  const ok = await page.evaluate(fams => {
     const loaded = new Set([...document.fonts].filter(f => f.status === 'loaded').map(f => f.family.replace(/["']/g, '')));
-    return ['Black Han Sans', 'Noto Sans KR', 'Nanum Gothic Coding', 'Gaegu'].every(f => loaded.has(f));
-  });
+    return fams.every(f => loaded.has(f));
+  }, FAMILIES);
   if (!ok) throw new Error('web fonts did not load — check the network, or render offline with --fonts <dir>');
   return page;
 }

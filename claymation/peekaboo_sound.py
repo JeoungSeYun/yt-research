@@ -32,11 +32,6 @@ def giggle(f0=3300):
         out[s:s + len(c)] += c
     return out
 
-def flutter(dur):
-    t = tt(dur)
-    n = filt(rng.standard_normal(len(t)), 'bandpass', [400, 2500])
-    return n * (0.5 + 0.5 * np.sin(PI2 * 13 * t)) ** 3 * np.sin(np.pi * t / dur) * 0.9
-
 def rustle(dur=0.4):
     t = tt(dur)
     n = filt(rng.standard_normal(len(t)), 'bandpass', [1800, 6000])
@@ -128,8 +123,8 @@ def sfx(mix, c):
     mix.add(c['land_big'], thud(), 0.95, 0.15)
     for t in c['laugh']:
         mix.add(t, giggle(), 0.55, -0.15)
-    f0, f1 = c['flutter']
-    mix.add(f0, flutter(f1 - f0), 0.5, 0.0)
+    f0, f1 = c['jump']                                        # 폴짝, 떡이 머리 위로
+    mix.add(f0, boing(260, 2.4, 0.4), 0.45, 0.0)
     mix.add(f0, slide_whistle(420, 1300, f1 - f0), 0.35, 0.0)
     mix.add(c['perch'], thud(), 0.35, 0.1)
     mix.add(c['perch'] + 0.03, boing(360, 0.6, 0.3), 0.3, 0.1)

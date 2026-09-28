@@ -18,14 +18,14 @@ sprout.py의 세트·재질·떡이 인형·연기 도구를 그대로 가져다
 import bpy, json, math, os, random, sys
 from math import sin, cos, pi, radians as rad
 import bmesh
+import numpy as np
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sprout as S
-from sprout import (FPS, NF, Track, clamp, lerp, seg, smooth, ease_out, ease_in, back_out, hump,
-                    clay, mesh, empty, xform, lumpify, bm_ico, bm_sphere, bm_ellipsoid, bm_almond,
-                    frame_from_normal, kf, gz, hop_squash)
+from sprout import (FPS, NF, Track, lerp, seg, smooth, ease_out, ease_in, back_out, hump,
+                    clay, mesh, empty, xform, bm_ico, bm_ellipsoid, frame_from_normal, kf, gz, hop_squash)
 
 # ─── 무대 배치 ───
 CAM_POS = Vector((0.0, -3.35, 0.78))
@@ -62,9 +62,6 @@ def free(p, r):
 
 def make_materials():
     B_ = dict(boil=True)
-    S.MAT['chick'] = clay('chick', '#FFE066', rough=0.55, sss=0.25, **B_)
-    S.MAT['tuftc'] = clay('tuftc', '#FFCE3A', sss=0.2, **B_)
-    S.MAT['beak'] = clay('beak', '#FF9A2E', rough=0.45, sss=0.15, **B_)
     S.MAT['bush'] = clay('bush', '#3E9E3A', rough=0.65, sss=0.08, prints=0.5)
     S.MAT['bush2'] = clay('bush2', '#55B544', rough=0.65, sss=0.08, prints=0.5)
     S.MAT['rock'] = clay('rock', '#8E8880', rough=0.75, sss=0.02, prints=0.0, dimple=0.4)
@@ -122,67 +119,89 @@ def build_hearts():
         B['hearts'].append(ob)
 
 
-# ─── 삐약이 ───
-def hit_c(o, d):
-    loc, nor, _, _ = C['bvh'].ray_cast(o, d.normalized())
-    return loc, nor
+# ─── 삐약이 (트리포로 만든 모델) ───
+CHICK_GLB = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'chick_tripo.glb')
 
-def place_c(ob, x, z, embed=0.0):
-    loc, nor = hit_c(Vector((x, -2.0, z)), Vector((0, 1, 0)))
-    ob.location = loc - nor * embed
-    ob.rotation_euler = frame_from_normal(nor).to_euler()
 
-def bm_beak(w, h, l):
-    """얼굴 쪽은 둥글고 끝이 뾰족한 부리 조각 (+Z 방향)."""
-    def f(c):
-        u = (c.z + 1) / 2
-        k = 1 - 0.7 * u
-        return (c.x * w * k, c.y * h * k, u * l)
-    return xform(bm_sphere(16, 12), f)
+def load_glb(path):
+    """GLB를 불러와 메쉬 데이터 하나로 (크기·방향은 prep_tripo.py에서 맞춰 둠)."""
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    new = [o for o in bpy.data.objects if o not in before]
+    ob = next(o for o in new if o.type == 'MESH')
+    me = ob.data
+    me.transform(ob.matrix_world)
+    for o in new:
+        bpy.data.objects.remove(o)
+    return me
+
+
+def clay_from_texture(name, me):
+    """트리포 텍스처 색은 그대로, 그 위에 세트와 같은 점토 결(지문·요철·보일링)을 입힌다."""
+    img = next(n.image for m in me.materials for n in m.node_tree.nodes if n.type == 'TEX_IMAGE')
+    mat = clay(name, '#FFE066', rough=0.55, sss=0.2, var=0.03, boil=True)
+    tx = mat.node_tree.nodes.new('ShaderNodeTexImage')
+    tx.image, tx.location = img, (200, 800)
+    mat.node_tree.links.new(tx.outputs['Color'], S.NODES[name]['hs'].inputs['Color'])
+    old = list(me.materials)
+    me.materials.clear()
+    me.materials.append(mat)
+    for m in old:
+        bpy.data.materials.remove(m)
+    return mat, img
+
+
+def find_eyes(me, img):
+    """텍스처에서 까만 눈동자가 칠해진 정점들을 찾아 양쪽 눈의 중심과 반지름을 구한다."""
+    w, h = img.size
+    px = np.array(img.pixels[:], dtype=np.float32).reshape(h, w, 4)
+    uv = me.uv_layers.active.data
+    pts = {1: [], -1: []}
+    for lp in me.loops:
+        co = me.vertices[lp.vertex_index].co
+        if co.y > 0 or co.z < 0.4 * CHICK_H or abs(co.x) < 0.015:
+            continue
+        u, v = uv[lp.index].uv
+        r, g, b_, _ = px[int(v % 1 * (h - 1)), int(u % 1 * (w - 1))]
+        if r + g + b_ < 0.25:
+            pts[1 if co.x > 0 else -1].append(co.copy())
+    eyes = {}
+    for s, lst in pts.items():
+        c = sum(lst, Vector()) / len(lst)
+        eyes[s] = (c, sorted((p - c).length for p in lst)[int(len(lst) * 0.9)])
+    return eyes
+
+
+CHICK_H = 0.3
 
 
 def build_chick():
     root = empty('C_root')
     jit = empty('C_jit', root)
     sq = empty('C_squash', jit)
-
-    def shape(c):
-        k = 1.0 + 0.12 * (0.25 - c.z)                  # 아래가 조금 더 통통
-        return (c.x * 0.135 * k, c.y * 0.125 * k, (c.z + 1.0) * 0.15)
-    bm = xform(bm_ico(4), shape)
-    lumpify(bm, 0.003, 5.0)
-    C['bvh'] = BVHTree.FromBMesh(bm)
-    body = mesh('C_body', bm, S.MAT['chick'], sq)
+    me = load_glb(CHICK_GLB)
+    mat, img = clay_from_texture('chick_tripo', me)
+    body = S.link(bpy.data.objects.new('C_body', me))
+    body.parent = sq
+    me.polygons.foreach_set('use_smooth', [True] * len(me.polygons))
     C.update(root=root, jit=jit, sq=sq, body=body)
+    C['bvh'] = BVHTree.FromPolygons([v.co for v in me.vertices], [p.vertices for p in me.polygons])
 
-    for side, sx in (('L', 1), ('R', -1)):
-        eye = mesh(f'C_eye{side}', bm_ico(3), S.MAT['eye'], body, sub=1)
-        mesh(f'C_shine{side}', bm_ico(2), S.MAT['shine'], eye, loc=(-0.35, 0.42, 0.82), scl=(0.26, 0.22, 0.22), sub=1)
-        ck = mesh(f'C_cheek{side}', bm_ico(3), S.MAT['cheek'], body, scl=(0.022, 0.015, 0.007), sub=1)
-        place_c(ck, sx * 0.084, 0.128, embed=0.004)
-        loc, _ = hit_c(Vector((sx * 2.0, 0.0, 0.14)), Vector((-sx, 0, 0)))
-        wing = mesh(f'C_wing{side}', xform(bm_ico(3), lambda c: (c.x * 0.022, c.y * 0.05, c.z * 0.066 - 0.05)),
-                    S.MAT['chick'], body)
-        wing.location = loc + Vector((-sx * 0.012, 0, 0))
-        wing.rotation_mode = 'QUATERNION'
-        foot = mesh(f'C_foot{side}', bm_ellipsoid(0.032, 0.048, 0.013, 3), S.MAT['beak'], jit, loc=(sx * 0.055, -0.06, 0.01))
-        C.update({'eye' + side: eye, 'wing' + side: wing, 'foot' + side: foot, 'shoulder' + side: wing.location.copy()})
-
-    loc, nor = hit_c(Vector((0, -2.0, 0.145)), Vector((0, 1, 0)))
-    beak = empty('C_beak', body, loc=loc - nor * 0.006)
-    beak.rotation_euler = frame_from_normal(nor).to_euler()
-    mesh('C_beak_top', bm_beak(0.028, 0.013, 0.046), S.MAT['beak'], beak, loc=(0, 0.005, 0), sub=1)
-    jaw = empty('C_jaw', beak, loc=(0, -0.003, 0))
-    mesh('C_beak_low', bm_beak(0.022, 0.009, 0.034), S.MAT['beak'], jaw, loc=(0, -0.004, 0), sub=1)
-
-    top, _ = hit_c(Vector((0, 0.01, 2.0)), Vector((0, 0, -1)))
-    tuft = empty('C_tuft', body, loc=top - Vector((0, 0, 0.006)))
-    for i, a in enumerate((-28, 0, 28)):
-        mesh(f'C_tuft{i}', bm_almond(0.055 - 0.01 * abs(i - 1), 0.022, 0.01, taper=(1.0, 0.3), curl=0.35),
-             S.MAT['tuftc'], tuft, rot=(rad(90 - abs(a) * 0.6), 0, rad(a)), sub=1)
-    C.update(jaw=jaw, tuft=tuft)
-    # 눈을 가릴 때 날개 끝이 닿을 곳
-    C['eye_pos'] = {sd: hit_c(Vector((sx * 0.052, -2.0, 0.185)), Vector((0, 1, 0)))[0] for sd, sx in (('L', 1), ('R', -1))}
+    # 눈꺼풀: 몸과 같은 재질, UV를 몸 옆면(노란색) 한 점에 모아 색을 맞춘다
+    _, _, fi, _ = C['bvh'].ray_cast(Vector((2.0, 0.02, 0.4 * CHICK_H)), Vector((-1, 0, 0)))
+    poly = me.polygons[fi]
+    body_uv = sum((me.uv_layers.active.data[i].uv for i in poly.loop_indices), Vector((0, 0))) / poly.loop_total
+    for s, (c, r) in find_eyes(me, img).items():
+        side = 'L' if s > 0 else 'R'
+        loc, nor, _, _ = C['bvh'].ray_cast(Vector((c.x, -2.0, c.z)), Vector((0, 1, 0)))
+        frame = frame_from_normal(nor)
+        lid = mesh(f'C_lid{side}', bm_ellipsoid(1.0, 1.0, 1.0, 3), mat, body, sub=1)
+        uvl = lid.data.uv_layers.new(name='UVMap')
+        for d in uvl.data:
+            d.uv = body_uv
+        lid.rotation_euler = frame.to_euler()
+        lid.scale = (0, 0, 0)
+        C['lid' + side] = (lid, loc, frame, r * 1.25)
 
 
 # ─── 떡이 연기 (sprout.py의 떡이 인형에 이번 이야기의 트랙을 끼운다) ───
@@ -262,39 +281,26 @@ C_HOPS = [
     (12.03, 12.22, 0.025, CB, CB),
 ]
 COUNT_T = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
-FLY_T0, FLY_T1 = 12.3, 12.95                       # 떡이 머리 위로 푸드덕
+FLY_T0, FLY_T1 = 12.3, 12.95                       # 떡이 머리 위로 폴짝
 
 _to_rock, _at_rock = face(C0, RF), face(RF, ROCK)
 _to_pot, _at_pot = face(RF, PF), face(PF, POT) % 360
 _to_bush = 360 + face(PF, BF)
-C_TH = Track((0, 0), (3.4, 0), (3.5, -40), (3.7, 40), (3.95, _to_rock), (4.7, _to_rock), (4.8, _at_rock), (5.25, _at_rock),
+C_TH = Track((0, 0), (0.3, 0), (0.55, 180, ease_out), (3.05, 180), (3.3, 0, ease_out), (3.5, -40), (3.7, 40), (3.95, _to_rock), (4.7, _to_rock), (4.8, _at_rock), (5.25, _at_rock),
              (5.45, 0), (5.7, _to_pot), (6.45, _to_pot), (6.6, _at_pot), (6.95, _at_pot), (7.15, 360), (7.3, 360),
              (7.4, 440, ease_out), (8.3, 440), (8.45, 360), (8.8, 360), (8.9, _to_bush), (9.95, _to_bush), (10.1, 460),
              (10.3, 460), (10.6, 410), (12.3, 410), (12.95, 360), (15, 360))
-C_LEAN = Track((0, 0), (4.75, 0), (4.95, 28), (5.2, 28), (5.35, 0), (6.5, 0), (6.7, 25), (6.95, 25), (7.1, 0),
+C_LEAN = Track((0, 0), (0.55, 0), (0.7, 10), (3.0, 10), (3.1, 0), (4.75, 0), (4.95, 28), (5.2, 28), (5.35, 0), (6.5, 0), (6.7, 25), (6.95, 25), (7.1, 0),
                (8.8, 0), (8.9, 14), (9.95, 14), (10.1, 20), (10.28, 20), (10.35, -25, ease_out), (10.6, -15), (10.9, 0), (15, 0))
 C_ROLL = Track((0, 0), (5.3, 0), (5.45, 14), (5.65, 0), (7.0, 0), (7.15, -14), (7.3, 0), (8.35, 0), (8.5, 10), (8.75, 0),
                (11.05, 0), (11.2, -8), (11.5, 8), (11.8, -8), (12.08, 6), (12.3, 0), (15, 0))
 C_SQX = Track((0, 0), (7.3, 0), (7.4, 0.06), (8.3, 0.06), (8.4, 0), (10.55, 0), (10.62, -0.22), (10.9, -0.05), (11.1, 0),
-              (12.95, 0), (13.0, -0.2), (13.2, 0.04), (13.35, 0), (15, 0))
-
-W_REST, W_OUT, W_UP = (-0.3, 0.05, -0.95), (-0.92, -0.1, 0.38), (-0.55, -0.1, 0.83)
-W_BACK, W_SHRUG = (-0.3, 0.6, -0.74), (-0.88, -0.35, 0.05)
-W_FLAP = ((-0.9, 0.0, 0.45), (-0.85, 0.0, -0.5))
-WINGS = Track((0, W_REST), (0.2, W_REST), (3.05, W_REST), (3.2, W_OUT, ease_out), (3.5, W_REST), (5.3, W_REST),
-              (5.4, W_SHRUG), (5.65, W_SHRUG), (5.8, W_REST), (7.3, W_REST), (7.4, W_OUT), (7.6, W_REST), (8.85, W_BACK),
-              (9.95, W_BACK), (10.33, W_OUT, ease_out), (10.6, W_OUT), (10.9, W_REST), (13.3, W_REST), (13.45, W_UP), (15, W_UP))
-COVER = Track((0, 0.0), (0.2, 0.0), (0.45, 1.0, back_out), (3.05, 1.0), (3.15, 0.0))     # 날개로 눈 가리기
-FLAP = Track((0, 0.0), (11.1, 0.0), (11.12, 1.0), (12.25, 1.0), (12.3, 1.0), (12.95, 1.0), (13.0, 0.0))
+              (12.25, 0), (12.32, 0.16), (12.7, 0.05), (12.95, 0), (13.0, -0.2), (13.2, 0.04), (13.35, 0), (15, 0))
 
 C_BLINKS = [4.0, 5.9, 7.15, 11.0, 13.1, 14.2]
-C_OPEN = Track((0, 1), (0.2, 1), (0.3, 0.1), (3.05, 0.1), (3.12, 1), (8.3, 1), (8.4, 0.55), (8.75, 0.55), (8.8, 1),
-               (11.1, 1), (11.15, 0.3), (12.3, 0.3), (12.35, 1), (13.3, 1), (13.4, 0.35), (15, 0.35))
-C_SIZE = Track((0, 1), (7.3, 1), (7.4, 1.25), (8.3, 1.2), (8.4, 1), (10.3, 1), (10.33, 1.45), (10.9, 1.3), (11.1, 1))
-C_WINK = Track((0, 1.0), (8.45, 1.0), (8.5, 0.1), (8.66, 0.1), (8.72, 1.0))    # 관객에게 찡긋
-C_UP = Track((0, 0), (12.3, 0), (12.4, 0.8), (12.95, 0.8), (13.1, 0), (15, 0))
-CHIRPS = [(3.12, 0.18), (7.38, 0.12), (10.3, 0.25), (11.18, 0.14), (11.48, 0.14), (11.78, 0.14), (12.05, 0.14),
-          (13.02, 0.16), (13.9, 0.15), (14.5, 0.15)]
+LID = Track((0, 0.0), (8.3, 0.0), (8.4, 0.45), (8.75, 0.45), (8.8, 0.0), (11.1, 0.0), (11.15, 0.62),
+            (12.3, 0.62), (12.35, 0.0), (13.3, 0.0), (13.4, 0.55), (15, 0.55))     # 슬쩍 반쯤 감기·눈웃음
+WINK = Track((0, 0.0), (8.45, 0.0), (8.5, 1.0), (8.66, 1.0), (8.72, 0.0))         # 관객에게 찡긋
 
 
 def hop_xy(hops, t, start):
@@ -323,7 +329,7 @@ def pose_chick(t, f):
     th, lean = rad(C_TH(t)), rad(C_LEAN(t))
     roll = rad(C_ROLL(t) + (4 * (1 if int(t * 2) % 2 else -1) if 0.5 <= t < 3.1 else 0))   # 셀 때 좌우로 까딱
     loc = Vector((xy.x, xy.y, gz(xy) + hz))
-    if t >= FLY_T0:                                   # 푸드덕 날아서 떡이 머리 위로
+    if t >= FLY_T0:                                   # 폴짝 뛰어올라 떡이 머리 위로
         head, s = perch_point(t, f)
         u = smooth(seg(t, FLY_T0, FLY_T1))
         start = Vector((CB.x, CB.y, gz(CB)))
@@ -341,40 +347,12 @@ def pose_chick(t, f):
     kf(C['sq'], 'scale', (sxy, sxy, sz), f)
     kf(C['sq'], 'rotation_euler', (lean, roll, 0), f)
 
-    blink = 0.12 if any(b <= t < b + 0.17 for b in C_BLINKS) else 1.0
-    es = C_SIZE(t)
-    for side, sx in (('L', 1), ('R', -1)):
-        eye = C['eye' + side]
-        place_c(eye, sx * 0.052, 0.185 + 0.02 * C_UP(t), embed=0.005)
-        eye.keyframe_insert('location', frame=f)
-        eye.keyframe_insert('rotation_euler', frame=f)
-        wink = C_WINK(t) if side == 'L' else 1.0
-        kf(eye, 'scale', (0.022 * es, 0.03 * es * C_OPEN(t) * blink * wink, 0.013 * es), f)
-        # 날개: 눈 가리기 / 퍼덕이기 / 포즈
-        d = Vector(W_FLAP[f % 2] if FLAP(t) > 0.5 else WINGS(t))
-        d.x *= -sx
-        d.normalize()
-        stretch = 1.0
-        cv = COVER(t)
-        if cv > 0:
-            dh = C['eye_pos'][side] + Vector((0, -0.02, 0)) - C['shoulder' + side]
-            d = d.lerp(dh.normalized(), clamp(cv)).normalized()
-            stretch = lerp(1.0, dh.length / 0.115, clamp(cv))
-        kf(C['wing' + side], 'rotation_quaternion', Vector((0, 0, -1)).rotation_difference(d), f)
-        kf(C['wing' + side], 'scale', (1, 1, stretch), f)
-        air = loc.z - gz(xy) if t < FLY_T0 else 0.0
-        kf(C['foot' + side], 'location', (sx * 0.055, -0.06, 0.01 + 0.3 * air), f)
-
-    beak = max([hump(t, a, a + d) for a, d in CHIRPS] + [0.0])
-    if 11.1 <= t < 12.3:
-        beak = max(beak, 0.6)
-    kf(C['jaw'], 'rotation_euler', (rad(38 * beak), 0, 0), f)
-
-    wx = 0.0
-    for (t0, t1, h, a, b) in C_HOPS:
-        if t >= t1:
-            wx += 0.4 * min(1, h / 0.07) * math.exp(-5 * (t - t1)) * sin(2 * pi * 2.8 * (t - t1))
-    kf(C['tuft'], 'rotation_euler', (wx, 0.1 * sin(2 * pi * 0.7 * t), 0), f)
+    blink = 1.0 if any(b <= t < b + 0.17 for b in C_BLINKS) else 0.0
+    for side in ('L', 'R'):                           # 눈꺼풀: 깜빡임·윙크·눈웃음
+        lid, eye, frame, r = C['lid' + side]
+        k = max(LID(t), blink, WINK(t) if side == 'L' else 0.0)
+        kf(lid, 'location', eye + frame.col[2] * 0.003 + frame.col[1] * (1 - k) * r, f)
+        kf(lid, 'scale', (r, r * k, r * 0.45) if k > 0 else (0, 0, 0), f)
     return loc
 
 
@@ -451,7 +429,7 @@ def cues():
             'ready': 3.12, 'hop_c': [[t1, h, b.x] for (t0, t1, h, a, b) in C_HOPS if h >= 0.05 and t1 < 10.6],
             'peek': [4.95, 6.7], 'nope': [5.4, 7.05], 'giggle': 6.85, 'notice': 7.38, 'duck': 7.6, 'sly': 8.42,
             'tiptoe': [h[1] for h in C_HOPS[5:8]], 'kkakkung': 10.22, 'startle': 10.3, 'land_big': 10.78,
-            'bottom': 10.62, 'laugh': [11.18, 11.48, 11.78, 12.05], 'land': land, 'flutter': [FLY_T0, FLY_T1],
+            'bottom': 10.62, 'laugh': [11.18, 11.48, 11.78, 12.05], 'land': land, 'jump': [FLY_T0, FLY_T1],
             'perch': FLY_T1, 'hearts': [h[0] for h in HEARTS], 'chirps': [13.9, 14.5]}
 
 

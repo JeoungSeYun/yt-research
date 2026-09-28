@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI AI, 나는 빼 — Thumbnail</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@700&family=IBM+Plex+Mono:wght@400;500;700&family=Nanum+Gothic+Coding:wght@700&family=Noto+Sans+KR:wght@300;500;900&family=Noto+Serif+KR:wght@500;900&display=block">
+<style>
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; width: min(100vw, 177.78vh); height: auto; margin: 0 auto; }
+</style>
+</head>
+<body>
+<!-- YouTube thumbnail, drawn at 1920×1080 with the video's own parts (export at 1280×720) -->
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="timing.js"></script>
+<script src="glyphs.js"></script>
+<script src="lib.js"></script>
+<script src="parts.js"></script>
+<script src="kit.js"></script>
+<script>
+'use strict';
+(async () => {
+  const M = window.MV, K = window.KIT, PT = window.PARTS;
+  const { W, H, TAU, C, font, glow } = M;
+  const g = document.getElementById('c').getContext('2d');
+  M.setMeasureCtx(g);
+  const fams = Object.values(M.FF).map(([w, f]) => `${w} 100px ${f.split(',')[0]}`);
+  await Promise.all(fams.map(f => document.fonts.load(f, 'AI 나는빼,' + (window.GLYPHS || ''))));
+  await document.fonts.ready;
+  M.buildTextures([]);
+
+  const t = 11.35; // a moment in the song, for the eye's pulse and the crown's glint
+  // ── background: dark red room lit by the eye
+  K.vgrad(g, [[0, '#23050a'], [0.55, '#100607'], [1, '#070606']]);
+  const EX = 1470, EY = 590, ER = 235;
+  K.rays(g, EX, EY, 30, 2400, 0.18, '#ff2a3d', 0.07);
+  glow(g, EX, EY, 1000, '#ff2a3d', 0.32);
+  K.topo(g, t, EX, EY, { n: 24, gap: 44, a: 0.2, col: '#ff7a66', seed: 3 });
+  K.crosses(g, 120, C.line, 0.05);
+  for (let i = 0; i < 22; i++) K.dot(g, M.hash(i * 3.1) * W, M.hash(i * 5.7) * H, 20 + M.hash(i * 9.3) * 70, i % 3 ? '#ff2a3d' : '#ffb35c', 0.12);
+
+  // ── the AI: eye + crown, looking down at the human
+  PT.eye(g, t, EX, EY, ER, { look: [-0.9, 0.55], heat: 1.25 });
+  PT.crown(g, EX + 12, EY - ER * 0.7, 1.75, C.amber, -0.13, { t: 0.32 });
+
+  // ── the human: two hands up, trembling
+  const HANDS = [[250, -0.15, true], [700, 0.15, false]];
+  for (const [x, rot, flip] of HANDS) PT.hand(g, x, 1120, 1.22, rot, flip, { spread: 0.95, cuff: C.acc });
+  g.save(); g.strokeStyle = 'rgba(255,244,234,0.85)'; g.lineWidth = 7; g.lineCap = 'round';
+  for (const [x, rot] of HANDS) for (const side of [-1, 1]) for (let k = 0; k < 2; k++) {
+    const cx = x + side * 125 + Math.sin(rot) * 260, r = 44 + k * 26;
+    g.beginPath(); g.arc(cx, 780, r, side < 0 ? Math.PI * 0.8 : -Math.PI * 0.2, side < 0 ? Math.PI * 1.2 : Math.PI * 0.2); g.stroke();
+  }
+  g.restore();
+  g.fillStyle = '#8fd8ff'; g.beginPath(); g.moveTo(930, 680); g.quadraticCurveTo(952, 716, 944, 734); g.arc(930, 728, 15, 0.4, Math.PI - 0.1); g.quadraticCurveTo(908, 716, 930, 680); g.fill();
+
+  // vignette under the title, so the words stay bright
+  g.drawImage(M.TEX.vignette, 0, 0);
+
+  // ── title
+  g.save();
+  g.font = font(270, 'disp'); g.textBaseline = 'alphabetic'; g.lineJoin = 'round';
+  g.shadowColor = 'rgba(0,0,0,0.7)'; g.shadowBlur = 40; g.shadowOffsetY = 10;
+  g.fillStyle = '#fff4ea'; g.fillText('AI AI,', 92, 312);
+  g.restore();
+  g.save();
+  g.translate(96, 372); g.rotate(-0.035);
+  g.font = font(250, 'disp'); g.textBaseline = 'alphabetic';
+  const tw = g.measureText('나는 빼').width;
+  g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 50; g.shadowOffsetY = 16;
+  g.fillStyle = C.acc; g.fillRect(-10, 0, tw + 70, 290);
+  g.shadowColor = 'transparent';
+  g.fillStyle = '#120806'; g.fillText('나는 빼', 25, 238);
+  g.restore();
+
+  // ── camera HUD, like the video
+  g.save(); g.strokeStyle = 'rgba(239,233,223,0.8)'; g.lineWidth = 4; g.lineCap = 'square';
+  const m = 44, L = 34;
+  g.beginPath();
+  g.moveTo(m, m + L); g.lineTo(m, m); g.lineTo(m + L, m); g.moveTo(W - m - L, m); g.lineTo(W - m, m); g.lineTo(W - m, m + L);
+  g.moveTo(W - m, H - m - L); g.lineTo(W - m, H - m); g.lineTo(W - m - L, H - m); g.moveTo(m + L, H - m); g.lineTo(m, H - m); g.lineTo(m, H - m - L);
+  g.stroke(); g.restore();
+  g.fillStyle = C.red; g.beginPath(); g.arc(W - m - 150, m + 30, 12, 0, TAU); g.fill();
+  M.txt(g, 'REC', W - m - 128, m + 42, 32, '#efe9df', 'monoB');
+
+  // ── film grain on top of everything
+  g.save(); g.globalAlpha = 0.06; g.globalCompositeOperation = 'overlay'; g.drawImage(M.TEX.grain[0], 0, 0, W, H); g.restore();
+  window.__done = true;
+})();
+</script>
+</body>
+</html>

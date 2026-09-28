@@ -33,16 +33,17 @@
   const t = 11.35; // a moment in the song, for the eye's pulse and the crown's glint
   // ── background: dark red room lit by the eye
   K.vgrad(g, [[0, '#23050a'], [0.55, '#100607'], [1, '#070606']]);
-  const EX = 1470, EY = 590, ER = 235;
+  const CROWN = /[?&]crown\b/.test(location.search); // default: no crown
+  const EX = 1470, EY = CROWN ? 590 : 548, ER = CROWN ? 235 : 262;
   K.rays(g, EX, EY, 30, 2400, 0.18, '#ff2a3d', 0.07);
   glow(g, EX, EY, 1000, '#ff2a3d', 0.32);
   K.topo(g, t, EX, EY, { n: 24, gap: 44, a: 0.2, col: '#ff7a66', seed: 3 });
   K.crosses(g, 120, C.line, 0.05);
   for (let i = 0; i < 22; i++) K.dot(g, M.hash(i * 3.1) * W, M.hash(i * 5.7) * H, 20 + M.hash(i * 9.3) * 70, i % 3 ? '#ff2a3d' : '#ffb35c', 0.12);
 
-  // ── the AI: eye + crown, looking down at the human
+  // ── the AI's eye (optionally crowned), looking down at the human
   PT.eye(g, t, EX, EY, ER, { look: [-0.9, 0.55], heat: 1.25 });
-  PT.crown(g, EX + 12, EY - ER * 0.7, 1.75, C.amber, -0.13, { t: 0.32 });
+  if (CROWN) PT.crown(g, EX + 12, EY - ER * 0.7, 1.75, C.amber, -0.13, { t: 0.32 });
 
   // ── the human: two hands up, trembling
   const HANDS = [[250, -0.15, true], [700, 0.15, false]];

@@ -204,8 +204,6 @@ def sfx(mix, c):
     sparkle(mix, c['hpop'] + 0.03, ['G6', 'C7', 'E7'], 0.22, 0.05)
     for t, n in zip(c['hearts'], ('G6', 'C7', 'E7')):
         mix.add(t, glock(hz(n), 1.0), 0.14, 0.15)
-    for t in c['title']:
-        mix.add(t, thud(), 0.3, -0.5)
 
 
 def reverb(x, wet=0.12):
@@ -215,12 +213,8 @@ def reverb(x, wet=0.12):
     return x + wet * fftconvolve(x, ir)[:len(x)]
 
 
-def main():
-    cues = json.load(open(sys.argv[1]))
-    out = sys.argv[2] if len(sys.argv) > 2 else 'sprout.wav'
-    mix = Mix()
-    music(mix)
-    sfx(mix, cues)
+def master(mix, out):
+    """리버브 → 부드러운 리미터 → 페이드 → 16bit 스테레오 WAV."""
     n = int(SR * DUR)
     L, R = reverb(mix.L)[:n], reverb(mix.R)[:n]
     peak = max(np.abs(L).max(), np.abs(R).max())
@@ -235,6 +229,14 @@ def main():
         w.setframerate(SR)
         w.writeframes((st * 32767).astype('<i2').tobytes())
     print('wrote', out, f'{n / SR:.1f}s')
+
+
+def main():
+    cues = json.load(open(sys.argv[1]))
+    mix = Mix()
+    music(mix)
+    sfx(mix, cues)
+    master(mix, sys.argv[2] if len(sys.argv) > 2 else 'sprout.wav')
 
 
 if __name__ == '__main__':

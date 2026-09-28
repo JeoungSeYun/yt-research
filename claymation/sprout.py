@@ -342,7 +342,6 @@ def make_materials():
     MAT['mush_cap'] = clay('mush_cap', '#E8392F', sss=0.15, **S)
     MAT['mush_stem'] = clay('mush_stem', '#F4EEDD', sss=0.2, **S)
     MAT['daisy'] = clay('daisy', '#FFFFFF', sss=0.2, **S)
-    MAT['title'] = clay('title', '#FF7A2E', sss=0.15, **B)
     MAT['symbol'] = clay('symbol', '#FFD23A', sss=0.15, **B)
     MAT['heart'] = clay('heart', '#FF3D63', sss=0.2, **B)
     MAT['water'] = water_mat()
@@ -797,7 +796,6 @@ DROP_TS = [2.42, 2.66, 2.9, 3.14, 3.38, 3.62, 3.86]
 DROP_FALL = 0.25
 DROPS = [(ts + k * 0.05, rng.uniform(-0.012, 0.012), rng.uniform(-0.012, 0.012)) for ts in DROP_TS for k in (0, 1)]
 HEARTS = [(13.75, Vector((0.22, -0.14, 0.52))), (13.95, Vector((-0.1, -0.24, 0.6))), (14.2, Vector((0.1, -0.18, 0.72)))]
-TITLE = [('새', 13.95, Vector((-0.86, 0.05, 0.86))), ('싹', 14.1, Vector((-0.56, 0.05, 0.86)))]
 
 def build_fx():
     FX['drops'] = []
@@ -809,9 +807,7 @@ def build_fx():
     FX['q'] = clay_text('Sym_q', '?', 0.3, MAT['symbol'], extrude=0.03, bevel=0.02, voxel=0.006)
     FX['x'] = clay_text('Sym_x', '!', 0.32, MAT['symbol'], extrude=0.03, bevel=0.022, voxel=0.006)
     FX['hearts'] = [clay_text(f'Heart{i}', '♥', 0.13, MAT['heart'], extrude=0.018) for i in range(len(HEARTS))]
-    FX['title'] = [clay_text(f'Title_{ch}', ch, 0.3, MAT['title'], extrude=0.035, bevel=0.02, voxel=0.005, smooth_iter=5)
-                   for ch, _, _ in TITLE]
-    for ob in [FX['q'], FX['x']] + FX['hearts'] + FX['title']:
+    for ob in [FX['q'], FX['x']] + FX['hearts']:
         ob.scale = (0, 0, 0)
 
 
@@ -904,6 +900,7 @@ HFLOWER = Track((0, 0.0), (13.2, 0.0), (13.42, 1.0, back_out))
 QMARK = Track((0, 0), (6.05, 0), (6.25, 1.0, back_out), (6.95, 1.0), (7.1, 0.0, ease_in))
 XMARK = Track((0, 0), (10.0, 0), (10.12, 1.0, back_out), (10.62, 1.0), (10.74, 0.0, ease_in))
 SWAY_T0, SWAY_P = 13.8, 0.92
+SPROUT_EXTRA = Track((0, (0.0, 0.0)))                 # 머리 새싹의 연기용 추가 기울기 (x, y)
 
 
 def hop_squash(t, t0, t1, h):
@@ -1008,7 +1005,7 @@ def pose_tteogi(t, f):
     hw = HOLD(t)
     inv = body_world(s).inverted() if hw > 0 else None
     cw = can_world(t, f) if hw > 0 else None
-    wave = sin(2 * pi * (t - SWAY_T0) / SWAY_P) if t > 13.9 else 0.0
+    wave = sin(2 * pi * (t - SWAY_T0) / SWAY_P) if t > SWAY_T0 + 0.1 else 0.0
     for side, sx in (('L', 1), ('R', -1)):
         d = Vector(ARMS(t))
         d.x *= -sx
@@ -1039,7 +1036,8 @@ def pose_tteogi(t, f):
             wx -= 0.2 * k * sin(pi * seg(t, t0, t1))
     dth = rad(TH(t) - TH(t - 1 / FPS))
     wy = -clamp(dth * 1.5, -0.5, 0.5) + 0.2 * sway(t - 0.12)
-    kf(K['sprout'], 'rotation_euler', (wx, wy, 0), f)
+    ex, ey = SPROUT_EXTRA(t)
+    kf(K['sprout'], 'rotation_euler', (wx + ex, wy + ey, 0), f)
     hs = HFLOWER(t)
     kf(K['hflower'], 'scale', (hs, hs, hs), f)
     for pv in K['hpetals']:
@@ -1171,17 +1169,6 @@ def pose_props(t, f, s):
         kf(ob, 'rotation_euler', (rad(80), rad(10 * sin(2 * pi * 1.3 * (t - t0))), 0), f)
         kf(ob, 'scale', (k, k, k), f)
 
-    for ob, (_, t0, p) in zip(FX['title'], TITLE):
-        if t < t0:
-            k, z = 0.0, 1.2
-        else:
-            k = 1.0
-            z = 1.2 * (1 - ease_in(seg(t, t0, t0 + 0.25)))
-        sq = 1 - 0.3 * hump(t, t0 + 0.25, t0 + 0.42) + 0.08 * hump(t, t0 + 0.42, t0 + 0.6) if t >= t0 else 1
-        kf(ob, 'location', p + Vector((0, 0, z)), f)
-        kf(ob, 'rotation_euler', (rad(84), 0, rad(3 if ob is FX['title'][0] else -4)), f)
-        kf(ob, 'scale', (k / math.sqrt(sq), k / math.sqrt(sq), k * sq), f)
-
     # 초점: 대부분 떡이, 꽃이 자랄 땐 꽃 쪽으로
     fl = flower_head_world(t, f)
     me = Vector((s['xy'].x, s['xy'].y, s['z'] + 0.25))
@@ -1220,7 +1207,7 @@ def animate():
 def cues():
     c = {'land': [], 'drop': [], 'pop': 10.06, 'hpop': 13.2, 'qmark': 6.05, 'xmark': 10.0,
          'rumble': 8.62, 'grow': 8.92, 'sigh': 7.3, 'setdown': 4.5, 'whoosh': 10.36,
-         'hearts': [h[0] for h in HEARTS], 'title': [x[1] + 0.25 for x in TITLE], 'bow': 12.5}
+         'hearts': [h[0] for h in HEARTS], 'bow': 12.5}
     for (t0, t1, h, a, b) in HOPS:
         c['land'].append([t1, h, b.x])
     for ts, _, _ in DROPS:

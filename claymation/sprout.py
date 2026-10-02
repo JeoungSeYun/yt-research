@@ -157,7 +157,7 @@ def reset_scene():
 
 # ─── 재질 ───
 def clay(name, hexcol, rough=0.55, sss=0.15, prints=1.0, bump=1.0, boil=False,
-         spec=0.4, var=0.06, dimple=0.0, emit=0.0, coat=0.0):
+         spec=0.4, var=0.06, dimple=0.0, emit=0.0, coat=0.0, tex_scale=1.0):
     """손으로 주무른 점토: 덩어리 요철 + 지문 자국 + 잔결 + 약간의 색 얼룩.
     boil=True면 프레임마다 결이 조금씩 바뀐다(스톱모션 '보일링')."""
     col = srgb(hexcol)
@@ -208,6 +208,11 @@ def clay(name, hexcol, rough=0.55, sss=0.15, prints=1.0, bump=1.0, boil=False,
         bs.inputs['Emission Strength'].default_value = emit
 
     co = nd('ShaderNodeTexCoord', -1700, 0).outputs['Object']
+    if tex_scale != 1.0:                    # 작은 인형이면 지문·결을 그만큼 촘촘하게
+        sc_ = nd('ShaderNodeVectorMath', -1600, -150, operation='SCALE')
+        lk(co, sc_.inputs[0])
+        sc_.inputs['Scale'].default_value = tex_scale
+        co = sc_.outputs['Vector']
     boil_socks = []
     if boil:                                # 프레임마다 결을 살짝 밀어 '보일링'
         mp = nd('ShaderNodeMapping', -1550, 0)

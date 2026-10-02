@@ -84,7 +84,11 @@ def plan():
 
 
 # ─── 조각 영상 ───
-LOOK = ("eq=brightness='0.010*(random(0)-0.5)':eval=frame,vignette=PI/7,noise=alls=3:allf=t")
+def look(sh):
+    """그레인·비네팅·조명 깜빡임. 불이 있는 장면은 모닥불처럼 조금 더 일렁이게."""
+    amp = 0.045 if 'fire' in sh.get('sfx', []) else 0.010
+    grade = "colorbalance=rs=-0.04:bs=0.05:rh=0.03:bh=-0.03"   # 그림자는 살짝 푸르게, 밝은 곳은 따뜻하게
+    return f"eq=brightness='{amp}*(random(0)-0.5)':eval=frame,{grade},vignette=PI/6.5,noise=alls=3:allf=t"
 
 def zoompan(move, n, focus=(0.5, 0.5)):
     """move: in / out / left / right / up / down / hold. n = 12fps 장 수."""
@@ -122,17 +126,18 @@ def render(seg, idx):
     path = os.path.join(SEG, f"{idx:03d}_{seg['id']}.mp4")
     clip = os.path.join(CLIP, seg['id'] + '.mp4')
     if sh.get('clip') and os.path.exists(clip):
-        native = 60                                        # 5초 클립의 짝수 장 수(12fps)
+        native = int(subprocess.run(['ffprobe', '-v', 'error', '-count_frames', '-select_streams', 'v:0', '-show_entries',
+                                     'stream=nb_read_frames', '-of', 'csv=p=0', clip], capture_output=True, text=True).stdout) // 2
         slow = min(max(n12 / native, 1.0), 1.6)            # 모자라면 최대 1.6배까지 느리게
         hold = max(0.0, n24 / FPS - native * slow / 12)
         vf = (f"select='not(mod(n\\,2))',setpts=N/(12*TB)*{slow:.4f},"
-              f"scale=1920:1084:flags=lanczos,crop=1920:1080,{LOOK},"
+              f"scale=1920:1084:flags=lanczos,crop=1920:1080,{look(sh)},"
               f"tpad=stop_mode=clone:stop_duration={hold + 0.2:.3f},fps={FPS}{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
         cmd = ['ffmpeg', '-v', 'error', '-y', '-i', clip, '-vf', vf]
     else:
         img = os.path.join(IMG, seg['id'] + '.png')
         vf = (f"scale=3840:2172:flags=lanczos,crop=3840:2160,{zoompan(sh.get('move', 'in'), n12, sh.get('focus', (0.5, 0.5)))},"
-              f"{LOOK},fps={FPS}{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
+              f"{look(sh)},fps={FPS}{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
         cmd = ['ffmpeg', '-v', 'error', '-y', '-i', img, '-vf', vf]
     cmd += ['-frames:v', str(n24), '-r', str(FPS), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', path]
     subprocess.run(cmd, check=True)

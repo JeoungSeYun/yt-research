@@ -23,6 +23,8 @@ rng = random.Random(7)
 
 # ─── 장면·렌더 ───
 def new_scene(res=(1920, 1080), samples=64):
+    MAT.clear()                                            # 장면을 새로 열면 이전 재질은 모두 사라진다
+    S.NODES.clear()
     sc = S.reset_scene()
     S.SC = sc
     S.MAT = MAT
@@ -63,11 +65,32 @@ def materials():
     MAT['char'] = C('char', '#2A1D16', rough=0.8, sss=0.0, prints=0.2, bump=1.5)
     MAT['stone'] = C('stone', '#4F4A44', rough=0.85, sss=0.0, prints=0.0, bump=4.0, dimple=0.3, var=0.18)
     MAT['ember'] = C('ember', '#FF5A14', rough=0.6, sss=0.0, prints=0.0, emit=2.5)
-    MAT['shell'] = C('shell', '#F3D9C6', rough=0.35, sss=0.25, prints=0.2)
+    MAT['shell'] = C('shell', '#EBD3BC', rough=0.35, sss=0.25, prints=0.2, var=0.15)
     MAT['ochre'] = C('ochre', '#A9442A', rough=0.6, sss=0.1, prints=0.2)
     MAT['rock'] = rock_mat('rock', '#B89470', '#7A5E45')
     MAT['floor'] = rock_mat('floor', '#8C6B4E', '#5C4331', art=False, scale=6.0)
     MAT['flame'] = flame_mat()
+    MAT['hoodie'] = C('hoodie', '#4F7BC8', rough=0.7, sss=0.05, prints=0.4, bump=1.5)
+    MAT['modernhair'] = C('modernhair', '#2B1F1A', rough=0.5, sss=0.05, prints=0.4)
+    MAT['grass'] = C('grass', '#7E9C4A', rough=0.8, sss=0.05, prints=0.0, bump=3.0, dimple=0.3, tex_scale=2.0)
+    MAT['grass2'] = C('grass2', '#A3B060', rough=0.8, sss=0.05, prints=0.0, tex_scale=3.0)
+    MAT['snow'] = C('snow', '#F4F6FA', rough=0.6, sss=0.3, prints=0.0, bump=2.0, tex_scale=2.0)
+    MAT['pine'] = C('pine', '#355C3A', rough=0.75, sss=0.05, prints=0.2, bump=2.0, tex_scale=3.0)
+    MAT['mount'] = C('mount', '#8C9AB0', rough=0.8, sss=0.05, prints=0.0, bump=3.0, tex_scale=1.0)
+    MAT['water'] = S.water_mat()
+    MAT['limestone'] = C('limestone', '#D8C9A8', rough=0.85, sss=0.02, prints=0.0, bump=4.0, dimple=0.4, tex_scale=2.0)
+    MAT['phone'] = C('phone', '#1E1E24', rough=0.25, sss=0.0, prints=0.2, coat=0.6)
+    MAT['screen'] = screen_mat('screen', True)
+    MAT['screen_off'] = screen_mat('screen_off', False)
+    MAT['sofa'] = C('sofa', '#C45A3C', rough=0.75, sss=0.05, prints=0.5, bump=1.5)
+    MAT['cushion'] = C('cushion', '#E9B949', rough=0.75, sss=0.05, prints=0.5)
+    MAT['tvbody'] = C('tvbody', '#2A2A30', rough=0.4, sss=0.0, prints=0.2)
+    MAT['floorwood'] = C('floorwood', '#A8794E', rough=0.7, sss=0.02, prints=0.2, bump=2.0, tex_scale=2.0)
+    MAT['wallpaper'] = C('wallpaper', '#E8DCC6', rough=0.85, sss=0.02, prints=0.0, tex_scale=2.0)
+    MAT['lampshade'] = C('lampshade', '#F5E6C8', rough=0.6, sss=0.4, prints=0.2, emit=0.6)
+    MAT['popcorn'] = C('popcorn', '#FFF4D6', rough=0.6, sss=0.3, prints=0.2, dimple=0.6)
+    MAT['blanket'] = C('blanket', '#7FA8D8', rough=0.8, sss=0.05, prints=0.4, bump=2.0)
+    MAT['flint'] = C('flint', '#5C5550', rough=0.35, sss=0.0, prints=0.0, bump=1.5, coat=0.3)
 
 
 def fur_mat(name, base, spot):
@@ -179,6 +202,56 @@ def flame_mat():
     return m
 
 
+def screen_mat(name, on=True):
+    """휴대폰·TV 화면: 켜지면 알록달록한 앱 아이콘이 빛나고, 꺼지면 검은 유리."""
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    N, lk = nt.nodes, nt.links.new
+    bs = N['Principled BSDF']
+    bs.inputs['Roughness'].default_value = 0.08
+    bs.inputs['Base Color'].default_value = (0.01, 0.01, 0.012, 1)
+    if on:
+        tc = N.new('ShaderNodeTexCoord')
+        vor = N.new('ShaderNodeTexVoronoi')
+        vor.inputs['Scale'].default_value = 7.0
+        vor.inputs['Randomness'].default_value = 0.0
+        lk(tc.outputs['Generated'], vor.inputs['Vector'])
+        hs = N.new('ShaderNodeHueSaturation')
+        hs.inputs['Saturation'].default_value = 1.6
+        lk(vor.outputs['Color'], hs.inputs['Color'])
+        bs.inputs['Emission Strength'].default_value = 3.0
+        lk(hs.outputs['Color'], bs.inputs['Emission Color'])
+        lk(hs.outputs['Color'], bs.inputs['Base Color'])
+    return m
+
+
+def banded_mat(name, base, band):
+    """조개·소라: 크림색 바탕에 갈색 나선 띠."""
+    m = S.clay(name, base, rough=0.35, sss=0.25, prints=0.1, tex_scale=6.0)
+    nt = m.node_tree
+    N, lk = nt.nodes, nt.links.new
+    bs = next(n for n in N if n.type == 'BSDF_PRINCIPLED')
+    hs = S.NODES[name]['hs']
+    tc = N.new('ShaderNodeTexCoord')
+    wv = N.new('ShaderNodeTexWave')
+    wv.wave_type = 'BANDS'
+    wv.bands_direction = 'Z'
+    wv.inputs['Scale'].default_value = 14.0
+    wv.inputs['Distortion'].default_value = 3.0
+    lk(tc.outputs['Generated'], wv.inputs['Vector'])
+    mr = N.new('ShaderNodeMapRange')
+    lk(wv.outputs['Fac'], mr.inputs['Value'])
+    mr.inputs['From Min'].default_value, mr.inputs['From Max'].default_value = 0.6, 0.85
+    mix = N.new('ShaderNodeMix')
+    mix.data_type = 'RGBA'
+    lk(mr.outputs['Result'], mix.inputs['Factor'])
+    lk(hs.outputs['Color'], mix.inputs['A'])
+    mix.inputs['B'].default_value = (*S.srgb(band), 1)
+    lk(mix.outputs['Result'], bs.inputs['Base Color'])
+    return m
+
+
 # ─── 메쉬 도우미 ───
 def bend_capsule(r0, L, r1, bend=0.0, twist=0.0, seg=10, ring=8):
     """+Z로 뻗다가 x쪽으로 휘는 점토 가닥 (머리카락·수염·불꽃 혀)."""
@@ -217,7 +290,8 @@ def head_point(hc, R, az, el):
     return hc + n * R, n
 
 
-def caveperson(name, kind='dad', loc=(0, 0, 0), yaw=0.0, sit=True, mouth='smile', eyes='open', seed=1):
+def caveperson(name, kind='dad', loc=(0, 0, 0), yaw=0.0, sit=True, mouth='smile', eyes='open', seed=1,
+               outfit='fur', hair_style='dread', paint=False):
     """귀여운 원시인 인형. 관절(빈 객체) 사전을 돌려준다 — pose()로 움직인다."""
     k = KINDS[kind]
     s = k['s']
@@ -230,19 +304,27 @@ def caveperson(name, kind='dad', loc=(0, 0, 0), yaw=0.0, sit=True, mouth='smile'
     J['torso'] = torso
     # 몸통 + 털가죽 옷
     obj(name + '_body', S.bm_ellipsoid(0.078, 0.066, 0.085), 'skin', torso, (0, 0, 0.075), lump=0.004)
+    if outfit == 'hoodie':                                 # 현대인: 후드티 + 바지
+        obj(name + '_hoodie', S.bm_roundcyl(0.088, 0.076, 0.175, e=0.45, taper=0.88, z0=-0.015), 'hoodie', torso,
+            (0, 0, -0.005), lump=0.003)
+        obj(name + '_hood', S.bm_torus(0.055, 0.02, 24, 10), 'hoodie', torso, (0, 0.03, 0.16), rot=(rad(15), 0, 0), sub=1)
     fur = S.bm_roundcyl(0.086, 0.074, 0.13, e=0.45, taper=0.82, z0=-0.01)
     for v in fur.verts:                                    # 아랫단을 들쭉날쭉하게
         if v.co.z < 0.02:
             a = math.atan2(v.co.y, v.co.x)
             v.co.z -= 0.012 * (0.5 + 0.5 * sin(a * 9 + rnd.uniform(0, 6)))
-    obj(name + '_fur', fur, k['fur'], torso, (0, 0, -0.005), lump=0.006, lump_scale=8.0)
-    for i in range(18):                                    # 아랫단 술(털 뭉치)
+    if outfit == 'fur':
+        obj(name + '_fur', fur, k['fur'], torso, (0, 0, -0.005), lump=0.006, lump_scale=8.0)
+    else:
+        fur.free()
+    for i in range(18 if outfit == 'fur' else 0):                                    # 아랫단 술(털 뭉치)
         a = 2 * pi * i / 18 + rnd.uniform(-0.1, 0.1)
         fr = bend_capsule(0.011, rnd.uniform(0.022, 0.034), 0.006, bend=rnd.uniform(-0.3, 0.3))
         obj(f'{name}_fringe{i}', fr, k['fur'], torso, (0.084 * cos(a), 0.072 * sin(a), 0.012),
             rot=(rad(180) + rad(rnd.uniform(-12, 12)), 0, a), sub=1)
-    strap = bend_capsule(0.016, 0.11, 0.016, bend=-0.3)
-    obj(name + '_strap', strap, k['fur'], torso, (0.035, -0.005, 0.085), rot=(0, rad(-40), 0), lump=0.003)
+    if outfit == 'fur':
+        strap = bend_capsule(0.016, 0.11, 0.016, bend=-0.3)
+        obj(name + '_strap', strap, k['fur'], torso, (0.035, -0.005, 0.085), rot=(0, rad(-40), 0), lump=0.003)
     # 고개
     neck = joint(name + '_neck', torso, (0, 0, 0.15))
     J['neck'] = neck
@@ -274,9 +356,15 @@ def caveperson(name, kind='dad', loc=(0, 0, 0), yaw=0.0, sit=True, mouth='smile'
     mp, mn = head_point(hc, R, 0, -30)
     face['mouth'] = build_mouth(name, head, mp, mn, mouth)
     # 머리카락: 두피 + 점토 가닥(드레드)
-    obj(name + '_scalp', S.bm_ellipsoid(R * 1.04, R * 1.02, R * 0.98, 3), k['hair'], head, tuple(hc + Vector((0, 0.006, 0.01))),
-        lump=0.004, lump_scale=9.0)
-    hair_n = 92 if kind != 'kid' else 56
+    scalp = S.bm_ellipsoid(R * 1.04, R * 1.02, R * 0.98, 3)
+    if hair_style == 'short':                              # 현대인: 단정한 짧은 머리 (앞머리 살짝)
+        for v in scalp.verts:
+            if v.co.y < -0.3 * R and v.co.z < 0.35 * R:
+                v.co.z = max(v.co.z, 0.35 * R) + (v.co.z - 0.35 * R) * 0.15
+        obj(name + '_scalp', scalp, 'modernhair', head, tuple(hc + Vector((0, 0.004, 0.012))), lump=0.003, lump_scale=12.0)
+    else:
+        obj(name + '_scalp', scalp, k['hair'], head, tuple(hc + Vector((0, 0.006, 0.01))), lump=0.004, lump_scale=9.0)
+    hair_n = 0 if hair_style != 'dread' else (92 if kind != 'kid' else 56)
     for i in range(hair_n):
         az = rnd.uniform(-180, 180)
         el = rnd.uniform(-10, 88)
@@ -299,8 +387,14 @@ def caveperson(name, kind='dad', loc=(0, 0, 0), yaw=0.0, sit=True, mouth='smile'
     if k.get('bone'):                                      # 아이: 머리에 작은 뼈 장식
         bp, bn = head_point(hc, R * 1.05, -40, 70)
         bone_prop(name + '_hairbone', head, bp, Euler((0, rad(30), rad(20))), 0.045)
-    if k['beard']:
+    if k['beard'] and outfit == 'fur':
         build_beard(name, head, hc, R, k['hair'], rnd)
+    if paint:                                              # 황토 물감 줄무늬
+        for side in (-1, 1):
+            for j in range(2):
+                pp, pn = head_point(hc, R, 48 * side, -2 - 9 * j)
+                obj(f'{name}_paint{side}{j}', S.bm_ellipsoid(0.016, 0.003, 0.0035), 'ochre', head, tuple(pp + pn * 0.001),
+                    rot=S.frame_from_normal(pn).to_euler(), sub=1)
     # 팔
     for side in (-1, 1):
         sh = joint(f'{name}_sh{side}', torso, (0.07 * side, 0, 0.125))
@@ -351,6 +445,12 @@ def build_mouth(name, head, p, n, kind):
         obj(name + '_m', S.bm_arc(0.022, 0.0042, 200, 340), 'mouth', grp, (0, 0.004, 0.002), rot=(0, 0, 0), sub=1)
     elif kind == 'o':
         obj(name + '_m', S.bm_ellipsoid(0.011, 0.014, 0.006), 'mouth', grp, (0, 0, 0), sub=1)
+    elif kind == 'puff':                                   # 볼을 부풀려 부는 입
+        obj(name + '_m', S.bm_ellipsoid(0.006, 0.007, 0.004), 'mouth', grp, (0, 0, 0), sub=1)
+        for side in (-1, 1):
+            obj(f'{name}_puff{side}', S.bm_ellipsoid(0.02, 0.02, 0.016), 'skin', grp, (0.026 * side, 0.004, -0.008), sub=2)
+    elif kind == 'flat':
+        obj(name + '_m', S.bm_arc(0.03, 0.0035, 250, 290), 'mouth', grp, (0, 0.002, 0.002), sub=1)
     else:                                                  # 'open': 활짝 웃는 입 (반달) + 혀 + 윗니
         bm = S.bm_ellipsoid(0.024, 0.015, 0.008)
         for v in bm.verts:
@@ -487,6 +587,12 @@ def cave(name='cave', R=1.05, H=1.1, art_span=(-62, 62), art_z=(-0.05, 0.72)):
     for f in bm.faces:
         f.normal_flip()
     wall = obj(name + '_wall', bm, 'rock', None, (0, 0, -0.02), sub=1)
+    dome = S.bm_ellipsoid(R * 1.2, R * 1.2, 0.5, 3)        # 천장 (위를 올려다봐도 하늘이 보이지 않게)
+    for v in dome.verts:
+        v.co.z = abs(v.co.z)
+    for f in dome.faces:
+        f.normal_flip()
+    obj(name + '_ceiling', dome, 'rock', None, (0, 0, H * 0.95), lump=0.06, lump_scale=2.5, sub=1)
     fl = S.bm_roundcyl(R * 1.25, R * 1.25, 0.06, e=0.2, seg=64, ring=24, z0=-0.06)
     obj(name + '_floor', fl, 'floor', None, (0, 0, -0.03), lump=0.012, lump_scale=4)
     rnd = random.Random(11)
@@ -521,3 +627,437 @@ def area(name, loc, tgt, size, energy, color):
     ob.location = loc
     S.look_at(ob, tgt)
     return ob
+
+
+# ─── 더 많은 소품 ───
+def conch_prop(name, parent=None, loc=(0, 0, 0), rot=(0, 0, 0), L=0.15):
+    """소라(나팔고둥) 껍데기: 뾰족한 나선 탑 + 볼록한 몸통 + 넓은 입구. +Z가 뾰족한 끝(입 대는 곳)."""
+    grp = joint(name, parent, loc, rot)
+    bm = bmesh.new()
+    nz, na = 60, 40
+    rows = []
+    for i in range(nz + 1):
+        u = i / nz                                         # 0 = 아래(관), 1 = 뾰족한 끝
+        if u < 0.18:
+            base = 0.012 + 0.11 * (u / 0.18) ** 0.8
+        elif u < 0.5:
+            base = 0.122 - 0.02 * ((u - 0.18) / 0.32)
+        else:
+            base = 0.102 * (1 - (u - 0.5) / 0.5) ** 1.2 + 0.004
+        whorl = 1 + 0.09 * max(0.0, sin(2 * pi * (u - 0.45) * 6)) if u > 0.45 else 1.0
+        row = []
+        for j in range(na):
+            a = 2 * pi * j / na
+            rib = 1 + 0.035 * sin(a * 9 + u * 20)
+            r = base * whorl * rib * L / 0.3
+            row.append(bm.verts.new((r * cos(a), r * sin(a) * 0.85, u * L)))
+        rows.append(row)
+    for i in range(nz):
+        for j in range(na):
+            bm.faces.new((rows[i][j], rows[i][(j + 1) % na], rows[i + 1][(j + 1) % na], rows[i + 1][j]))
+    bm.faces.new(rows[0][::-1])
+    bm.faces.new(rows[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if 'conch' not in MAT:
+        MAT['conch'] = banded_mat('conch', '#EADBC2', '#8A5A36')
+        MAT['nacre'] = S.clay('nacre', '#F2A688', rough=0.15, sss=0.3, prints=0.0, coat=0.6)
+    obj(name + '_shell', bm, 'conch', grp, (0, 0, 0), lump=0.0015, lump_scale=25)
+    ap = S.bm_ellipsoid(0.025 * L / 0.15, 0.01, 0.05 * L / 0.15)
+    obj(name + '_aperture', ap, 'nacre', grp, (0.0, -0.05 * L / 0.15, 0.045 * L / 0.15), sub=1)
+    lip = S.bm_torus(0.035 * L / 0.15, 0.007 * L / 0.15, 28, 8, (rad(-100), rad(100)))
+    obj(name + '_lip', lip, 'nacre', grp, (0.0, -0.05 * L / 0.15, 0.045 * L / 0.15), rot=(0, rad(90), rad(90)), scl=(1, 1.6, 1), sub=1)
+    return grp
+
+
+def torch_prop(name, parent=None, loc=(0, 0, 0), rot=(0, 0, 0), light=6.0):
+    grp = joint(name, parent, loc, rot)
+    obj(name + '_stick', S.bm_capsule(0.012, 0.22, 0.014), 'wood', grp, (0, 0, -0.2), lump=0.002)
+    obj(name + '_wrap', S.bm_ellipsoid(0.022, 0.022, 0.03), 'char', grp, (0, 0, 0.02), lump=0.003)
+    for i in range(4):
+        a = 2 * pi * i / 4
+        fl = bend_capsule(0.016 if i == 0 else 0.011, 0.07 if i == 0 else 0.05, 0.003, bend=0.2 * cos(a), twist=1.0)
+        f_ob = obj(f'{name}_flame{i}', fl, 'flame', grp, (0.006 * cos(a), 0.006 * sin(a), 0.04), sub=1)
+        f_ob.visible_shadow = False
+    li = bpy.data.lights.new(name + '_light', 'POINT')
+    li.energy, li.color, li.shadow_soft_size = light, S.srgb('#FFAE66'), 0.03
+    lo = S.link(bpy.data.objects.new(name + '_light', li))
+    lo.parent, lo.location = grp, (0, 0, 0.09)
+    return grp
+
+
+def bowl_prop(name, parent=None, loc=(0, 0, 0), paint='ochre', r=0.04):
+    """돌 그릇에 담긴 황토 물감."""
+    grp = joint(name, parent, loc)
+    bm = S.bm_roundcyl(r, r, r * 0.8, e=0.3, taper=1.15)
+    obj(name + '_bowl', bm, 'stone', grp, (0, 0, 0), lump=0.004, lump_scale=15)
+    obj(name + '_paint', S.bm_ellipsoid(r * 0.85, r * 0.85, 0.006), paint, grp, (0, 0, r * 0.72), sub=1)
+    return grp
+
+
+def necklace(name, parent=None, loc=(0, 0, 0), rot=(0, 0, 0), R=0.07, n=16, open_gap=0.0):
+    """구멍 뚫린 조개·이빨 구슬을 엮은 목걸이."""
+    grp = joint(name, parent, loc, rot)
+    obj(name + '_cord', S.bm_torus(R, 0.0025, 48, 6, None if not open_gap else (open_gap, 2 * pi - open_gap)), 'wood', grp, sub=1)
+    for i in range(n):
+        a = open_gap + (2 * pi - 2 * open_gap) * (i + 0.5) / n
+        if i % 4 == 2:                                    # 동물 이빨
+            obj(f'{name}_tooth{i}', S.bm_capsule(0.004, 0.024, 0.0015), 'bone', grp,
+                (R * cos(a), R * sin(a), -0.002), rot=(rad(180), 0, a), sub=1)
+        else:                                             # 조개 구슬
+            obj(f'{name}_bead{i}', S.bm_ellipsoid(0.008, 0.0065, 0.006), 'shell', grp,
+                (R * cos(a), R * sin(a), 0), rot=(0, 0, a), sub=1)
+    return grp
+
+
+def dog(name, loc=(0, 0, 0), yaw=0.0, lie=False, s=1.0, mouth_open=True):
+    """복슬복슬한 회갈색 강아지 (석기시대의 친구)."""
+    root = joint(name, None, loc, (0, 0, rad(yaw)))
+    root.scale = (s, s, s)
+    if 'dogfur' not in MAT:
+        MAT['dogfur'] = S.clay('dogfur', '#A08A72', rough=0.7, sss=0.1, prints=0.6, bump=2.0, tex_scale=6.0)
+        MAT['dogfur2'] = S.clay('dogfur2', '#EDE3D2', rough=0.7, sss=0.1, prints=0.6, bump=2.0, tex_scale=6.0)
+        MAT['nose'] = S.clay('nose', '#1C1412', rough=0.25, sss=0.0, prints=0.0, coat=0.5)
+    zb = 0.06 if lie else 0.1
+    obj(name + '_body', S.bm_ellipsoid(0.055, 0.1, 0.05), 'dogfur', root, (0, 0.02, zb), lump=0.004, lump_scale=8)
+    obj(name + '_chest', S.bm_ellipsoid(0.04, 0.035, 0.04), 'dogfur2', root, (0, -0.06, zb - 0.005), sub=2)
+    head = joint(name + '_head', root, (0, -0.09, zb + 0.06))
+    obj(name + '_skull', S.bm_ellipsoid(0.048, 0.046, 0.043), 'dogfur', head, (0, 0, 0), lump=0.003, lump_scale=8)
+    obj(name + '_snout', S.bm_ellipsoid(0.026, 0.035, 0.022), 'dogfur2', head, (0, -0.045, -0.012), sub=2)
+    obj(name + '_nose', S.bm_ellipsoid(0.01, 0.008, 0.008), 'nose', head, (0, -0.08, -0.004), sub=1)
+    for side in (-1, 1):
+        obj(f'{name}_eye{side}', S.bm_ellipsoid(0.008, 0.006, 0.009), 'eye', head, (0.02 * side, -0.038, 0.012), sub=1)
+        obj(f'{name}_shine{side}', S.bm_ellipsoid(0.0022, 0.0012, 0.0022), 'shine', head, (0.02 * side - 0.002, -0.044, 0.016), sub=1)
+        ear = bend_capsule(0.016, 0.04, 0.006, bend=0.4 * side)
+        obj(f'{name}_ear{side}', ear, 'dogfur', head, (0.03 * side, 0.005, 0.03), rot=(rad(-15), rad(25 * side), 0), sub=1)
+        for fb in (-1, 1):
+            if lie:
+                leg = S.bm_capsule(0.016, 0.07, 0.015)
+                obj(f'{name}_leg{side}{fb}', leg, 'dogfur', root, (0.035 * side, 0.02 + 0.07 * fb, 0.02), rot=(rad(-90), 0, 0), sub=1)
+            else:
+                leg = S.bm_capsule(0.017, 0.085, 0.015)
+                obj(f'{name}_leg{side}{fb}', leg, 'dogfur', root, (0.032 * side, 0.02 + 0.065 * fb, 0.0), sub=1)
+    if mouth_open:
+        obj(name + '_tongue', S.bm_ellipsoid(0.01, 0.012, 0.004), 'tongue', head, (0, -0.06, -0.03), rot=(rad(-20), 0, 0), sub=1)
+    tail = bend_capsule(0.012, 0.07, 0.006, bend=0.8)
+    obj(name + '_tail', tail, 'dogfur', root, (0, 0.11, zb + 0.02), rot=(rad(-50), 0, 0), sub=1)
+    return {'root': root, 'head': head}
+
+
+def mammoth(name, loc=(0, 0, 0), yaw=0.0, s=1.0):
+    """털북숭이 매머드 (멀리 배경용으로 단순하게)."""
+    root = joint(name, None, loc, (0, 0, rad(yaw)))
+    root.scale = (s, s, s)
+    if 'mamfur' not in MAT:
+        MAT['mamfur'] = S.clay('mamfur', '#6B4A2E', rough=0.8, sss=0.05, prints=0.3, bump=3.0, tex_scale=3.0)
+        MAT['tusk'] = S.clay('tusk', '#EFE4CC', rough=0.4, sss=0.2, prints=0.2)
+    obj(name + '_body', S.bm_ellipsoid(0.16, 0.24, 0.17), 'mamfur', root, (0, 0, 0.3), lump=0.015, lump_scale=6)
+    obj(name + '_hump', S.bm_ellipsoid(0.12, 0.12, 0.12), 'mamfur', root, (0, -0.14, 0.42), lump=0.01)
+    obj(name + '_head', S.bm_ellipsoid(0.11, 0.1, 0.12), 'mamfur', root, (0, -0.27, 0.36), lump=0.01)
+    trunk = bend_capsule(0.04, 0.3, 0.018, bend=-0.6)
+    obj(name + '_trunk', trunk, 'mamfur', root, (0, -0.34, 0.33), rot=(rad(170), 0, 0), lump=0.004)
+    for side in (-1, 1):
+        tusk = bend_capsule(0.016, 0.22, 0.006, bend=0.9, twist=0.6 * side)
+        obj(f'{name}_tusk{side}', tusk, 'tusk', root, (0.05 * side, -0.33, 0.3), rot=(rad(150), rad(-15 * side), 0), sub=1)
+        obj(f'{name}_ear{side}', S.bm_ellipsoid(0.03, 0.05, 0.04), 'mamfur', root, (0.1 * side, -0.25, 0.4), sub=1)
+        for fb in (-1, 1):
+            obj(f'{name}_leg{side}{fb}', S.bm_capsule(0.055, 0.24, 0.05), 'mamfur', root, (0.09 * side, 0.13 * fb, 0.0), lump=0.006)
+    return root
+
+
+def tortoise(name, loc=(0, 0, 0), yaw=0.0, s=1.0, flipped=False):
+    root = joint(name, None, loc, (rad(180) if flipped else 0, 0, rad(yaw)))
+    root.scale = (s, s, s)
+    if 'shell_t' not in MAT:
+        MAT['shell_t'] = S.clay('shell_t', '#7A6440', rough=0.6, sss=0.05, prints=0.4, bump=2.5, dimple=0.6, tex_scale=6.0)
+        MAT['tskin'] = S.clay('tskin', '#8E8462', rough=0.7, sss=0.05, prints=0.4, tex_scale=6.0)
+    obj(name + '_shell', S.bm_roundcyl(0.05, 0.065, 0.045, e=0.6, taper=0.5), 'shell_t', root, (0, 0, 0.0), lump=0.003, lump_scale=14)
+    if not flipped:
+        obj(name + '_head', S.bm_ellipsoid(0.016, 0.024, 0.015), 'tskin', root, (0, -0.075, 0.015), sub=1)
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                obj(f'{name}_leg{sx}{sy}', S.bm_ellipsoid(0.013, 0.013, 0.01), 'tskin', root, (0.045 * sx, 0.045 * sy, 0.005), sub=1)
+    return root
+
+
+def meat_spit(name, loc=(0, 0, 0), yaw=0.0):
+    """불 위에 걸린 고기 꼬치."""
+    root = joint(name, None, loc, (0, 0, rad(yaw)))
+    if 'meat' not in MAT:
+        MAT['meat'] = S.clay('meat', '#8E3B22', rough=0.45, sss=0.15, prints=0.4, bump=2.0, tex_scale=6.0)
+    for side in (-1, 1):                                   # Y자 받침대
+        obj(f'{name}_post{side}', S.bm_capsule(0.01, 0.26, 0.009), 'wood', root, (0.2 * side, 0, 0), lump=0.002)
+    obj(name + '_spit', S.bm_capsule(0.007, 0.46, 0.007), 'wood', root, (-0.23, 0, 0.24), rot=(0, rad(90), 0), sub=1)
+    obj(name + '_meat', S.bm_ellipsoid(0.07, 0.05, 0.045), 'meat', root, (0, 0, 0.24), lump=0.008, lump_scale=12)
+    bone_prop(name + '_bone', root, Vector((0.09, 0, 0.24)), Euler((0, rad(90), 0)), 0.05)
+    return root
+
+
+# ─── 바깥 세트 ───
+def sky_card(top='#6FA3D9', mid='#F3D9B0', bottom='#F7E8CF', emit=0.8, R=6.0, H=4.0):
+    """그림물감으로 칠한 하늘 배경 (반원통). 위→아래 색 지정."""
+    m = bpy.data.materials.new('skycard')
+    m.use_nodes = True
+    nt = m.node_tree
+    N, lk = nt.nodes, nt.links.new
+    bs = N['Principled BSDF']
+    tc = N.new('ShaderNodeTexCoord')
+    sep = N.new('ShaderNodeSeparateXYZ')
+    lk(tc.outputs['Generated'], sep.inputs[0])
+    ramp = N.new('ShaderNodeValToRGB')
+    lk(sep.outputs['Z'], ramp.inputs['Fac'])
+    cr = ramp.color_ramp
+    cr.elements[0].position, cr.elements[0].color = 0.0, (*S.srgb(bottom), 1)
+    cr.elements[1].position, cr.elements[1].color = 1.0, (*S.srgb(top), 1)
+    cr.elements.new(0.28).color = (*S.srgb(mid), 1)
+    nz = N.new('ShaderNodeTexNoise')
+    nz.inputs['Scale'].default_value = 3.0
+    nz.inputs['Detail'].default_value = 8.0
+    lk(tc.outputs['Object'], nz.inputs['Vector'])
+    mr = N.new('ShaderNodeMapRange')
+    lk(nz.outputs['Fac'], mr.inputs['Value'])
+    mr.inputs['From Min'].default_value, mr.inputs['From Max'].default_value = 0.3, 0.7
+    mr.inputs['To Min'].default_value, mr.inputs['To Max'].default_value = 0.92, 1.06
+    hs = N.new('ShaderNodeHueSaturation')
+    lk(ramp.outputs['Color'], hs.inputs['Color'])
+    lk(mr.outputs['Result'], hs.inputs['Value'])
+    lk(hs.outputs['Color'], bs.inputs['Base Color'])
+    lk(hs.outputs['Color'], bs.inputs['Emission Color'])
+    bs.inputs['Emission Strength'].default_value = emit
+    bs.inputs['Roughness'].default_value = 0.95
+    bm = bmesh.new()
+    nu, nv = 64, 8
+    rows = [[bm.verts.new((sin(a) * R, cos(a) * R, H * j / nv - 0.3))
+             for a in (rad(-110) + rad(220) * i / nu for i in range(nu + 1))] for j in range(nv + 1)]
+    for j in range(nv):
+        for i in range(nu):
+            bm.faces.new((rows[j][i], rows[j + 1][i], rows[j + 1][i + 1], rows[j][i + 1]))
+    ob = obj('sky', bm, m, None, (0, 0, 0), sub=0)
+    ob.visible_shadow = False
+    return ob
+
+
+def stars(n=160, R=5.6, seed=4):
+    rnd = random.Random(seed)
+    if 'star' not in MAT:
+        MAT['star'] = S.clay('star', '#FFF6D8', rough=0.5, sss=0.0, prints=0.0, emit=4.0)
+    bm = bmesh.new()
+    for i in range(n):
+        a = rad(rnd.uniform(-80, 80))
+        z = rnd.uniform(0.9, 3.4)
+        part = S.bm_ico(1)
+        r = rnd.uniform(0.006, 0.016)
+        S.bm_merge(bm, part, Matrix.Translation((sin(a) * R * 0.98, cos(a) * R * 0.98, z)) @ Matrix.Scale(r, 4))
+    obj('stars', bm, 'star', None, sub=0)
+
+
+def ground(mat='grass', R=4.0, snow=0.0, seed=2, lump=0.05):
+    """들판: 큰 원판에 완만한 굴곡 + (snow>0이면) 눈 덮인 곳."""
+    bm = bmesh.new()
+    bmesh.ops.create_grid(bm, x_segments=90, y_segments=90, size=R)
+    off = Vector((seed * 3.1, seed * 1.7, 0))
+    for v in bm.verts:
+        v.co.z = noise.noise(v.co * 0.6 + off) * 0.12 + noise.noise(v.co * 2.5 + off) * 0.02
+    obj('ground', bm, mat, None, (0, 1.5, 0), sub=1)
+    if snow:
+        rnd = random.Random(seed)
+        for i in range(int(24 * snow)):
+            x, y = rnd.uniform(-3, 3), rnd.uniform(-0.4, 4.5)
+            sz = rnd.uniform(0.15, 0.5)
+            obj(f'snow{i}', S.bm_ellipsoid(sz, sz * 0.7, 0.03), 'snow', None,
+                (x, y, noise.noise(Vector((x, y - 1.5, 0)) * 0.6 + off) * 0.12 + 0.0), rot=(0, 0, rnd.uniform(0, 6)), lump=0.01)
+
+
+def tufts(n=120, area=((-2.5, 2.5), (-0.6, 3.5)), seed=5):
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    for i in range(n):
+        x, y = rnd.uniform(*area[0]), rnd.uniform(*area[1])
+        for j in range(4):
+            bl = bend_capsule(0.006, rnd.uniform(0.04, 0.09), 0.002, bend=rnd.uniform(-0.6, 0.6))
+            M = Matrix.Translation((x + rnd.uniform(-0.02, 0.02), y + rnd.uniform(-0.02, 0.02), 0.0)) @ \
+                Euler((rnd.uniform(-0.3, 0.3), rnd.uniform(-0.3, 0.3), rnd.uniform(0, 6))).to_matrix().to_4x4()
+            S.bm_merge(bm, bl, M)
+    obj('tufts', bm, 'grass2', None, (0, 0, 0.0), sub=0)
+
+
+def pine(name, loc, h=1.0, seed=1):
+    rnd = random.Random(seed)
+    grp = joint(name, None, loc)
+    obj(name + '_trunk', S.bm_capsule(0.04 * h, 0.4 * h, 0.03 * h), 'wood', grp, (0, 0, 0), sub=1)
+    for i in range(4):
+        z = (0.2 + 0.22 * i) * h
+        r = (0.32 - 0.07 * i) * h
+        cone = S.bm_roundcyl(r, r, 0.32 * h, e=0.6, taper=0.15, z0=0)
+        obj(f'{name}_c{i}', cone, 'pine', grp, (0, 0, z), lump=0.02 * h, lump_scale=5)
+    return grp
+
+
+def mountains(n=7, R=5.0, seed=3, snowcap=True):
+    rnd = random.Random(seed)
+    for i in range(n):
+        a = rad(-60 + 120 * i / (n - 1) + rnd.uniform(-6, 6))
+        h = rnd.uniform(0.9, 1.7)
+        w = rnd.uniform(0.9, 1.5)
+        bm = S.bm_roundcyl(w, w * 0.6, h, e=0.7, taper=0.08, z0=0)
+        obj(f'mount{i}', bm, 'mount', None, (sin(a) * R, cos(a) * R, -0.1), rot=(0, 0, a), lump=0.08, lump_scale=2)
+        if snowcap:
+            cap = S.bm_roundcyl(w * 0.32, w * 0.2, h * 0.3, e=0.7, taper=0.1, z0=0)
+            obj(f'mcap{i}', cap, 'snow', None, (sin(a) * R, cos(a) * R, -0.1 + h * 0.72), rot=(0, 0, a), lump=0.03, lump_scale=4)
+
+
+def cliff_cave(loc=(1.2, 1.8, 0), s=1.0):
+    """바위 절벽과 동굴 입구."""
+    grp = joint('cliff', None, loc)
+    grp.scale = (s, s, s)
+    obj('cliff_rock', S.bm_ellipsoid(1.0, 0.7, 0.9), 'rock', grp, (0.3, 0.3, 0.2), lump=0.15, lump_scale=2.5)
+    obj('cliff_rock2', S.bm_ellipsoid(0.6, 0.5, 0.6), 'rock', grp, (-0.5, 0.1, 0.0), lump=0.1, lump_scale=3)
+    obj('cave_mouth', S.bm_ellipsoid(0.32, 0.25, 0.4), 'char', grp, (-0.15, -0.38, 0.2), lump=0.03, lump_scale=4)
+    return grp
+
+
+def river(y=0.6, w=0.7, L=6.0):
+    bm = bmesh.new()
+    bmesh.ops.create_grid(bm, x_segments=60, y_segments=6, size=1.0)
+    for v in bm.verts:
+        v.co.x *= L / 2
+        v.co.y = v.co.y * w / 2 + 0.25 * sin(v.co.x * 0.9)
+        v.co.z = 0.005 * noise.noise(v.co * 8)
+    obj('river', bm, 'water', None, (0, y, 0.035), sub=1)
+    obj('riverbed', S.bm_roundcyl(L / 2, w * 0.7, 0.03, e=0.2, z0=-0.03), 'stone', None, (0, y, 0.0), lump=0.01, lump_scale=8)
+
+
+def t_pillar(name, loc, yaw=0.0, h=0.9, relief=True):
+    """괴베클리 테페의 T자 돌기둥 (동물 부조)."""
+    grp = joint(name, None, loc, (0, 0, rad(yaw)))
+    obj(name + '_shaft', S.bm_roundcyl(0.09, 0.03, h, e=0.15, z0=0), 'limestone', grp, (0, 0, 0), lump=0.006, lump_scale=8)
+    obj(name + '_top', S.bm_roundcyl(0.2, 0.04, 0.1, e=0.15, z0=0), 'limestone', grp, (0.06, 0, h), lump=0.006, lump_scale=8)
+    if relief:                                            # 여우·멧돼지 같은 부조
+        a = S.bm_ellipsoid(0.05, 0.01, 0.025)
+        obj(name + '_animal', a, 'limestone', grp, (0, -0.03, h * 0.6), lump=0.002, sub=1)
+        obj(name + '_animal_h', S.bm_ellipsoid(0.02, 0.01, 0.016), 'limestone', grp, (-0.055, -0.03, h * 0.62), sub=1)
+    return grp
+
+
+# ─── 현대 소품 ───
+def phone(name, parent=None, loc=(0, 0, 0), rot=(0, 0, 0), on=True):
+    grp = joint(name, parent, loc, rot)
+    obj(name + '_body', S.bm_roundcyl(0.03, 0.006, 0.062, e=0.25, z0=-0.031), 'phone', grp, (0, 0, 0), sub=2)
+    scr = S.bm_roundcyl(0.026, 0.001, 0.054, e=0.25, z0=-0.027)
+    obj(name + '_screen', scr, 'screen' if on else 'screen_off', grp, (0, -0.0062, 0), sub=1)
+    if on:
+        li = bpy.data.lights.new(name + '_glow', 'AREA')
+        li.size, li.energy, li.color = 0.05, 0.6, S.srgb('#BFD6FF')
+        lo = S.link(bpy.data.objects.new(name + '_glow', li))
+        lo.parent, lo.location, lo.rotation_euler = grp, (0, -0.02, 0), (rad(-90), 0, 0)
+    return grp
+
+
+def sofa(name, loc=(0, 0, 0), yaw=0.0):
+    grp = joint(name, None, loc, (0, 0, rad(yaw)))
+    obj(name + '_seat', S.bm_roundcyl(0.5, 0.2, 0.12, e=0.25, z0=0), 'sofa', grp, (0, 0, 0.0), lump=0.006)
+    obj(name + '_back', S.bm_roundcyl(0.5, 0.07, 0.24, e=0.3, z0=0), 'sofa', grp, (0, 0.17, 0.08), lump=0.006)
+    for side in (-1, 1):
+        obj(f'{name}_arm{side}', S.bm_roundcyl(0.07, 0.2, 0.2, e=0.3, z0=0), 'sofa', grp, (0.5 * side, 0, 0.0), lump=0.006)
+    obj(name + '_cush', S.bm_ellipsoid(0.1, 0.05, 0.08), 'cushion', grp, (-0.36, 0.08, 0.2), rot=(rad(-15), 0, rad(10)), lump=0.005)
+    return grp
+
+
+def living_room(tv=True, window_night=True):
+    """현대 거실: 나무 바닥, 벽지, 창문(밤 도시 불빛), TV, 스탠드."""
+    obj('floor_m', S.bm_roundcyl(2.2, 2.2, 0.04, e=0.1, z0=-0.04), 'floorwood', None, (0, 0.5, 0), lump=0.004)
+    bm = bmesh.new()
+    bmesh.ops.create_grid(bm, x_segments=20, y_segments=10, size=1.0)
+    obj('wall_m', bm, 'wallpaper', None, (0, 1.0, 0.8), rot=(rad(90), 0, 0), scl=(2.2, 0.9, 1), sub=0)
+    if window_night:
+        if 'citynight' not in MAT:
+            MAT['citynight'] = screen_mat('citynight', True)
+        win = S.bm_roundcyl(0.35, 0.005, 0.45, e=0.1, z0=0)
+        obj('window', win, 'citynight', None, (-0.85, 0.99, 0.45), sub=0)
+        obj('window_frame', S.bm_torus(0.4, 0.015, 4, 6), 'wood', None, (-0.85, 0.985, 0.68), rot=(rad(90), rad(45), 0), scl=(1.0, 1.3, 1), sub=0)
+    if tv:
+        obj('tv', S.bm_roundcyl(0.42, 0.02, 0.5, e=0.1, z0=0), 'tvbody', None, (0.55, 0.95, 0.35), sub=1)
+        obj('tv_screen', S.bm_roundcyl(0.39, 0.005, 0.46, e=0.1, z0=0), 'screen', None, (0.55, 0.928, 0.37), sub=0)
+        obj('tv_stand', S.bm_roundcyl(0.5, 0.15, 0.3, e=0.2, z0=0), 'wood', None, (0.55, 0.85, 0.0), lump=0.004)
+    lamp = joint('lamp', None, (-1.1, 0.6, 0))
+    obj('lamp_pole', S.bm_capsule(0.012, 0.75, 0.012), 'tvbody', lamp, (0, 0, 0), sub=1)
+    obj('lamp_shade', S.bm_roundcyl(0.12, 0.12, 0.16, e=0.3, taper=0.7, z0=0), 'lampshade', lamp, (0, 0, 0.72), sub=1)
+    li = bpy.data.lights.new('lamp_light', 'POINT')
+    li.energy, li.color, li.shadow_soft_size = 25, S.srgb('#FFC98A'), 0.08
+    lo = S.link(bpy.data.objects.new('lamp_light', li))
+    lo.parent, lo.location = lamp, (0, 0, 0.8)
+
+
+def controller(name, loc=(0, 0, 0), yaw=0.0):
+    grp = joint(name, None, loc, (0, 0, rad(yaw)))
+    obj(name + '_body', S.bm_ellipsoid(0.06, 0.035, 0.016), 'tvbody', grp, (0, 0, 0.016), lump=0.002)
+    for side in (-1, 1):
+        obj(f'{name}_grip{side}', S.bm_ellipsoid(0.025, 0.035, 0.018), 'tvbody', grp, (0.045 * side, 0.02, 0.012), sub=1)
+    for i, c in enumerate(('#E84A4A', '#4AA3E8', '#4AE87A', '#E8D44A')):
+        if f'btn{i}' not in MAT:
+            MAT[f'btn{i}'] = S.clay(f'btn{i}', c, rough=0.3, sss=0.1, prints=0.0, emit=0.4)
+        obj(f'{name}_b{i}', S.bm_ellipsoid(0.006, 0.006, 0.004), f'btn{i}', grp,
+            (0.03 + 0.008 * (i % 2) * 2 - 0.008, -0.004 + 0.008 * (i // 2) * 2 - 0.008, 0.031), sub=1)
+    return grp
+
+
+# ─── 석기시대 소품 2 ───
+def figurine(name, loc, kind='bison', s=1.0, mat='ochre_toy'):
+    """아이 장난감: 점토로 빚은 작은 동물."""
+    if mat not in MAT:
+        MAT[mat] = S.clay(mat, '#9B6A43', rough=0.6, sss=0.1, prints=0.8, tex_scale=8.0)
+    grp = joint(name, None, loc)
+    grp.scale = (s, s, s)
+    obj(name + '_b', S.bm_ellipsoid(0.03, 0.045, 0.026), mat, grp, (0, 0, 0.03), lump=0.002)
+    obj(name + '_h', S.bm_ellipsoid(0.018, 0.02, 0.017), mat, grp, (0, -0.048, 0.034 if kind != 'bison' else 0.026), sub=1)
+    if kind == 'bison':
+        obj(name + '_hump', S.bm_ellipsoid(0.022, 0.022, 0.02), mat, grp, (0, -0.022, 0.05), sub=1)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            obj(f'{name}_l{sx}{sy}', S.bm_capsule(0.006, 0.025, 0.006), mat, grp, (0.016 * sx, 0.025 * sy, 0.0), sub=1)
+    return grp
+
+
+def dice(name, loc, rot=(0, 0, 0), s=0.016):
+    """뼈 주사위: 둥근 정육면체 + 점."""
+    grp = joint(name, None, loc, rot)
+    obj(name + '_c', S.bm_roundcyl(s, s, 2 * s, e=0.25, z0=-s), 'bone', grp, (0, 0, s), sub=1)
+    for k, (dx, dy) in enumerate(((0, 0), (-0.5, -0.5), (0.5, 0.5))):
+        obj(f'{name}_d{k}', S.bm_ellipsoid(s * 0.18, s * 0.18, s * 0.08), 'mouth', grp, (dx * s, dy * s, 2 * s), sub=1)
+    return grp
+
+
+def flint(name, loc, s=0.05, seed=1):
+    """깨진 부싯돌 조각 (각진 면)."""
+    rnd = random.Random(seed)
+    bm = S.bm_ico(1)
+    for v in bm.verts:
+        v.co = Vector((v.co.x * s * rnd.uniform(0.7, 1.2), v.co.y * s * 0.45, v.co.z * s * rnd.uniform(0.8, 1.3)))
+    me_ob = obj(name, bm, 'flint', None, loc, rot=(rad(rnd.uniform(-20, 20)), 0, rad(rnd.uniform(0, 360))), sub=0)
+    return me_ob
+
+
+def spear(name, parent=None, loc=(0, 0, 0), rot=(0, 0, 0), L=0.55):
+    grp = joint(name, parent, loc, rot)
+    obj(name + '_shaft', S.bm_capsule(0.006, L, 0.006), 'wood', grp, (0, 0, 0), sub=1)
+    tip = S.bm_roundcyl(0.012, 0.004, 0.05, e=0.5, taper=0.05, z0=0)
+    obj(name + '_tip', tip, 'flint', grp, (0, 0, L - 0.01), sub=1)
+    return grp
+
+
+def drum_prop(name, loc=(0, 0, 0), r=0.07):
+    if 'hide' not in MAT:
+        MAT['hide'] = S.clay('hide', '#D9B98A', rough=0.6, sss=0.25, prints=0.4, tex_scale=6.0)
+    grp = joint(name, None, loc)
+    obj(name + '_frame', S.bm_roundcyl(r, r, 0.07, e=0.3, z0=0), 'wood', grp, (0, 0, 0), lump=0.003)
+    obj(name + '_skin', S.bm_ellipsoid(r * 0.95, r * 0.95, 0.008), 'hide', grp, (0, 0, 0.068), sub=1)
+    return grp
+
+
+def basin(name, loc=(0, 0, 0), r=0.12):
+    """돌을 파낸 큰 통 (곡물 발효)."""
+    grp = joint(name, None, loc)
+    obj(name + '_stone', S.bm_roundcyl(r, r, r * 0.9, e=0.35, z0=0), 'limestone', grp, (0, 0, 0), lump=0.01, lump_scale=6)
+    if 'mash' not in MAT:
+        MAT['mash'] = S.clay('mash', '#C9A15A', rough=0.4, sss=0.2, prints=0.0, dimple=1.0, tex_scale=8.0)
+    obj(name + '_mash', S.bm_ellipsoid(r * 0.8, r * 0.8, 0.01), 'mash', grp, (0, 0, r * 0.82), sub=1)
+    return grp

@@ -104,7 +104,7 @@ def stencil(img, x, y, size, rnd, color=OCHRE):
     hand = Image.new('L', (s, s), 0)
     hand.paste(hand_mask(int(size * 0.8), rnd), (int(s / 2 - size * 0.4), int(s / 2 - size * 0.42)))
     hand = hand.filter(ImageFilter.GaussianBlur(2.0))
-    a = np.clip(np.asarray(cloud, float) * 3.0, 0, 210) * fall * (1 - np.asarray(hand, float) / 255)
+    a = np.clip(np.asarray(cloud, float) * 5.0, 0, 240) * fall * (1 - np.asarray(hand, float) / 255)
     layer = Image.new('RGBA', (s, s), color + (0,))
     layer.putalpha(Image.fromarray(a.astype(np.uint8)))
     img.alpha_composite(layer, (int(x - s / 2), int(y - s / 2)))
@@ -154,9 +154,22 @@ def wall(path, seed=1, W=4096, H=1536):
     animal(img, MAMMOTH, 3150, 800, 640, 440, rnd, color=BLACK)
     for x, y, s in ((300, 330, 300), (3650, 330, 280), (1900, 300, 240), (3900, 1150, 260)):
         stencil(img, x, y, s, rnd)
-    for x, y, s in ((420, 980, 210), (3080, 300, 180), (2600, 1180, 200), (1150, 1200, 170)):
+    for x, y, s in ((420, 980, 210), (3080, 300, 180), (2150, 1330, 190), (1150, 1200, 170)):
         handprint(img, x, y, s, rnd)
+    # 다리를 여러 번 겹쳐 그린 들소 (횃불 아래서 달리는 듯 보인다는 그림)
+    animal(img, BISON, 2350, 930, 620, 360, rnd, color=(110, 40, 26), extra=[BISON_HORN])
+    leg_rows = []
+    for x0 in (0.27, 0.40, 0.68, 0.81):                   # 원래 다리마다 앞뒤로 비스듬한 다리를 더 그린다
+        for slant in (-0.09, 0.09, -0.16):
+            leg_rows.append([(x0 - 0.025, 0.72), (x0 + 0.025, 0.72), (x0 + slant + 0.022, 0.98), (x0 + slant - 0.022, 0.98)])
+    for leg in leg_rows:
+        animal(img, leg, 2350, 930, 620, 360, rnd, color=(110, 40, 26))
+    # 아이들이 손가락으로 그은 선 (위쪽 벽 = 천장 쪽)
     d = ImageDraw.Draw(img)
+    for g, (gx, gy) in enumerate(((2050, 60), (2600, 110), (3350, 70), (900, 40), (1500, 90))):
+        for f in range(4):
+            pts = [(gx + f * 22 + 10 * math.sin(t * 0.9 + g), gy + t * 26) for t in range(9)]
+            d.line(pts, fill=(95, 70, 55, 150), width=11)
     for i in range(9):                                    # 점 줄
         x, y = 1300 + i * 46, 1240 + 10 * math.sin(i)
         d.ellipse([x - 13, y - 13, x + 13, y + 13], fill=OCHRE + (200,))

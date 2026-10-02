@@ -513,11 +513,11 @@ def bone_prop(name, parent, loc, rot, L=0.08):
 
 
 def flute(name, parent, loc=(0, 0, 0), rot=(0, 0, 0), L=0.12):
-    """새 뼈 피리: 흰 점토 관 + 손가락 구멍."""
+    """새 뼈 피리: 흰 점토 관 + 손가락 구멍 다섯 개(호흘레 펠스의 독수리 날개뼈 피리처럼)."""
     grp = joint(name, parent, loc, rot)
     obj(name + '_tube', S.bm_capsule(0.0085, L, 0.0075), 'bone', grp, (0, 0, 0), lump=0.0006)
-    for i in range(4):
-        obj(f'{name}_hole{i}', S.bm_ellipsoid(0.0032, 0.0032, 0.002), 'mouth', grp, (0, -0.008, L * (0.35 + 0.13 * i)), sub=1)
+    for i in range(5):
+        obj(f'{name}_hole{i}', S.bm_ellipsoid(0.0029, 0.0029, 0.002), 'mouth', grp, (0, -0.008, L * (0.3 + 0.11 * i)), sub=1)
     return grp
 
 

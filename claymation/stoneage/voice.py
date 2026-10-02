@@ -38,14 +38,23 @@ def request(method, path, key, body=None):
 
 
 def pick_voice(key):
+    """TYPECAST_VOICE_ID가 없으면 설명으로 추천받되, 스마트 감정을 쓰는 ssfm-v30을 지원하는 목소리만 고른다."""
     vid = os.environ.get('TYPECAST_VOICE_ID')
     if vid:
         return vid
-    q = urllib.parse.urlencode({'query': VOICE_QUERY, 'count': 5})
+    q = urllib.parse.urlencode({'query': VOICE_QUERY, 'count': 10})
     recs = request('GET', f'/v1/voices/recommendations?{q}', key)
-    for r in recs:
-        print(f"  추천 목소리: {r['voice_id']} {r.get('voice_name')} (score {r.get('score')})")
-    return recs[0]['voice_id']
+    v30 = {v['voice_id']: v for v in request('GET', f'/v3/voices?model={MODEL}', key)}
+    ok = [r for r in recs if r['voice_id'] in v30]
+    for r in ok:
+        v = v30[r['voice_id']]
+        name = v.get('voice_name') or {}
+        print(f"  추천 목소리: {r['voice_id']} {name.get('kor') or name.get('eng')} "
+              f"({v.get('gender')}, {v.get('age')}, {', '.join(v.get('use_cases') or [])}) "
+              f"score {r.get('score')}  미리 듣기: {v.get('preview_url')}")
+    if not ok:
+        sys.exit(f'{MODEL}을 지원하는 추천 목소리가 없습니다. TYPECAST_VOICE_ID로 직접 지정하세요.')
+    return ok[0]['voice_id']
 
 
 def main():

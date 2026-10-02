@@ -297,22 +297,46 @@ def highlight(s, words):
         s = s.replace(w, HL + w + WH)
     return s
 
+def chunk_times(L, parts):
+    """화면별 (시작, 끝). 내레이션 단어 타이밍(voice/<id>.json)이 있으면 화면 경계의 문장부호 위치로 맞추고,
+    없으면 음절 수에 비례해 나눈다. tts와 sub는 문장부호 개수가 같게 써 두었다."""
+    v0, v1 = L['v0'], L['v1']
+    tot = sum(syllables(p) for p in parts) or 1
+    prop, t = [], v0
+    for p in parts:
+        d = (v1 - v0) * syllables(p) / tot
+        prop.append((t, t + d))
+        t += d
+    wj = os.path.join(VOICE, L['id'] + '.json')
+    words = json.load(open(wj)) if L.get('voiced') and os.path.exists(wj) else []
+    if not words:
+        return prop
+    ends = [i for i, w in enumerate(words) if w['text'] and w['text'][-1] in '.,?!…']
+    out, count, i0 = [], 0, 0
+    for k, p in enumerate(parts):
+        count += len(re.findall(r'[.,?!…](?=\s|$)', p))
+        if k == len(parts) - 1:
+            i1 = len(words) - 1
+        elif p[-1] in '.,?!…' and 0 < count <= len(ends):
+            i1 = ends[count - 1]
+        else:
+            return prop                                    # 화면 경계가 문장부호가 아니면 비례 배분
+        out.append((v0 + words[i0]['start'], v0 + words[i1]['end']))
+        i0 = min(i1 + 1, len(words) - 1)
+    return out
+
 def subtitles(lines, path):
     ev = []
     for L in lines:
         parts = chunks(L['sub'])
-        tot = sum(syllables(p) for p in parts) or 1
-        t = L['v0']
-        for p in parts:
-            d = (L['v1'] - L['v0']) * syllables(p) / tot
-            body = r'\N'.join(wrap(p))
-            ev.append((t - 0.05, t + d + 0.15, body, L.get('hl', [])))
-            t += d
+        for p, (t0, t1) in zip(parts, chunk_times(L, parts)):
+            ev.append((t0 - 0.05, t1 + 0.15, r'\N'.join(wrap(p)), L.get('hl', [])))
     with open(path, 'w') as f:
         f.write(ASS_HEAD)
         for k, (a, b, body, hl) in enumerate(ev):
             if k + 1 < len(ev):
-                b = min(b, ev[k + 1][0])
+                nxt = ev[k + 1][0]
+                b = nxt if nxt - b < 0.6 else min(b, nxt)  # 짧은 쉼 동안은 자막을 그대로 둔다
             f.write(f"Dialogue: 0,{ts(a)},{ts(b)},Shade,,0,0,0,,{{\\pos(963,1003)\\blur10\\alpha&H38&}}{body}\n")
             f.write(f"Dialogue: 0,{ts(a)},{ts(b)},Shade,,0,0,0,,{{\\pos(961,1001)\\blur3\\alpha&H68&}}{body}\n")
             f.write(f"Dialogue: 1,{ts(a)},{ts(b)},Text,,0,0,0,,{{\\pos(960,1000)}}{highlight(body, hl)}\n")

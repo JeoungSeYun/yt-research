@@ -2,5 +2,3 @@ build/
 *.blend
 *.blend1
 __pycache__/
-# 8분 영상 1080p 원본은 GitHub 파일 크기 제한(100MB)을 넘어서 저장소에 넣지 않는다 (stoneage_720p.mp4를 넣는다)
-/stoneage.mp4

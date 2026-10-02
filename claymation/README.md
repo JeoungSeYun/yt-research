@@ -70,30 +70,6 @@ GPT Image, Kling 3.0), 이어 붙이기·12fps 스톱모션 처리·음악과 �
 장면마다 그 시대 느낌의 음악(뼈 피리·가죽북 / 다르부카·우드 / 리라)을 합성했고, 자막은 나눔스퀘어라운드로 얹었다.
 내레이션은 타입캐스트 API(`oldfun_voice.py`)로 만든다. 생성 기록과 출처는 [`oldfun_prompts.md`](oldfun_prompts.md)에 있다.
 
-## 8분 정보 영상 「석기시대 사람들은 뭐 하고 놀았을까?」
-
-폰도, 유튜브도, 노래방도 없던 석기시대. 해가 지면 사람들은 뭘 하며 지냈을까?
-현대의 오락거리로 시작해 "그때는 아무것도 없었다"로 넘어간 뒤, 일곱 장으로 석기시대의 유흥을 따라간다.
-
-| 장 | 내용 |
-|---|---|
-| 오프닝 | 스마트폰·게임·노래방이 있는 오늘 → 화면이 꺼지고 빙하기 들판으로 |
-| 1 불 앞의 밤 | 불의 흔적(100만 년 전, 40만 년 전 불 피우기), 주호안 사람들의 밤 이야기 |
-| 2 4만 년 전의 플레이리스트 | 새 뼈·상아 피리, 1만 8천 년 전 고둥 나팔 |
-| 3 동굴 속 영화관 | 손 스텐실, 겹쳐 그린 동물과 횃불, 아이들의 손가락 선 |
-| 4 장난감과 놀이 | 점토 인형, 돌 깨기 연습, 납작한 뼈 주사위, 투창기 |
-| 5 석기시대의 파티 | 힐라존 타크티트의 장례 잔치, 괴베클리 테페 |
-| 6 꾸미기와 반려견 | 조개 구슬, 황토 물감, 본-오버카셀의 개 |
-| 7 남는 시간 | 수렵채집인은 하루에 얼마나 일했을까 |
-
-- **AI 생성 없이** 모든 장면을 Blender로 직접 빚었다(`stoneage/world.py`의 점토 인형·소품·동굴, `stoneage/shots.py`의 61장면).
-  동굴 벽화 무늬도 PIL로 그린 텍스처다(`stoneage/cave_art.py`).
-- 사진 장면은 12fps로 천천히 줌·팬하고(스톱모션 카메라), 모닥불 장면에는 조명 깜빡임을 더 세게 넣었다.
-- 자막은 Pretendard로, 테두리 없이 흐린 그림자 두 겹만 깔았다. 장이 바뀔 때 왼쪽 위에 장 제목이 뜬다.
-- 음악·효과음은 직접 합성했다(`stoneage/score.py`: 현대 오프닝 비트, 동굴 드론, 뼈 피리, 고둥, 가죽북, 모닥불 소리 등).
-- 내레이션은 타입캐스트 API로 만든다(`stoneage/voice.py`). 내레이션 파일이 생기면 타임라인과 자막 시각이 그 길이에 맞춰 다시 짜인다.
-- 대본의 사실 문장은 두 번에 나눠 다시 확인했고, 줄마다 근거를 [`stoneage/sources.md`](stoneage/sources.md)에 적었다.
-
 ## 만든 방법 (1·2화 Blender 버전)
 
 - **스톱모션 방식**: 12fps로 한 장씩 포즈를 잡아 '촬영'(키프레임 보간 없음)하고, 24fps 영상에서 한 장을
@@ -120,10 +96,6 @@ GPT Image, Kling 3.0), 이어 붙이기·12fps 스톱모션 처리·음악과 �
 | `make_ai_video.sh`, `ai_prompts.md` | 실사 클레이 버전 조립 스크립트, AI 생성 프롬프트·작업 기록 |
 | `oldfun_voice.py`, `oldfun_sound.py`, `oldfun.ass` | 정보 영상: 타입캐스트 내레이션·자막 타이밍, 음악·효과음과 믹스, 기본 자막 |
 | `make_oldfun_video.sh`, `oldfun_prompts.md` | 정보 영상 조립 스크립트, AI 생성 기록·사실 확인 출처 |
-| `stoneage/script.py`, `stoneage/sources.md` | 8분 영상: 내레이션 대본·장면 배치, 사실 확인 출처 |
-| `stoneage/world.py`, `stoneage/shots.py`, `stoneage/cave_art.py` | 8분 영상: 점토 인형·소품·세트, 장면 61개, 동굴 벽화 텍스처 |
-| `stoneage/build.py`, `stoneage/score.py`, `stoneage/voice.py` | 8분 영상: 조립(타임라인·자막·인코딩), 음악·효과음, 타입캐스트 내레이션 |
-| `stoneage/renders/` | 8분 영상의 최종 렌더(JPEG). 있으면 다시 렌더하지 않고 조립한다 |
 | `*.mp4`, `*.jpg` | 완성 영상과 엔딩 스틸 |
 
 ## 다시 만들기
@@ -136,13 +108,6 @@ sudo apt install ffmpeg fonts-nanum   # 인코딩, 기호용 나눔스퀘어라�
 
 ./make_ai_video.sh                    # 실사 클레이 버전 (build/ai/clip_1~3.mp4 필요, ai_prompts.md 참고)
 TYPECAST_API_KEY=... ./make_oldfun_video.sh   # 정보 영상 (build/oldfun/clip_1~3.mp4 필요, oldfun_prompts.md 참고)
-
-# 8분 영상: 장면 렌더(1600×900, 28샘플, 장면당 1.5~3분) → 내레이션 → 조립
-#   자막·썸네일 글꼴 Pretendard(Medium·SemiBold·Bold·Black)를 ~/.local/share/fonts 에 설치해 둔다
-#   (https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/public/static/Pretendard-SemiBold.otf 등)
-python3 stoneage/shots.py --all --skip-existing --res 1600x900 --spp 28
-TYPECAST_API_KEY=... python3 stoneage/voice.py    # 없으면 글자 수로 어림한 타이밍으로 조립된다
-python3 stoneage/build.py                          # stoneage.mp4
 
 python3 peekaboo.py --blend peekaboo.blend        # Blender에서 열어볼 .blend 파일만 저장
 python3 peekaboo.py --frames 124,172 --out test/  # 특정 프레임만 렌더

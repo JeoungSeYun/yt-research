@@ -6,7 +6,7 @@
 script.py의 내레이션 줄(LINES)과 장면(SHOTS)으로 타임라인을 짜고,
   1) 장면마다 1920×1080 조각 영상을 만든다
      - 사진: 4K로 키운 뒤 천천히 줌/팬 (12fps로 움직여 한 장씩 두 번 = 스톱모션 카메라 느낌)
-     - 영상: Kling 클립을 짝수 장만 남겨 on twos, 길이가 모자라면 조금 느리게, 그래도 모자라면 마지막 장을 잡아 둔다
+     - 영상(clip/<id>.mp4가 있을 때만): 짝수 장만 남겨 on twos, 길이가 모자라면 조금 느리게, 그래도 모자라면 마지막 장을 잡아 둔다
      - 그레인·비네팅·조명 깜빡임도 여기서(12fps) 입혀 한 장 안에서는 그대로 머물게 한다
   2) 조각을 이어 붙이고, 자막(테두리 없이 부드러운 그림자만)과 소리를 얹어 인코딩한다
 
@@ -26,6 +26,7 @@ from script import LINES, SHOTS                           # noqa: E402
 BUILD = os.environ.get('STONEAGE_BUILD', os.path.join(ROOT, 'build', 'stoneage'))
 IMG, CLIP, VOICE, SEG = (os.path.join(BUILD, d) for d in ('img', 'clip', 'voice', 'seg'))
 IMG = os.environ.get('STONEAGE_IMG', IMG)                 # 미리보기 그림으로 시험할 때
+RENDERS = os.path.join(HERE, 'renders')                   # 저장소에 넣어 둔 최종 렌더(JPEG): 다시 렌더하지 않고 조립할 때
 OUT = os.environ.get('STONEAGE_OUT', os.path.join(ROOT, 'stoneage.mp4'))
 FPS = 24
 LEAD, GAP, CHAPTER_GAP, TAIL = 0.25, 0.45, 1.1, 2.5       # 줄 앞 여유, 줄 사이, 장 바뀔 때, 끝
@@ -120,6 +121,13 @@ def fades(n24, dip_in, dip_out):
         f.append(f"fade=t=out:st={n24 / FPS - DIP:.3f}:d={DIP}")
     return (',' + ','.join(f)) if f else ''
 
+def still(sid):
+    """장면 그림: 새로 렌더한 PNG가 있으면 그것을, 없으면 저장소의 JPEG를 쓴다."""
+    for p in (os.path.join(IMG, sid + '.png'), os.path.join(RENDERS, sid + '.jpg')):
+        if os.path.exists(p):
+            return p
+    return None
+
 def render(seg, idx):
     sh = SHOTS[seg['id']]
     n24 = seg['f1'] - seg['f0']
@@ -136,7 +144,7 @@ def render(seg, idx):
               f"tpad=stop_mode=clone:stop_duration={hold + 0.2:.3f},fps={FPS}{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
         cmd = ['ffmpeg', '-v', 'error', '-y', '-i', clip, '-vf', vf]
     else:
-        img = os.path.join(IMG, seg['id'] + '.png')
+        img = still(seg['id'])
         vf = (f"scale=3840:2172:flags=lanczos,crop=3840:2160,{zoompan(sh.get('move', 'in'), n12, sh.get('focus', (0.5, 0.5)))},"
               f"{look(sh)},fps={FPS}{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
         cmd = ['ffmpeg', '-v', 'error', '-y', '-i', img, '-vf', vf]
@@ -249,6 +257,10 @@ def main():
             print(f"{L['id']:>6} {L['v0']:7.2f}–{L['v1']:7.2f} {'V' if L['voiced'] else '~'} {L['sub'][:40]}")
         print(f"{len(segs)} shots, {int(total // 60)}:{total % 60:04.1f}")
         return
+    missing = sorted({s['id'] for s in segs if not still(s['id'])
+                      and not (SHOTS[s['id']].get('clip') and os.path.exists(os.path.join(CLIP, s['id'] + '.mp4')))})
+    if missing:
+        sys.exit('그림이 없는 장면: ' + ', '.join(missing) + '  (python3 shots.py --all --skip-existing 로 렌더)')
     for d in (SEG,):
         os.makedirs(d, exist_ok=True)
     only = None

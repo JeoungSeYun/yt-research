@@ -628,6 +628,21 @@ def a_kid_dog():
     person('kid', 'kid', (-0.12, 0.28, 0.0), 30, 'pet', mouth='open', seed=9)
     W.camera((0.0, -0.42, 0.18), (0.0, 0.25, 0.13), lens=50, fstop=2.2)
 
+# 썸네일 (영상에는 안 쓴다)
+@shot
+def thumb():
+    """돌멩이를 스마트폰처럼 들고 갸웃하는 석기시대 아이. 왼쪽은 제목 글자 자리."""
+    cave_set(fire_light=30, behind=True)
+    J = W.caveperson('kid', 'kid', (0.16, 0.2, 0.0), -18, mouth='o', seed=9)
+    W.pose(J, head=(16, 0, -12), shL=(-50, 0, -30), shR=(-50, 0, 30), elL=(-80, 0, 0), elR=(-80, 0, 0))
+    hands = (W.world_pos(J['wrL']) + W.world_pos(J['wrR'])) / 2
+    eyes = (W.world_pos(J['face']['eye1']) + W.world_pos(J['face']['eye-1'])) / 2
+    d = (eyes - hands).normalized()
+    st = W.obj('stonephone', S.bm_roundcyl(0.03, 0.008, 0.056, e=0.35, z0=-0.028), 'stone', None,
+               hands + d * 0.012, sub=2, lump=0.002)
+    st.rotation_euler = d.to_track_quat('-Y', 'Z').to_euler()
+    W.camera((0.0, -0.36, 0.23), (0.075, 0.2, 0.2), lens=50, fstop=2.4)
+
 
 # ─── 실행 ───
 def render(sid, path, res=(1600, 900), spp=32):

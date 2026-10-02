@@ -658,6 +658,73 @@ def render(sid, path, res=(1600, 900), spp=32):
     print(f'{sid}: {time.time() - t0:.0f}s -> {path}', flush=True)
 
 
+def flame_box(margin=0.05):
+    """불꽃이 화면에서 차지하는 영역(Blender 테두리 좌표 0~1, 아래가 0). 화면에 없으면 None."""
+    from bpy_extras.object_utils import world_to_camera_view
+    bpy.context.view_layer.update()
+    sc = S.SC
+    xs, ys = [], []
+    for ob in bpy.data.objects:
+        if ob.type == 'MESH' and '_flame' in ob.name:
+            for v in ob.data.vertices:
+                p = world_to_camera_view(sc, sc.camera, ob.matrix_world @ v.co)
+                if p.z > 0:
+                    xs.append(p.x)
+                    ys.append(p.y)
+    if not xs:
+        return None
+    box = (max(0.0, min(xs) - margin), min(1.0, max(xs) + margin),
+           max(0.0, min(ys) - margin), min(1.0, max(ys) + margin * 1.5))
+    return box if box[1] > box[0] and box[3] > box[2] else None
+
+
+def render_flames(sid, n, out, res, spp, skip):
+    """불꽃 모양만 바꾼 교체 컷 <id>_f1.png … : 불꽃 둘레만 렌더해서 기본 그림에 부드럽게 덮는다."""
+    from PIL import Image, ImageFilter
+    base = os.path.join(out, sid + '.png')
+    if not os.path.exists(base):
+        print(f'{sid}: 기본 그림이 없어 건너뜀', flush=True)
+        return
+    W.new_scene(res, spp)
+    W.materials()
+    SHOT[sid]()
+    box0 = flame_box()                                     # 기본 불꽃 자리도 덮어야 옛 불꽃 끝이 남지 않는다
+    if box0 is None:
+        print(f'{sid}: 화면에 불꽃이 없음', flush=True)
+        return
+    for v in range(1, n + 1):
+        path = os.path.join(out, f'{sid}_f{v}.png')
+        if skip and os.path.exists(path):
+            continue
+        W.FLAME_VARIANT = v
+        try:
+            W.new_scene(res, spp)
+            W.materials()
+            SHOT[sid]()
+        finally:
+            W.FLAME_VARIANT = 0
+        bv = flame_box() or box0
+        box = (min(box0[0], bv[0]), max(box0[1], bv[1]), min(box0[2], bv[2]), max(box0[3], bv[3]))
+        sc = S.SC
+        sc.render.resolution_x, sc.render.resolution_y = res
+        sc.cycles.samples = spp
+        sc.render.use_border, sc.render.use_crop_to_border = True, False
+        sc.render.border_min_x, sc.render.border_max_x, sc.render.border_min_y, sc.render.border_max_y = box
+        sc.render.image_settings.color_mode = 'RGBA'
+        tmp = path[:-4] + '_part.png'
+        sc.render.filepath = tmp
+        t0 = time.time()
+        bpy.ops.render.render(write_still=True)
+        part = Image.open(tmp).convert('RGBA')
+        mask = part.getchannel('A').point(lambda a: 255 if a > 250 else 0)
+        mask = mask.filter(ImageFilter.MinFilter(41)).filter(ImageFilter.GaussianBlur(6))   # 테두리 밖 검은 칸이 섞이지 않게
+        img = Image.open(base).convert('RGB')
+        img.paste(part.convert('RGB'), (0, 0), mask)
+        img.save(path)
+        os.remove(tmp)
+        print(f'{sid}_f{v}: {time.time() - t0:.0f}s -> {path}', flush=True)
+
+
 def main():
     a = sys.argv[1:]
     if '--list' in a:
@@ -667,8 +734,12 @@ def main():
     spp = int(a[a.index('--spp') + 1]) if '--spp' in a else 32
     out = a[a.index('--preview') + 1] if '--preview' in a else IMG
     os.makedirs(out, exist_ok=True)
-    flags = {'--res', '--spp', '--preview'}
+    flags = {'--res', '--spp', '--preview', '--flames'}
     names = [x for i, x in enumerate(a) if not x.startswith('--') and (i == 0 or a[i - 1] not in flags)]
+    if '--flames' in a:                                    # 불꽃 교체 컷: python3 shots.py --flames 2 a_fire_close …
+        for sid in names:
+            render_flames(sid, int(a[a.index('--flames') + 1]), out, res, spp, '--skip-existing' in a)
+        return
     if '--all' in a or '--preview' in a and not names:
         names = list(SHOT)
     for sid in names:

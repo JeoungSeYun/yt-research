@@ -18,6 +18,7 @@ import sprout as S                                        # noqa: E402
 
 TEX = os.path.join(os.path.dirname(HERE), 'build', 'stoneage', 'tex')
 MAT = {}
+FLAME_VARIANT = 0      # 0 = 기본 불꽃. 1, 2 … = 같은 장면에서 불꽃 혀 모양만 바꾼 교체용(스톱모션 불꽃)
 rng = random.Random(7)
 
 
@@ -540,11 +541,13 @@ def campfire(name, loc=(0, 0, 0), scale=1.0, light=180.0, seed=3):
         obj(f'{name}_ember{i}', S.bm_ellipsoid(0.012, 0.01, 0.008), 'ember' if i % 2 else 'char', grp,
             (r * cos(a), r * sin(a), 0.01), lump=0.002, sub=1)
     flames = []
+    var = FLAME_VARIANT
+    frnd = random.Random(seed * 7919 + var) if var else rnd   # 교체용 불꽃: 돌·장작은 그대로, 불꽃만 다르게
     for i in range(7):                                     # 점토 불꽃 혀
-        a = 2 * pi * i / 7
+        a = 2 * pi * i / 7 + (frnd.uniform(-0.3, 0.3) if var else 0.0)
         r = 0.0 if i == 0 else 0.035
-        h = 0.2 if i == 0 else rnd.uniform(0.11, 0.16)
-        fl = bend_capsule(0.032 if i == 0 else 0.022, h, 0.004, bend=rnd.uniform(-0.25, 0.25), twist=rnd.uniform(-1.5, 1.5))
+        h = (0.2 * (frnd.uniform(0.86, 1.1) if var else 1.0)) if i == 0 else frnd.uniform(0.11, 0.16)
+        fl = bend_capsule(0.032 if i == 0 else 0.022, h, 0.004, bend=frnd.uniform(-0.25, 0.25), twist=frnd.uniform(-1.5, 1.5))
         f_ob = obj(f'{name}_flame{i}', fl, 'flame', grp, (r * cos(a), r * sin(a), 0.02), lump=0.004, lump_scale=14)
         f_ob.visible_shadow = False
         flames.append(f_ob)

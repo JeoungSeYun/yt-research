@@ -16,7 +16,7 @@ script.py의 내레이션 줄(LINES)과 장면(SHOTS)으로 타임라인을 짜�
   python3 build.py --plan     # 타임라인만 출력
   python3 build.py --segments 3,4   # 특정 장면 조각만 다시
 """
-import json, os, re, subprocess, sys, wave
+import json, os, random, re, shutil, subprocess, sys, wave
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)                              # claymation/
@@ -92,8 +92,9 @@ def look(sh):
     grade = "colorbalance=rs=-0.04:bs=0.05:rh=0.03:bh=-0.03"   # 그림자는 살짝 푸르게, 밝은 곳은 따뜻하게
     return f"eq=brightness='{amp}*(random(0)-0.5)':eval=frame,{grade},vignette=PI/6.5,noise=alls=3:allf=t"
 
-def zoompan(move, n, focus=(0.5, 0.5)):
-    """move: in / out / left / right / up / down / hold. n = 12fps 장 수."""
+def zoompan(move, n, focus=(0.5, 0.5), d=None):
+    """move: in / out / left / right / up / down / hold. n = 12fps 장 수.
+    d: 입력 한 장당 내보낼 장 수(사진 한 장이면 n, 불꽃 교체 컷처럼 12fps로 장이 들어오면 1)."""
     fx, fy = focus
     z0, z1 = {'in': (1.0, 1.12), 'out': (1.12, 1.0)}.get(move, (1.10, 1.10))
     if move == 'hold':
@@ -111,7 +112,7 @@ def zoompan(move, n, focus=(0.5, 0.5)):
         cy = f"(ih-ih/zoom)*(1-{p})"
     elif move == 'down':
         cy = f"(ih-ih/zoom)*{p}"
-    return f"zoompan=z='{z}':x='{cx}':y='{cy}':d={n}:s=1920x1080:fps=12"
+    return f"zoompan=z='{z}':x='{cx}':y='{cy}':d={d or n}:s=1920x1080:fps=12"
 
 def fades(n24, dip_in, dip_out):
     f = []
@@ -127,6 +128,14 @@ def still(sid):
         if os.path.exists(p):
             return p
     return None
+
+def variants(base):
+    """기본 그림 옆의 불꽃 교체 컷(<id>_f1, <id>_f2 …, shots.py --flames로 만든다)."""
+    stem, ext = os.path.splitext(base)
+    out = []
+    while os.path.exists(f'{stem}_f{len(out) + 1}{ext}'):
+        out.append(f'{stem}_f{len(out) + 1}{ext}')
+    return out
 
 def render(seg, idx):
     sh = SHOTS[seg['id']]
@@ -145,9 +154,26 @@ def render(seg, idx):
         cmd = ['ffmpeg', '-v', 'error', '-y', '-i', clip, '-vf', vf]
     else:
         img = still(seg['id'])
-        vf = (f"scale=3840:2172:flags=lanczos,crop=3840:2160,{zoompan(sh.get('move', 'in'), n12, sh.get('focus', (0.5, 0.5)))},"
+        frames = [img] + variants(img)
+        zp = zoompan(sh.get('move', 'in'), n12, sh.get('focus', (0.5, 0.5)), d=1 if len(frames) > 1 else None)
+        vf = (f"scale=3840:2172:flags=lanczos,crop=3840:2160,{zp},"
               f"{look(sh)},fps={FPS}{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
-        cmd = ['ffmpeg', '-v', 'error', '-y', '-i', img, '-vf', vf]
+        if len(frames) > 1:                                # 불꽃 교체: 12fps 격자에서 1~2장마다 다른 불꽃으로 바꿔 끼운다
+            seq = os.path.join(SEG, f"{idx:03d}_seq")
+            shutil.rmtree(seq, ignore_errors=True)
+            os.makedirs(seq)
+            ext = os.path.splitext(img)[1]
+            rnd = random.Random(f"{seg['id']}{idx}")
+            cur, i = 0, 0
+            while i < n12:
+                for _ in range(rnd.choice((1, 2, 2))):
+                    if i < n12:
+                        os.symlink(os.path.abspath(frames[cur]), os.path.join(seq, f"{i:04d}{ext}"))
+                        i += 1
+                cur = rnd.choice([j for j in range(len(frames)) if j != cur])
+            cmd = ['ffmpeg', '-v', 'error', '-y', '-framerate', '12', '-i', os.path.join(seq, f"%04d{ext}"), '-vf', vf]
+        else:
+            cmd = ['ffmpeg', '-v', 'error', '-y', '-i', img, '-vf', vf]
     cmd += ['-frames:v', str(n24), '-r', str(FPS), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', path]
     subprocess.run(cmd, check=True)
     return path
@@ -257,19 +283,19 @@ def main():
             print(f"{L['id']:>6} {L['v0']:7.2f}–{L['v1']:7.2f} {'V' if L['voiced'] else '~'} {L['sub'][:40]}")
         print(f"{len(segs)} shots, {int(total // 60)}:{total % 60:04.1f}")
         return
-    missing = sorted({s['id'] for s in segs if not still(s['id'])
+    only = None
+    if '--segments' in args:
+        only = {int(x) for x in args[args.index('--segments') + 1].split(',')}
+    missing = sorted({s['id'] for i, s in enumerate(segs) if (only is None or i in only) and not still(s['id'])
                       and not (SHOTS[s['id']].get('clip') and os.path.exists(os.path.join(CLIP, s['id'] + '.mp4')))})
     if missing:
         sys.exit('그림이 없는 장면: ' + ', '.join(missing) + '  (python3 shots.py --all --skip-existing 로 렌더)')
     for d in (SEG,):
         os.makedirs(d, exist_ok=True)
-    only = None
-    if '--segments' in args:
-        only = {int(x) for x in args[args.index('--segments') + 1].split(',')}
     paths = []
     for i, s in enumerate(segs):
         p = os.path.join(SEG, f"{i:03d}_{s['id']}.mp4")
-        if only is None or i in only or not os.path.exists(p):
+        if only is None or i in only:
             print(f"[{i + 1}/{len(segs)}] {s['id']} {(s['f1'] - s['f0']) / FPS:.1f}s", flush=True)
             p = render(s, i)
         paths.append(p)

@@ -23,9 +23,10 @@ ROOT = os.path.dirname(HERE)                              # claymation/
 sys.path.insert(0, HERE)
 from script import LINES, SHOTS                           # noqa: E402
 
-BUILD = os.path.join(ROOT, 'build', 'stoneage')
+BUILD = os.environ.get('STONEAGE_BUILD', os.path.join(ROOT, 'build', 'stoneage'))
 IMG, CLIP, VOICE, SEG = (os.path.join(BUILD, d) for d in ('img', 'clip', 'voice', 'seg'))
-OUT = os.path.join(ROOT, 'stoneage.mp4')
+IMG = os.environ.get('STONEAGE_IMG', IMG)                 # 미리보기 그림으로 시험할 때
+OUT = os.environ.get('STONEAGE_OUT', os.path.join(ROOT, 'stoneage.mp4'))
 FPS = 24
 LEAD, GAP, CHAPTER_GAP, TAIL = 0.25, 0.45, 1.1, 2.5       # 줄 앞 여유, 줄 사이, 장 바뀔 때, 끝
 DIP = 0.35                                                 # 장이 바뀔 때 검은 화면으로 넘어가는 시간

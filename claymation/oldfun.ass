@@ -1,0 +1,18 @@
+[Script Info]
+; 옛날 사람들은 뭐 하고 놀았을까? — 자막 (내레이션 타이밍에 맞춤)
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,NanumSquareRound,66,&H00FFFFFF,&H00FFFFFF,&H00142235,&H8C000000,-1,0,0,0,100,100,0,0,1,5.5,2.5,2,80,80,64,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.05,0:00:02.52,Sub,,0,0,0,,{\fad(120,0)}폰도 없던 옛날엔 뭐 하고 놀았을까?
+Dialogue: 0,0:00:02.52,0:00:05.00,Sub,,0,0,0,,약 4만 년 전엔 {\c&H0038D8FF&}뼈 피리{\c&H00FFFFFF&}를 불었어요!
+Dialogue: 0,0:00:05.15,0:00:09.70,Sub,,0,0,0,,약 5천 년 전 이집트 사람들은\N{\c&H0038D8FF&}'세네트'{\c&H00FFFFFF&}라는 보드게임을 했고요,
+Dialogue: 0,0:00:10.05,0:00:14.60,Sub,,0,0,0,,2천 년도 더 전 그리스에선 양의 뼈로\N{\c&H0038D8FF&}공기놀이{\c&H00FFFFFF&} 같은 놀이를 했대요!

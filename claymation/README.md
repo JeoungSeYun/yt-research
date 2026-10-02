@@ -11,6 +11,13 @@
 
 (세 영상 모두 1920×1080, 24fps, 15초, 사운드 포함)
 
+정보 영상도 같은 실사 클레이 스타일로 만들었다.
+
+| 정보 영상 「옛날 사람들은 뭐 하고 놀았을까?」 |
+|---|
+| ![옛날 놀이](oldfun.jpg) |
+| ▶ [`oldfun.mp4`](oldfun.mp4) — 자막·음악·효과음 포함, 타입캐스트 내레이션은 API 키를 넣고 다시 만들면 들어간다 |
+
 ## 1화 「새싹」
 
 1. 떡이가 물뿌리개를 들고 깡총깡총 화분 앞으로 와서 물을 준다.
@@ -51,6 +58,18 @@
 GPT Image, Kling 3.0), 이어 붙이기·12fps 스톱모션 처리·음악과 효과음은 이 저장소의 스크립트로 했다.
 프롬프트와 작업 ID, 쓴 크레딧은 [`ai_prompts.md`](ai_prompts.md)에 있다.
 
+## 정보 영상 「옛날 사람들은 뭐 하고 놀았을까?」
+
+폰도 없던 아주 옛날 사람들은 뭐 하고 놀았을까? 그 시대 사람 점토 인형들이 15초 동안 세 장면으로 보여 준다.
+
+1. **약 4만 년 전 동굴** — 모닥불 앞에서 뼈 피리를 불고, 친구들은 손뼉을 친다.
+2. **약 5천 년 전 이집트** — 막대 주사위를 던지며 보드게임 '세네트'를 한다.
+3. **2천여 년 전 그리스** — 아이들이 양의 발목뼈로 공기놀이 같은 놀이를 한다.
+
+내용은 박물관·논문 자료로 확인했고, 근거가 약한 이야기(가장 오래된 주사위, 공기놀이의 조상 등)는 뺐다.
+장면마다 그 시대 느낌의 음악(뼈 피리·가죽북 / 다르부카·우드 / 리라)을 합성했고, 자막은 나눔스퀘어라운드로 얹었다.
+내레이션은 타입캐스트 API(`oldfun_voice.py`)로 만든다. 생성 기록과 출처는 [`oldfun_prompts.md`](oldfun_prompts.md)에 있다.
+
 ## 만든 방법 (1·2화 Blender 버전)
 
 - **스톱모션 방식**: 12fps로 한 장씩 포즈를 잡아 '촬영'(키프레임 보간 없음)하고, 24fps 영상에서 한 장을
@@ -75,6 +94,8 @@ GPT Image, Kling 3.0), 이어 붙이기·12fps 스톱모션 처리·음악과 �
 | `make_video.sh` | 렌더 → 사운드 → 인코딩 전체 파이프라인 |
 | `peekaboo_ai_sound.py` | 실사 클레이 버전 음악·효과음 (영상에서 잡은 타이밍 큐 포함) |
 | `make_ai_video.sh`, `ai_prompts.md` | 실사 클레이 버전 조립 스크립트, AI 생성 프롬프트·작업 기록 |
+| `oldfun_voice.py`, `oldfun_sound.py`, `oldfun.ass` | 정보 영상: 타입캐스트 내레이션·자막 타이밍, 음악·효과음과 믹스, 기본 자막 |
+| `make_oldfun_video.sh`, `oldfun_prompts.md` | 정보 영상 조립 스크립트, AI 생성 기록·사실 확인 출처 |
 | `*.mp4`, `*.jpg` | 완성 영상과 엔딩 스틸 |
 
 ## 다시 만들기
@@ -86,6 +107,7 @@ sudo apt install ffmpeg fonts-nanum   # 인코딩, 기호용 나눔스퀘어라�
 ./make_video.sh peekaboo              # 2화
 
 ./make_ai_video.sh                    # 실사 클레이 버전 (build/ai/clip_1~3.mp4 필요, ai_prompts.md 참고)
+TYPECAST_API_KEY=... ./make_oldfun_video.sh   # 정보 영상 (build/oldfun/clip_1~3.mp4 필요, oldfun_prompts.md 참고)
 
 python3 peekaboo.py --blend peekaboo.blend        # Blender에서 열어볼 .blend 파일만 저장
 python3 peekaboo.py --frames 124,172 --out test/  # 특정 프레임만 렌더

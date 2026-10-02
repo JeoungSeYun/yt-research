@@ -247,7 +247,7 @@ def main():
     if '--plan' in args:
         for L in lines:
             print(f"{L['id']:>6} {L['v0']:7.2f}–{L['v1']:7.2f} {'V' if L['voiced'] else '~'} {L['sub'][:40]}")
-        print(f"{len(segs)} shots, {total / 60:.0f}:{total % 60:04.1f}")
+        print(f"{len(segs)} shots, {int(total // 60)}:{total % 60:04.1f}")
         return
     for d in (SEG,):
         os.makedirs(d, exist_ok=True)
@@ -283,7 +283,7 @@ def main():
                     '-vf', f"subtitles={subs},format=yuv420p", '-af', f"{ln},aresample=44100",
                     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'aac', '-b:a', '192k',
                     '-t', f"{total:.3f}", '-movflags', '+faststart', OUT], check=True)
-    print('done:', OUT, f"{total / 60:.0f}:{total % 60:04.1f}")
+    print('done:', OUT, f"{int(total // 60)}:{total % 60:04.1f}")
 
 
 if __name__ == '__main__':

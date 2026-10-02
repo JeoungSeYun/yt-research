@@ -500,10 +500,10 @@ def a_kid_knap():
 @shot
 def a_dice_close():
     cave_set(fire_light=20, behind=True)
-    W.dice('d1', (-0.02, 0.05, 0.0), (0, 0, rad(20)))
-    W.dice('d2', (0.03, 0.08, 0.0), (0, 0, rad(-35)))
-    W.dice('d3', (0.0, 0.11, 0.0), (rad(90), 0, rad(10)))
-    W.camera((0.05, -0.12, 0.09), (0.0, 0.08, 0.015), lens=70, fstop=2.0)
+    W.dice('d1', (-0.025, 0.05, 0.0), (0, 0, rad(20)))
+    W.dice('d2', (0.03, 0.075, 0.0), (0, 0, rad(-35)), marked=False)
+    W.dice('d3', (-0.005, 0.11, 0.0), (0, 0, rad(75)))
+    W.camera((0.05, -0.12, 0.1), (0.0, 0.08, 0.012), lens=70, fstop=4.0)
 
 @shot
 def a_dice_game():
@@ -511,7 +511,7 @@ def a_dice_game():
     person('dad', 'dad', (-0.25, 0.3, 0.0), 30, 'wide', mouth='open', seed=2)
     person('mom', 'mom', (0.25, 0.3, 0.0), -30, 'clap', mouth='open', seed=5)
     for i in range(3):
-        W.dice(f'd{i}', (-0.03 + 0.03 * i, 0.12 + 0.02 * (i % 2), 0.0), (0, 0, rad(30 * i)))
+        W.dice(f'd{i}', (-0.04 + 0.04 * i, 0.12 + 0.02 * (i % 2), 0.0), (0, 0, rad(30 * i)), marked=i != 1)
     W.camera((0.0, -0.65, 0.35), (0.0, 0.25, 0.15), lens=42, fstop=2.8)
 
 # 잔치

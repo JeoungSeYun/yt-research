@@ -1017,12 +1017,15 @@ def figurine(name, loc, kind='bison', s=1.0, mat='ochre_toy'):
     return grp
 
 
-def dice(name, loc, rot=(0, 0, 0), s=0.016):
-    """뼈 주사위: 둥근 정육면체 + 점."""
+def dice(name, loc, rot=(0, 0, 0), s=0.016, marked=True):
+    """뼈 주사위: 북아메리카 1만 2천여 년 전 유적에서 나온 것처럼 납작한 양면 뼈 조각.
+    한 면에만 새김 줄이 있어서, 던져서 어느 면이 나오는지 본다(정육면체가 아니다)."""
     grp = joint(name, None, loc, rot)
-    obj(name + '_c', S.bm_roundcyl(s, s, 2 * s, e=0.25, z0=-s), 'bone', grp, (0, 0, s), sub=1)
-    for k, (dx, dy) in enumerate(((0, 0), (-0.5, -0.5), (0.5, 0.5))):
-        obj(f'{name}_d{k}', S.bm_ellipsoid(s * 0.18, s * 0.18, s * 0.08), 'mouth', grp, (dx * s, dy * s, 2 * s), sub=1)
+    obj(name + '_c', S.bm_roundcyl(1.6 * s, 0.7 * s, 0.38 * s, e=0.4, z0=0), 'bone', grp, (0, 0, 0), sub=1)
+    if marked:
+        for k in range(4):
+            obj(f'{name}_m{k}', S.bm_ellipsoid(0.07 * s, 0.42 * s, 0.05 * s), 'mouth', grp,
+                ((-0.75 + 0.5 * k) * s, 0, 0.38 * s), sub=1)
     return grp
 
 

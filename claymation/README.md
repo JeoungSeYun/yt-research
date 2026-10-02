@@ -138,6 +138,8 @@ sudo apt install ffmpeg fonts-nanum   # 인코딩, 기호용 나눔스퀘어라�
 TYPECAST_API_KEY=... ./make_oldfun_video.sh   # 정보 영상 (build/oldfun/clip_1~3.mp4 필요, oldfun_prompts.md 참고)
 
 # 8분 영상: 장면 렌더(1600×900, 28샘플, 장면당 1.5~3분) → 내레이션 → 조립
+#   자막·썸네일 글꼴 Pretendard(Medium·SemiBold·Bold·Black)를 ~/.local/share/fonts 에 설치해 둔다
+#   (https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/public/static/Pretendard-SemiBold.otf 등)
 python3 stoneage/shots.py --all --skip-existing --res 1600x900 --spp 28
 TYPECAST_API_KEY=... python3 stoneage/voice.py    # 없으면 글자 수로 어림한 타이밍으로 조립된다
 python3 stoneage/build.py                          # stoneage.mp4

@@ -156,8 +156,8 @@ def render(seg, idx):
         img = still(seg['id'])
         frames = [img] + variants(img)
         zp = zoompan(sh.get('move', 'in'), n12, sh.get('focus', (0.5, 0.5)), d=1 if len(frames) > 1 else None)
-        vf = (f"scale=3840:2172:flags=lanczos,crop=3840:2160,{zp},"
-              f"{look(sh)},fps={FPS}{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
+        vf = (f"scale=3840:2172:flags=lanczos,crop=3840:2160,{zp},"     # 12→24fps에서 끝 장이 모자라지 않게 tpad
+              f"{look(sh)},fps={FPS},tpad=stop_mode=clone:stop=6{fades(n24, seg['dip_in'], seg['dip_out'])},format=yuv420p")
         if len(frames) > 1:                                # 불꽃 교체: 12fps 격자에서 1~2장마다 다른 불꽃으로 바꿔 끼운다
             seq = os.path.join(SEG, f"{idx:03d}_seq")
             shutil.rmtree(seq, ignore_errors=True)
@@ -174,12 +174,14 @@ def render(seg, idx):
             cmd = ['ffmpeg', '-v', 'error', '-y', '-framerate', '12', '-i', os.path.join(seq, f"%04d{ext}"), '-vf', vf]
         else:
             cmd = ['ffmpeg', '-v', 'error', '-y', '-i', img, '-vf', vf]
-    cmd += ['-frames:v', str(n24), '-r', str(FPS), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', path]
+    # B프레임 없이(-bf 0): 이어 붙일 때(concat -c copy) 조각 머리의 장이 빠지지 않게
+    cmd += ['-frames:v', str(n24), '-r', str(FPS), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '14', '-bf', '0', path]
     subprocess.run(cmd, check=True)
     return path
 
 
 # ─── 자막 (Pretendard, 테두리 없이 부드러운 그림자) ───
+# 글꼴 이름 주의: 'Pretendard Bold'는 fontconfig가 못 찾아 다른 글꼴로 바뀐다. 굵은 제목은 'Pretendard' + Bold(-1).
 ASS_HEAD = """[Script Info]
 ScriptType: v4.00+
 PlayResX: 1920
@@ -193,8 +195,8 @@ Style: Text,Pretendard SemiBold,56,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0
 Style: Shade,Pretendard SemiBold,56,&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,0.4,0,1,0,0,2,100,100,80,1
 Style: ChapNo,Pretendard Medium,30,&H00E6F2FF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,6,0,1,0,0,7,0,0,0,1
 Style: ChapNoShade,Pretendard Medium,30,&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,6,0,1,0,0,7,0,0,0,1
-Style: Chap,Pretendard Bold,64,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,1,0,1,0,0,7,0,0,0,1
-Style: ChapShade,Pretendard Bold,64,&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,1,0,1,0,0,7,0,0,0,1
+Style: Chap,Pretendard,64,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,1,0,1,0,0,7,0,0,0,1
+Style: ChapShade,Pretendard,64,&H00000000,&H00000000,&H00000000,&H00000000,-1,0,0,0,100,100,1,0,1,0,0,7,0,0,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -206,9 +208,41 @@ def ts(t):
     t = max(0.0, t)
     return f"{int(t // 3600)}:{int(t % 3600 // 60):02d}:{t % 60:05.2f}"
 
+def break_cost(a, b, width):
+    """두 줄 a | b로 끊는 값(작을수록 좋다). 너무 길면 None."""
+    if max(len(a), len(b)) > width + 4:
+        return None
+    cost = abs(len(a) - len(b))
+    last, nxt = a.split()[-1], b.split()[0]
+    if a[-1] in '.?!…':
+        cost -= 9
+    elif a[-1] == ',':
+        clause = a[:-1].split(',')[-1].strip()
+        cost += 10 if len(clause) < 6 else -6              # '말과 들소, | 사자들이'처럼 나열 중간은 피한다
+    if re.search(r'[.?!…]\s', a) or re.search(r'[.?!…]\s', b):
+        cost += 20                                          # 한 줄에 문장 끝과 다음 문장 머리가 같이 있으면
+    if (re.search(r'([0-9]|[만천백몇여]|약|적어도)$', last) or re.match(r'(년|전|개|마리|살|시간|된|것)', nxt)
+            or re.fullmatch(r'수[는도가]?', nxt)):
+        cost += 30                                          # '1만 8천 | 년 전', '달리는 | 것처럼'처럼 붙어 다니는 말을 떼지 않는다
+    if re.search(r'(이나|와|과)$', last) or nxt.startswith('같'):
+        cost += 8                                           # '점이나 | 선', '말과 | 들소', '선 | 같은'
+    return cost
+
 def wrap(text, width=24):
-    """한 줄 width자 안팎으로, 어절 단위로 두 줄까지 나눈다."""
-    words, lines, cur = text.split(), [], ''
+    """한 화면 두 줄까지. 줄 길이가 고르게, 되도록 문장·쉼표 뒤에서 끊는다.
+    두 줄로 마땅히 안 되면 어절 단위로 width자씩 나눈 줄들을 돌려준다(chunks가 화면을 나눈다)."""
+    if len(text) <= width + 2:
+        return [text]
+    words = text.split()
+    best = None
+    for i in range(1, len(words)):
+        a, b = ' '.join(words[:i]), ' '.join(words[i:])
+        c = break_cost(a, b, width)
+        if c is not None and c < 25 and (best is None or c < best[0]):
+            best = (c, [a, b])
+    if best:
+        return best[1]
+    lines, cur = [], ''
     for w in words:
         if cur and len(cur) + 1 + len(w) > width:
             lines.append(cur)
@@ -218,26 +252,43 @@ def wrap(text, width=24):
     lines.append(cur)
     return lines
 
-def chunks(text):
-    """자막 한 화면 = 두 줄 이하. 길면 여러 화면으로 나눈다(문장·쉼표 경계 우선)."""
-    parts = [p.strip() for p in re.split(r'(?<=[.?!,…])\s+', text) if p.strip()]
-    out, cur = [], ''
-    for p in parts:
-        cand = (cur + ' ' + p).strip()
-        if cur and len(wrap(cand)) > 2:
-            out.append(cur)
-            cur = p
-        else:
-            cur = cand
-    out.append(cur)
-    final = []
-    for c in out:                                          # 쉼표 없이 긴 문장은 어절로 자른다
-        ls = wrap(c)
-        while len(ls) > 2:
-            final.append(' '.join(ls[:2]))
-            ls = ls[2:]
-        final.append(' '.join(ls))
-    return final
+def chunks(text, width=24):
+    """자막 한 화면 = 두 줄 이하. 길면 여러 화면으로 나눈다.
+    문장·쉼표로 자른 조각을 화면에 나눠 담는 모든 방법 중, 줄바꿈이 자연스럽고
+    화면이 문장 끝에서 바뀌는 쪽을 고른다."""
+    parts = []
+    for p in (p.strip() for p in re.split(r'(?<=[.?!,…])\s+', text)):
+        if parts and len(re.sub(r'[^가-힣0-9A-Za-z]', '', parts[-1])) < 5 and parts[-1][-1] == ',':
+            parts[-1] += ' ' + p                            # '도, 도샵, 레에 …'처럼 짧게 나열한 건 한데 묶는다
+        elif p:
+            parts.append(p)
+    INF = float('inf')
+
+    def screen(seg):
+        t = ' '.join(seg)
+        if len(t) <= width + 2:
+            return 0
+        w = wrap(t, width)
+        return max(0, break_cost(w[0], w[1], width)) if len(w) == 2 else INF
+
+    n = len(parts)
+    best, back = [0.0] + [INF] * n, [0] * (n + 1)
+    for j in range(1, n + 1):
+        for i in range(max(0, j - 4), j):
+            c = screen(parts[i:j])
+            if c == INF or best[i] == INF:
+                continue
+            v = best[i] + c + 10 + (0 if j == n or parts[j - 1][-1] in '.?!…' else 6)
+            if v < best[j]:
+                best[j], back[j] = v, i
+    if best[n] == INF:                                     # 조각 하나가 두 줄을 넘으면 어절로 자른다
+        ls = wrap(text, width)
+        return [' '.join(ls[k:k + 2]) for k in range(0, len(ls), 2)]
+    out, j = [], n
+    while j:
+        out.append(' '.join(parts[back[j]:j]))
+        j = back[j]
+    return out[::-1]
 
 def highlight(s, words):
     for w in words:
@@ -305,6 +356,11 @@ def main():
         f.writelines(f"file '{p}'\n" for p in paths)
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', os.path.join(BUILD, 'concat.txt'),
                     '-c', 'copy', os.path.join(BUILD, 'video.mp4')], check=True)
+    got = int(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-count_packets', '-show_entries',
+                              'stream=nb_read_packets', '-of', 'csv=p=0', os.path.join(BUILD, 'video.mp4')],
+                             capture_output=True, text=True).stdout)
+    if got != segs[-1]['f1']:                              # 장 수가 어긋나면 화면이 자막·소리와 점점 밀린다
+        sys.exit(f"이어 붙인 영상이 {got}장, 타임라인은 {segs[-1]['f1']}장: 조각 길이를 확인하세요")
     subs = os.path.join(BUILD, 'subs.ass')
     subtitles(lines, subs)
     json.dump({'lines': lines, 'shots': segs, 'total': total}, open(os.path.join(BUILD, 'timeline.json'), 'w'),

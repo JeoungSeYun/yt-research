@@ -28,6 +28,8 @@ IMG, CLIP, VOICE, SEG = (os.path.join(BUILD, d) for d in ('img', 'clip', 'voice'
 IMG = os.environ.get('STONEAGE_IMG', IMG)                 # 미리보기 그림으로 시험할 때
 RENDERS = os.path.join(HERE, 'renders')                   # 저장소에 넣어 둔 최종 렌더(JPEG): 다시 렌더하지 않고 조립할 때
 OUT = os.environ.get('STONEAGE_OUT', os.path.join(ROOT, 'stoneage.mp4'))
+PREVIEW = OUT[:-4] + '_720p.mp4'                            # 저장소용(GitHub 파일 100MB 제한) 720p 판
+PREVIEW_MB = 85
 FPS = 24
 LEAD, GAP, CHAPTER_GAP, TAIL = 0.25, 0.45, 1.1, 2.5       # 줄 앞 여유, 줄 사이, 장 바뀔 때, 끝
 DIP = 0.35                                                 # 장이 바뀔 때 검은 화면으로 넘어가는 시간
@@ -378,6 +380,15 @@ def main():
                     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'aac', '-b:a', '192k',
                     '-t', f"{total:.3f}", '-movflags', '+faststart', OUT], check=True)
     print('done:', OUT, f"{int(total // 60)}:{total % 60:04.1f}")
+    # 720p 판: 크기를 PREVIEW_MB 안으로 맞추는 2패스 인코딩
+    kbps = int(PREVIEW_MB * 8e3 / total) - 128
+    common = ['-vf', 'scale=1280:720:flags=lanczos', '-c:v', 'libx264', '-preset', 'medium', '-b:v', f'{kbps}k']
+    log = os.path.join(BUILD, 'x264_preview')
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', OUT, *common, '-pass', '1', '-passlogfile', log,
+                    '-an', '-f', 'null', '-'], check=True)
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', OUT, *common, '-pass', '2', '-passlogfile', log,
+                    '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', PREVIEW], check=True)
+    print('preview:', PREVIEW, f'{os.path.getsize(PREVIEW) / 1e6:.0f} MB')
 
 
 if __name__ == '__main__':

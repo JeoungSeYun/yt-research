@@ -15,6 +15,7 @@ script.py의 내레이션 줄(LINES)과 장면(SHOTS)으로 타임라인을 짜�
   python3 build.py            # 전체
   python3 build.py --plan     # 타임라인만 출력
   python3 build.py --segments 3,4   # 특정 장면 조각만 다시
+  python3 build.py --export-renders # build/stoneage/img의 렌더를 stoneage/renders/*.jpg로 (저장소에 넣을 것)
 """
 import json, os, random, re, shutil, subprocess, sys, wave
 
@@ -355,6 +356,17 @@ def main():
     args = sys.argv[1:]
     lines, segs = plan()
     total = segs[-1]['f1'] / FPS
+    if '--export-renders' in args:                         # 최종 렌더를 저장소용 JPEG로(새 환경에서 다시 렌더하지 않고 조립)
+        from PIL import Image
+        os.makedirs(RENDERS, exist_ok=True)
+        n = 0
+        for f in sorted(os.listdir(IMG)):
+            sid = re.sub(r'_f\d+$', '', f[:-4])
+            if f.endswith('.png') and sid in SHOTS:
+                Image.open(os.path.join(IMG, f)).convert('RGB').save(os.path.join(RENDERS, f[:-4] + '.jpg'), quality=92)
+                n += 1
+        print(f'{n} renders -> {RENDERS}')
+        return
     if '--plan' in args:
         for L in lines:
             print(f"{L['id']:>6} {L['v0']:7.2f}–{L['v1']:7.2f} {'V' if L['voiced'] else '~'} {L['sub'][:40]}")

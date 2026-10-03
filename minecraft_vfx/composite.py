@@ -156,6 +156,9 @@ def main(photo, mask, bg, out, sky_mask=None, sun_json=None):
     if sky_mask and sun_json and os.path.exists(os.path.join(os.path.dirname(bg), 'depth.png')):
         dimg = Image.open(os.path.join(os.path.dirname(bg), 'depth.png')).convert('L').resize((B.shape[1], B.shape[0]), Image.BILINEAR)
         depth = lin(np.asarray(dimg, np.float32) / 255)      # 렌더에서 sqrt(거리/120m)로 저장
+        # 가까운 물체 테두리 픽셀에는 뒤 배경이 섞여 있다: 주변에서 가장 먼 깊이로 흐려야 먼 건물 무늬가 점선처럼 안 남는다
+        from scipy.ndimage import grey_dilation
+        depth = grey_dilation(depth, size=(5, 5))
         Bs = depth_blur(Bs, np.clip((depth - 0.25) / 0.6, 0, 1))
     if sky_mask and sun_json:
         import json

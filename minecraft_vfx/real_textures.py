@@ -6,7 +6,8 @@
 Mojang 저작물(마인크래프트 EULA 적용)이라 저장소에는 넣지 않고 build/ 안에서만 쓴다.
 
   git clone --depth 1 --filter=blob:none --sparse https://github.com/Mojang/bedrock-samples bedrock
-  git -C bedrock sparse-checkout set resource_pack/textures/blocks
+  git -C bedrock sparse-checkout set resource_pack/textures/blocks resource_pack/textures/entity \
+      resource_pack/textures/environment resource_pack/textures/particle
   python3 real_textures.py bedrock/resource_pack/textures/blocks build/tex_real
 """
 import os, sys
@@ -120,6 +121,18 @@ def make(src, out):
     # 캐릭터 스킨·구름·달: blocks 옆 폴더(entity, environment)에서 원본 크기 그대로
     up = os.path.dirname(os.path.normpath(src))
     raw = lambda *p: Image.open(os.path.join(up, *p)).convert('RGBA')
+    # 마을: 참나무 판자·조약돌·유리·흙길·밭·밀·문·건초·꽃·횃불
+    for k, n in {'planks': 'planks_oak.png', 'cobblestone': 'cobblestone.png', 'glass': 'glass.png',
+                 'path_top': 'grass_path_top.png', 'path_side': 'grass_path_side.png', 'farmland': 'farmland_wet.png',
+                 'wheat': 'wheat_stage_7.png', 'door_lower': 'door_wood_lower.png', 'door_upper': 'door_wood_upper.png',
+                 'hay_side': 'hay_block_side.png', 'hay_top': 'hay_block_top.png', 'dandelion': 'flower_dandelion.png',
+                 'poppy': 'flower_rose.png', 'daisy': 'flower_oxeye_daisy.png', 'torch': 'torch_on.png'}.items():
+        T[k] = L(n)
+    # 주민(평원): 기본 몸 + 평원 옷을 겹친 64×64 스킨, 화난 주민 효과(파티클 아틀라스의 8×8 한 칸)
+    vil = raw('entity', 'villager2', 'villager.png')
+    vil.alpha_composite(raw('entity', 'villager2', 'biomes', 'biome_plains.png'))
+    T['villager'] = vil
+    T['angry'] = raw('particle', 'particles.png').crop((8, 40, 16, 48))
     T['skin_steve'] = raw('entity', 'steve.png')
     T['skin_alex'] = raw('entity', 'alex.png')
     T['clouds_map'] = raw('environment', 'clouds.png')

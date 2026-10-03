@@ -436,9 +436,13 @@ def player(name, skin, x, y, slim=False, swing=24.0, yaw=0.0):
         ('legR', 0, 16, 0, 32, 4, 12, 4, ((0, 4), (-2, 2), (0, 12)), (2, 0, 12), swing, 0.25),
         ('legL', 16, 48, 0, 48, 4, 12, 4, ((-4, 0), (-2, 2), (0, 12)), (-2, 0, 12), -swing, 0.25),
     ]
+    from PIL import Image
+    sk = Image.open(os.path.join(TEX, skin + '.png')).convert('RGBA')
     for pn, U, V, U2, V2, w, h, d, box, pivot, rot, infl in parts:
         skin_part(f'{name}_{pn}', mat, root, U, V, w, h, d, box, pivot, rot)
-        skin_part(f'{name}_{pn}_o', mat, root, U2, V2, w, h, d, box, pivot, rot, inflate=infl)
+        # 바깥 레이어는 스킨에 그려진 게 있을 때만(비어 있으면 상자 가장자리에 옆 칸 픽셀이 점선처럼 묻어난다)
+        if sk.crop((U2, V2, U2 + 2 * (d + w), V2 + d + h)).getextrema()[3][1] > 0:
+            skin_part(f'{name}_{pn}_o', mat, root, U2, V2, w, h, d, box, pivot, rot, inflate=infl)
     return root
 
 
@@ -803,6 +807,29 @@ def main():
     sc.render.filepath = out
     sc.render.image_settings.file_format = 'PNG'
     save_sun_screen(os.path.join(os.path.dirname(out) or '.', 'sun.json'))
+    if '--depth' in a:                                      # 깊이 지도: sqrt(거리/120m), 하늘 = 1 (얕은 심도용)
+        m = bpy.data.materials.new('depth')
+        m.use_nodes = True
+        nt = m.node_tree
+        nt.nodes.clear()
+        cd = nt.nodes.new('ShaderNodeCameraData')
+        dv = nt.nodes.new('ShaderNodeMath'); dv.operation = 'DIVIDE'; dv.inputs[1].default_value = 120.0
+        sq = nt.nodes.new('ShaderNodeMath'); sq.operation = 'POWER'; sq.inputs[1].default_value = 0.5
+        mn = nt.nodes.new('ShaderNodeMath'); mn.operation = 'MINIMUM'; mn.inputs[1].default_value = 1.0
+        em = nt.nodes.new('ShaderNodeEmission')
+        out_ = nt.nodes.new('ShaderNodeOutputMaterial')
+        nt.links.new(cd.outputs['View Distance'], dv.inputs[0])
+        nt.links.new(dv.outputs['Value'], sq.inputs[0])
+        nt.links.new(sq.outputs['Value'], mn.inputs[0])
+        nt.links.new(mn.outputs['Value'], em.inputs['Color'])
+        nt.links.new(em.outputs['Emission'], out_.inputs['Surface'])
+        bpy.context.view_layer.material_override = m
+        wd = bpy.data.worlds.new('depth_sky')
+        wd.use_nodes = True
+        wd.node_tree.nodes['Background'].inputs['Color'].default_value = (1, 1, 1, 1)
+        sc.world = wd
+        sc.cycles.samples, sc.cycles.use_denoising = 4, False
+        sc.view_settings.view_transform, sc.view_settings.look, sc.view_settings.exposure = 'Standard', 'None', 0.0
     if '--mask' in a:                                       # 하늘 가림막: 하늘은 투명(빛내림용)
         sc.render.film_transparent = True
         sc.cycles.use_denoising = False

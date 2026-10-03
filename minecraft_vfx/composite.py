@@ -11,7 +11,7 @@
 3) 라이트 랩: 새 배경의 빛이 사람 테두리에 살짝 스며들게.
 4) 배경 질감 맞추기: 렌더는 너무 깨끗하니 아주 살짝 흐리게 하고 사진 같은 노이즈를 얹는다.
 """
-import sys
+import os, sys
 import numpy as np
 from PIL import Image
 from scipy.ndimage import gaussian_filter, binary_dilation
@@ -28,6 +28,45 @@ def srgb(x):
 
 def blur3(img, s):
     return np.stack([gaussian_filter(img[..., c], s) for c in range(img.shape[2])], -1)
+
+
+def relight_person(F, a, B, P, sun_x, warm=(1.0, 0.62, 0.32)):
+    """역광 장면에 맞춰 사람을 다시 비춘다(선형 색).
+    - 카메라 쪽은 해를 등진 그늘: 사람 주변 그늘진 배경의 밝기·색 쪽으로 절반쯤 맞춘다(살짝 어둡고 푸르게).
+    - 해 쪽 몸통 가장자리부터 안쪽으로 노을빛이 은은하게 번진다."""
+    from scipy.ndimage import binary_dilation
+    ring = binary_dilation(a > 0.5, iterations=80) & (a < 0.02)
+    lumB = B[..., 0] * 0.3 + B[..., 1] * 0.59 + B[..., 2] * 0.11
+    shade = ring & (lumB < np.percentile(lumB[ring], 45))      # 새 배경에서 사람 주변의 그늘진 곳
+    # 빛의 변화 = (새 장면 그늘의 밝기·색) / (원래 사진에서 사람 주변 밝기·색). 옷 색(알베도)은 그대로 둔다
+    g = np.clip((B[shade].mean(0) / np.maximum(P[ring].mean(0), 1e-4)) ** 0.6, 0.58, 1.1)
+    F = F * g
+    print('relight gain', g.round(3))
+    # 해 쪽(화면 오른쪽 sun_x 방향) 가장자리에서 안쪽으로 번지는 노을빛
+    H, W = a.shape
+    inside = (a > 0.5).astype(np.float32)
+    side = 1 if sun_x > W / 2 else -1
+    dist = np.zeros_like(inside)
+    run = np.zeros(H, np.float32)                              # 해 쪽 가장자리로부터 안쪽 거리(행마다 훑기)
+    cols = range(W - 1, -1, -1) if side > 0 else range(W)
+    for x in cols:
+        run = np.where(inside[:, x] > 0, run + 1, 0)
+        dist[:, x] = run
+    spill = np.exp(-dist / 70.0) * inside
+    spill = gaussian_filter(spill, 3) * a
+    return F * (1 + spill[..., None] * np.array(warm, np.float32) * 1.6)   # 밝은 곳(피부·머리)일수록 더 물든다
+
+
+def depth_blur(B, depth, max_sigma=2.2):
+    """거리가 멀수록 살짝 흐리게(얕은 심도 느낌). depth: 0(가까움)~1(멂)."""
+    levels = [0.0, 0.6, 1.2, 2.2][:4]
+    out = B.copy()
+    stack = [B] + [blur3(B, s * max_sigma / 2.2) for s in levels[1:]]
+    w = np.clip(depth, 0, 1) * (len(levels) - 1)
+    for i in range(len(levels) - 1):
+        t = np.clip(w - i, 0, 1)[..., None]
+        out = np.where((w >= i)[..., None], stack[i] * (1 - t) + stack[i + 1] * t, out)
+    return out
 
 
 def premium(C, a, sky, sun, warm=(1.0, 0.62, 0.32)):
@@ -112,8 +151,15 @@ def main(photo, mask, bg, out, sky_mask=None, sun_json=None):
     F = F * gain
     print('person gain', gain.round(3))
 
-    # 4) 배경: 아주 살짝 흐리게(폰 사진 선명도에 맞춤)
+    # 4) 배경: 아주 살짝 흐리게(폰 사진 선명도에 맞춤). 깊이 지도가 있으면 멀수록 더 흐리게
     Bs = blur3(B, 0.6)
+    if sky_mask and sun_json and os.path.exists(os.path.join(os.path.dirname(bg), 'depth.png')):
+        dimg = Image.open(os.path.join(os.path.dirname(bg), 'depth.png')).convert('L').resize((B.shape[1], B.shape[0]), Image.BILINEAR)
+        depth = lin(np.asarray(dimg, np.float32) / 255)      # 렌더에서 sqrt(거리/120m)로 저장
+        Bs = depth_blur(Bs, np.clip((depth - 0.25) / 0.6, 0, 1))
+    if sky_mask and sun_json:
+        import json
+        F = relight_person(F / gain, a, Bs, P, json.load(open(sun_json))['x'] * a.shape[1])   # 앞의 단순 색 맞춤 대신
 
     # 3) 라이트 랩
     inner = gaussian_filter(a, 3)                           # 테두리 몇 픽셀만(넓으면 뿌연 후광처럼 보인다)

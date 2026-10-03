@@ -27,6 +27,8 @@
    - 새 배경 쪽으로 사람 색을 살짝 맞춘다.
    - 배경 빛이 사람 테두리에 스며들게 한다(라이트 랩).
    - 배경에 폰 사진 같은 노이즈를 얹는다.
+   - (골든) 사람을 다시 비춘다. 카메라 쪽은 해를 등진 그늘이라, 새 장면 그늘빛 ÷ 원래 사진 주변 빛만큼 어둡고 푸르게 맞춘다.
+     해 쪽 몸 가장자리부터는 노을빛이 번지게 한다. 깊이 지도(`--depth`, `build/depth.png`)가 있으면 배경을 멀수록 살짝 흐리게 한다(얕은 심도).
    - (골든) 하늘 가림막(`--mask`로 렌더)과 화면 속 해 위치(`sun.json`)를 주면 마무리를 더한다.
      해 쪽 사람 테두리에 노을빛을 얹고, 해에서 퍼지는 빛내림과 밝은 불빛의 번짐(블룸)을 더한 뒤 색 보정과 비네팅을 한다.
      색 보정은 그림자를 푸르게, 밝은 곳을 따뜻하게, 대비·채도를 조금 올린다.
@@ -49,6 +51,7 @@ python3 composite.py build/photo.jpg build/mask_raw.png build/bg_full.png build/
 # 골든아워 역광 + 마무리
 export MC_LOOK=golden
 python3 mc_world.py --res 483x644 --spp 16 --mask --out build/sky_mask.png  # 하늘 가림막 + build/sun.json
+python3 mc_world.py --res 966x1288 --spp 4 --depth --out build/depth.png     # 깊이 지도(얕은 심도)
 python3 mc_world.py --res 1932x2576 --spp 96 --out build/bg_gold.png
 python3 composite.py build/photo.jpg build/mask_raw.png build/bg_gold.png build/final_gold.jpg build/sky_mask.png build/sun.json
 ```

@@ -6,6 +6,7 @@
   python3 vid_composite.py track          # 사람 머리 위치 → build/vid/track.json (주민이 쳐다볼 곳)
   python3 vid_composite.py frame 44 86    # 몇 장만 미리보기 → build/vid/check_0044.jpg …
   python3 vid_composite.py all            # 161장 합성 + 효과음 → build/vid/final.mp4
+  python3 vid_composite.py encode         # 합성한 프레임은 두고 소리·인코딩만 다시
 
 입력(build/vid): frames/0001.jpg…(원본 30fps), masks05/0001.png…(segment_rvm.py), bg_base.png, vil/v_0000.png…(mc_village.py)
 효과음: 환경 변수 MC_SFX 폴더의 wav(마크 리소스 팩 sounds를 vgmstream으로 푼 것, 저장소에는 넣지 않는다)
@@ -347,6 +348,8 @@ def main():
         return plan()
     if cmd == 'track':
         return track()
+    if cmd == 'encode':                                     # 프레임은 그대로 두고 소리·인코딩만 다시
+        return encode()
     clip = Clip()
     B = blur3(lin(np.asarray(Image.open(os.path.join(VID, 'bg_base.png')).convert('RGB'), np.float32) / 255), 0.5)
     gain = person_gain(clip, B)
@@ -362,10 +365,15 @@ def main():
         img, _ = composite(clip, i, B, gain)
         Image.fromarray(img).save(os.path.join(VID, 'out', f'c_{i:04d}.png'))
         print('composited', i, flush=True)
+    encode()
+
+
+def encode():
+    """합성한 프레임 + 효과음 → build/vid/final.mp4 (29.97fps H.264)."""
     wav = os.path.join(VID, 'mix.wav')
     mix_audio(wav)
     out = os.path.join(VID, 'final.mp4')
-    subprocess.run(['ffmpeg', '-y', '-v', 'error', '-framerate', f'{FPS:.6f}', '-i', os.path.join(VID, 'out', 'c_%04d.png'),
+    subprocess.run(['ffmpeg', '-y', '-v', 'error', '-framerate', '30000/1001', '-i', os.path.join(VID, 'out', 'c_%04d.png'),
                     '-i', wav, '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p',
                     '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out], check=True)
     print('saved', out)

@@ -404,7 +404,10 @@ def skin_part(name, mat, parent, U, V, w, h, d, box, pivot, rot_x=0.0, inflate=0
     for vs, us in faces:
         polys.append(tuple(range(len(verts), len(verts) + 4)))
         verts += vs
-        uvs.append(us)
+        # UV를 텍셀 경계에서 0.05px 안쪽으로: 경계에 딱 맞으면 테두리에서 옆 칸(투명) 픽셀을 집어 점선처럼 비친다
+        cu, cv = sum(u for u, _ in us) / 4, sum(v for _, v in us) / 4
+        e = 0.05 / 64
+        uvs.append([(u + e * ((cu > u) - (cu < u)), v + e * ((cv > v) - (cv < v))) for u, v in us])
     me.from_pydata(verts, [], polys)
     layer = me.uv_layers.new()
     for p in me.polygons:

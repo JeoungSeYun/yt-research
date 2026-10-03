@@ -28,7 +28,14 @@ def has_tex(name):
     return os.path.exists(os.path.join(TEX, name + '.png'))
 OX = -0.6                      # 블록 격자의 x 원점: 길 왼쪽 가장자리가 x=-0.6
 CAM = (0.0, 0.0, 1.55)
-SKY_H, SKY_Z = '#AEBBDA', '#6F86B9'                        # 지평선 쪽, 하늘 꼭대기 색
+SKY_H, SKY_Z = '#AEBBDA', '#6F86B9'
+LOOK = os.environ.get('MC_LOOK', 'dusk')                   # dusk: 흐린 해 질 녘 / golden: 길 끝 숲 너머로 지는 해(역광)
+SUN_AZ, SUN_EL = 15.0, 4.5                                  # golden: 해 방향(강 위, 정면에서 오른쪽으로 15°, 높이 4.5°)
+
+
+def sun_dir():
+    a, e = math.radians(SUN_AZ), math.radians(SUN_EL)
+    return Vector((math.sin(a) * math.cos(e), math.cos(a) * math.cos(e), math.sin(e)))                        # 지평선 쪽, 하늘 꼭대기 색
 
 
 def srgb(h):
@@ -41,8 +48,8 @@ def srgb(h):
 MATS = {}
 
 
-def tex_mat(tex, haze=0.0, emit=0.0, alpha=False, gloss=False):
-    key = f'{tex}_h{int(haze * 100)}_e{emit}_{int(alpha)}{int(gloss)}'
+def tex_mat(tex, haze=0.0, emit=0.0, alpha=False, gloss=False, warm_emit=0.0):
+    key = f'{tex}_h{int(haze * 100)}_e{emit}_{int(alpha)}{int(gloss)}_w{warm_emit}'
     if key in MATS:
         return key
     m = bpy.data.materials.new(key)
@@ -71,6 +78,19 @@ def tex_mat(tex, haze=0.0, emit=0.0, alpha=False, gloss=False):
     if emit:
         nt.links.new(im.outputs['Color'], bs.inputs['Emission Color'])
         bs.inputs['Emission Strength'].default_value = emit
+    if warm_emit:                                          # 노란빛 픽셀(발광석 창)만 빛나게
+        sp = nt.nodes.new('ShaderNodeSeparateColor')
+        nt.links.new(im.outputs['Color'], sp.inputs['Color'])
+        sub = nt.nodes.new('ShaderNodeMath')
+        sub.operation = 'SUBTRACT'
+        nt.links.new(sp.outputs['Red'], sub.inputs[0])
+        nt.links.new(sp.outputs['Blue'], sub.inputs[1])
+        mr = nt.nodes.new('ShaderNodeMapRange')
+        mr.inputs['From Min'].default_value, mr.inputs['From Max'].default_value = 0.25, 0.45
+        mr.inputs['To Max'].default_value = warm_emit
+        nt.links.new(sub.outputs['Value'], mr.inputs['Value'])
+        nt.links.new(im.outputs['Color'], bs.inputs['Emission Color'])
+        nt.links.new(mr.outputs['Result'], bs.inputs['Emission Strength'])
     if alpha:
         nt.links.new(im.outputs['Alpha'], bs.inputs['Alpha'])
     if tex.startswith('leaves') or tex in ('bush', 'tallgrass', 'flower_pink', 'reeds'):
@@ -300,13 +320,13 @@ def garden(rnd):
 def lamps():
     """마크식 가로등: 짙은 참나무 울타리 기둥 5칸 + 맨 위 발광석 한 블록."""
     post = tex_mat('fence') if has_tex('fence') else tex_mat('iron')
-    glow = tex_mat('lantern', emit=5.0)
+    glow = tex_mat('lantern', emit=10.0 if LOOK == 'golden' else 5.0)
     for j in range(24, 356, 25):
         x0, y0 = OX - 1, j
         B.box(x0 + 0.375, y0 + 0.375, 0, x0 + 0.625, y0 + 0.625, 5, post)
         B.box(x0, y0, 5, x0 + 1, y0 + 1, 6, glow)
         li = bpy.data.lights.new(f'lamp{j}', 'POINT')
-        li.energy, li.color, li.shadow_soft_size = 160, srgb('#FFC27A')[:3], 0.45
+        li.energy, li.color, li.shadow_soft_size = (280 if LOOK == 'golden' else 160), srgb('#FFC27A')[:3], 0.45
         ob = bpy.data.objects.new(f'lamp{j}', li)
         ob.location = (x0 + 0.5, y0 + 0.5, 4.7)
         bpy.context.scene.collection.objects.link(ob)
@@ -444,7 +464,8 @@ def people():
 
 def far_bank(rnd):
     D = 1300
-    fac = [tex_mat('facade', haze=0.3), tex_mat('facade2', haze=0.3)]
+    we = 6.0 if LOOK == 'golden' else 2.0
+    fac = [tex_mat('facade', haze=0.3, warm_emit=we), tex_mat('facade2', haze=0.3, warm_emit=we)]
     for n, th in enumerate([6.6, 7.6, 8.5, 9.6, 10.5, 11.6, 12.6, 13.7, 14.7, 15.8, 16.9, 18.0]):
         t = math.radians(th)
         cx, cy = D * math.sin(t), D * math.cos(t)
@@ -479,7 +500,7 @@ def far_bank(rnd):
             B.box(cx - w * f / 2, cy - 40, -1.2, cx + w * f / 2, cy + 40, round(h * (0.45 + step * 0.28)), hill)
     t = math.radians(27.2)
     B.box(1420 * math.sin(t) - 16, 1420 * math.cos(t) - 16, -1.2, 1420 * math.sin(t) + 16, 1420 * math.cos(t) + 16, 88,
-          tex_mat('facade2', haze=0.46), s=facade_scale())
+          tex_mat('facade2', haze=0.46, warm_emit=6.0 if LOOK == 'golden' else 2.0), s=facade_scale())
     for th in range(-30, 40, 5):                            # 가운데 지평선의 먼 숲·산
         t = math.radians(th + rnd.uniform(-2, 2))
         cx, cy = 2600 * math.sin(t), 2600 * math.cos(t)
@@ -504,9 +525,33 @@ def far_trees(rnd):
             B.box(OX + x0, y0 + rnd.uniform(0, 4), 0, OX + x0 + rnd.choice((3, 4)), y0 + 8, h, L, s=1)
 
 
+def cloud_mat():
+    """노을 구름: 스스로 살짝 빛나는 복숭아빛 + 뒤에서 오는 해빛이 비쳐 보이게(반투명)."""
+    if 'cloud_golden' in MATS:
+        return 'cloud_golden'
+    m = bpy.data.materials.new('cloud_golden')
+    m.use_nodes = True
+    nt = m.node_tree
+    bs = nt.nodes['Principled BSDF']
+    bs.inputs['Base Color'].default_value = srgb('#F1E2E4')
+    bs.inputs['Roughness'].default_value = 1.0
+    bs.inputs['Emission Color'].default_value = srgb('#F2B9A6')
+    bs.inputs['Emission Strength'].default_value = 0.32
+    tr = nt.nodes.new('ShaderNodeBsdfTranslucent')
+    tr.inputs['Color'].default_value = srgb('#FFD2B0')
+    mix = nt.nodes.new('ShaderNodeMixShader')
+    mix.inputs['Fac'].default_value = 0.45
+    out = nt.nodes['Material Output']
+    nt.links.new(bs.outputs['BSDF'], mix.inputs[1])
+    nt.links.new(tr.outputs['BSDF'], mix.inputs[2])
+    nt.links.new(mix.outputs['Shader'], out.inputs['Surface'])
+    MATS['cloud_golden'] = m
+    return 'cloud_golden'
+
+
 def clouds(rnd, z=170, cell=16):
     """네모 구름. 진짜 마크 구름 지도(clouds.png)가 있으면 그것을 12m 칸, 128m 높이(게임의 y=192)에 깐다."""
-    mat = color_mat('cloud', '#DCDBE8', rough=1.0, emit=0.22)
+    mat = cloud_mat() if LOOK == 'golden' else color_mat('cloud', '#DCDBE8', rough=1.0, emit=0.22)
     g = {}
     if has_tex('clouds_map'):
         from PIL import Image
@@ -542,10 +587,12 @@ def clouds(rnd, z=170, cell=16):
         B.box(x0, y0, z, x0 + cell, y0 + cell, z + 4, mat, skip=skip)
 
 
-def moon(az=17.0, el=11.0, dist=3000.0, size_deg=22.0):
+def moon(az=None, el=None, dist=3000.0, size_deg=None):
     """마크의 네모난 달(보름달). 검은 부분은 비치고 달만 빛난다."""
     if not has_tex('moon'):
         return
+    if az is None:                                          # 골든: 해가 오른쪽이라 달은 위쪽 가운데로
+        az, el, size_deg = (2.0, 21.0, 16.0) if LOOK == 'golden' else (17.0, 11.0, 22.0)
     m = bpy.data.materials.new('moon')
     m.use_nodes = True
     nt = m.node_tree
@@ -635,6 +682,9 @@ def setup(res, spp):
     nt.links.new(bg.outputs['Background'], mix.inputs[2])
     nt.links.new(mix.outputs['Shader'], out.inputs['Surface'])
     sc.world = w
+    if LOOK == 'golden':
+        golden_light(sc)
+        return
     # 낮게 깔린 노을빛 해: 왼쪽 뒤에서. 가까운 곳은 옹벽 그늘, 강 건너는 노을빛
     sd = bpy.data.lights.new('sun', 'SUN')
     sd.energy, sd.color, sd.angle = 2.2, srgb('#FFB27A')[:3], math.radians(2.0)
@@ -642,6 +692,91 @@ def setup(res, spp):
     d = Vector((0.78, 0.55, -math.sin(math.radians(5.0)))).normalized()   # 빛이 나아가는 방향
     sun.rotation_euler = (-d).to_track_quat('Z', 'Y').to_euler()
     sc.collection.objects.link(sun)
+
+
+def golden_light(sc):
+    """역광 골든아워: 해 쪽 지평선은 주황, 반대쪽은 연보라, 위는 깊은 파랑 + 해 둘레의 빛무리.
+    장면을 비추는 하늘빛은 푸르스름하게(그림자가 푸르게), 해는 주황으로 낮게."""
+    w = bpy.data.worlds.new('sky_golden')
+    w.use_nodes = True
+    nt = w.node_tree
+    nt.nodes.clear()
+    N = nt.nodes.new
+    L = nt.links.new
+    tc = N('ShaderNodeTexCoord')
+    nrm = N('ShaderNodeVectorMath'); nrm.operation = 'NORMALIZE'
+    L(tc.outputs['Generated'], nrm.inputs[0])
+    dot = N('ShaderNodeVectorMath'); dot.operation = 'DOT_PRODUCT'
+    dot.inputs[1].default_value = tuple(sun_dir())
+    L(nrm.outputs['Vector'], dot.inputs[0])
+    sep = N('ShaderNodeSeparateXYZ')
+    L(nrm.outputs['Vector'], sep.inputs['Vector'])
+    # 지평선 색: 해 쪽일수록 주황
+    mr_s = N('ShaderNodeMapRange')
+    mr_s.inputs['From Min'].default_value, mr_s.inputs['From Max'].default_value = -0.4, 1.0
+    L(dot.outputs['Value'], mr_s.inputs['Value'])
+    pw = N('ShaderNodeMath'); pw.operation = 'POWER'; pw.inputs[1].default_value = 2.4
+    L(mr_s.outputs['Result'], pw.inputs[0])
+    hz = N('ShaderNodeMix'); hz.data_type = 'RGBA'
+    hz.inputs['A'].default_value = srgb('#B4B0D2')
+    hz.inputs['B'].default_value = srgb('#F7AE74')
+    L(pw.outputs['Value'], hz.inputs['Factor'])
+    # 위로 갈수록 깊은 파랑(해 쪽은 천천히)
+    mr_z = N('ShaderNodeMapRange')
+    mr_z.inputs['From Min'].default_value, mr_z.inputs['From Max'].default_value = -0.01, 0.5
+    L(sep.outputs['Z'], mr_z.inputs['Value'])
+    pz = N('ShaderNodeMath'); pz.operation = 'POWER'; pz.inputs[1].default_value = 0.8
+    L(mr_z.outputs['Result'], pz.inputs[0])
+    sky = N('ShaderNodeMix'); sky.data_type = 'RGBA'
+    L(hz.outputs['Result'], sky.inputs['A'])
+    sky.inputs['B'].default_value = srgb('#46629F')
+    L(pz.outputs['Value'], sky.inputs['Factor'])
+    # 해 둘레 빛무리 + 해
+    cl = N('ShaderNodeMath'); cl.operation = 'MAXIMUM'; cl.inputs[1].default_value = 0.0
+    L(dot.outputs['Value'], cl.inputs[0])
+    g1 = N('ShaderNodeMath'); g1.operation = 'POWER'; g1.inputs[1].default_value = 24.0
+    L(cl.outputs['Value'], g1.inputs[0])
+    g2 = N('ShaderNodeMath'); g2.operation = 'POWER'; g2.inputs[1].default_value = 900.0
+    L(cl.outputs['Value'], g2.inputs[0])
+    halo = N('ShaderNodeMix'); halo.data_type = 'RGBA'; halo.blend_type = 'ADD'
+    L(g1.outputs['Value'], halo.inputs['Factor'])
+    L(sky.outputs['Result'], halo.inputs['A'])
+    halo.inputs['B'].default_value = tuple(v * 1.6 for v in srgb('#FFB06A')[:3]) + (1.0,)
+    disk = N('ShaderNodeMix'); disk.data_type = 'RGBA'; disk.blend_type = 'ADD'
+    L(g2.outputs['Value'], disk.inputs['Factor'])
+    L(halo.outputs['Result'], disk.inputs['A'])
+    disk.inputs['B'].default_value = (30.0, 22.0, 12.0, 1.0)
+    bg = N('ShaderNodeBackground'); bg.inputs['Strength'].default_value = 1.25
+    L(disk.outputs['Result'], bg.inputs['Color'])
+    lit = N('ShaderNodeBackground')                          # 장면을 비추는 하늘빛: 푸른 시간대
+    lit.inputs['Color'].default_value = srgb('#A3B2D8')
+    lit.inputs['Strength'].default_value = 1.3
+    lp = N('ShaderNodeLightPath')
+    mx = N('ShaderNodeMath'); mx.operation = 'MAXIMUM'
+    L(lp.outputs['Is Camera Ray'], mx.inputs[0])
+    L(lp.outputs['Is Glossy Ray'], mx.inputs[1])
+    mix = N('ShaderNodeMixShader')
+    out = N('ShaderNodeOutputWorld')
+    L(mx.outputs['Value'], mix.inputs['Fac'])
+    L(lit.outputs['Background'], mix.inputs[1])
+    L(bg.outputs['Background'], mix.inputs[2])
+    L(mix.outputs['Shader'], out.inputs['Surface'])
+    sc.world = w
+    sd = bpy.data.lights.new('sun', 'SUN')
+    sd.energy, sd.color, sd.angle = 6.0, srgb('#FF9A52')[:3], math.radians(1.2)
+    sun = bpy.data.objects.new('sun', sd)
+    sun.rotation_euler = sun_dir().to_track_quat('Z', 'Y').to_euler()   # 빛은 해에서 장면 쪽으로
+    sc.collection.objects.link(sun)
+
+
+def save_sun_screen(path):
+    """화면에서 해의 위치(0~1, 아래가 0) — 합성에서 빛내림을 그 점에서 퍼뜨린다."""
+    from bpy_extras.object_utils import world_to_camera_view
+    import json
+    sc = bpy.context.scene
+    bpy.context.view_layer.update()
+    p = world_to_camera_view(sc, sc.camera, Vector(CAM) + sun_dir() * 1000)
+    json.dump({'x': p.x, 'y': p.y}, open(path, 'w'))
 
 
 def main():
@@ -661,9 +796,17 @@ def main():
     clouds(rnd)
     moon()
     B.build()
+    for ob in bpy.context.scene.objects:                    # 구름·달은 그림자를 만들지 않게(노을빛이 장면에 닿도록)
+        if ob.name.startswith(('mc_cloud', 'mc_moon')):
+            ob.visible_shadow = False
     sc = bpy.context.scene
     sc.render.filepath = out
     sc.render.image_settings.file_format = 'PNG'
+    save_sun_screen(os.path.join(os.path.dirname(out) or '.', 'sun.json'))
+    if '--mask' in a:                                       # 하늘 가림막: 하늘은 투명(빛내림용)
+        sc.render.film_transparent = True
+        sc.cycles.use_denoising = False
+        sc.render.image_settings.color_mode = 'RGBA'
     print('faces:', sum(len(o.data.polygons) for o in sc.objects if o.type == 'MESH'), flush=True)
     bpy.ops.render.render(write_still=True)
     print('saved', out)

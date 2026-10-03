@@ -17,11 +17,19 @@
    - 하늘: 해 질 녘 그라데이션, 마크 구름 지도(clouds.png) 그대로 깐 구름(12블록 칸, 128블록 위), 네모난 보름달
    - 모든 배경을 1m 블록 단위로 만든다(먼 언덕·다리·배도).
    - 하늘 그라데이션은 눈에 보이는 색으로만 쓴다. 장면을 비추는 빛은 거의 흰 하늘빛이라, 사진처럼 따뜻한 색감이 난다.
+   - 라이팅 두 가지(`MC_LOOK`).
+     - `dusk`(기본): 흐린 해 질 녘.
+     - `golden`: 강 위 오른쪽 앞으로 낮게 지는 해(역광). 길 위에 스티브·알렉스의 긴 그림자가 지고, 나무 옆면에 노을빛이 걸린다.
+       하늘은 해 쪽이 주황, 반대쪽이 연보라, 위가 깊은 파랑이다. 그림자는 푸른 하늘빛으로 채우고, 구름은 노을빛에 물들게 반투명으로,
+       가로등·강 건너 창은 따뜻하게 빛나게 했다. 구름은 그림자를 드리우지 않는다.
 4. **합성** `composite.py`: 순서대로 처리한다.
    - 가장자리의 원래 배경색 번짐을 없앤다.
    - 새 배경 쪽으로 사람 색을 살짝 맞춘다.
    - 배경 빛이 사람 테두리에 스며들게 한다(라이트 랩).
    - 배경에 폰 사진 같은 노이즈를 얹는다.
+   - (골든) 하늘 가림막(`--mask`로 렌더)과 화면 속 해 위치(`sun.json`)를 주면 마무리를 더한다.
+     해 쪽 사람 테두리에 노을빛을 얹고, 해에서 퍼지는 빛내림과 밝은 불빛의 번짐(블룸)을 더한 뒤 색 보정과 비네팅을 한다.
+     색 보정은 그림자를 푸르게, 밝은 곳을 따뜻하게, 대비·채도를 조금 올린다.
 
 ```bash
 # 사람 따기는 numpy 2가 필요해서 Blender(bpy, numpy 1.26)와 다른 가상환경에서 돌린다
@@ -37,6 +45,12 @@ export MC_TEX=build/tex_real          # 직접 그린 텍스처를 쓰려면: py
 python3 mc_world.py --res 483x644 --spp 16 --out build/bg_preview.png     # 미리보기 (약 10초)
 python3 mc_world.py --res 1932x2576 --spp 96 --out build/bg_full.png       # 최종 (CPU 4코어로 약 10분)
 python3 composite.py build/photo.jpg build/mask_raw.png build/bg_full.png build/final.jpg
+
+# 골든아워 역광 + 마무리
+export MC_LOOK=golden
+python3 mc_world.py --res 483x644 --spp 16 --mask --out build/sky_mask.png  # 하늘 가림막 + build/sun.json
+python3 mc_world.py --res 1932x2576 --spp 96 --out build/bg_gold.png
+python3 composite.py build/photo.jpg build/mask_raw.png build/bg_gold.png build/final_gold.jpg build/sky_mask.png build/sun.json
 ```
 
 사진과 결과물은 개인 사진이라 `build/`에만 두고 저장소에는 넣지 않는다.

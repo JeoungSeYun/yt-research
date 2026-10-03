@@ -63,9 +63,9 @@ def main(photo, mask, bg, out):
     Bs = blur3(B, 0.6)
 
     # 3) 라이트 랩
-    inner = gaussian_filter(a, 10)
-    edge = np.clip(a - inner, 0, 1) * 1.8
-    wrap = blur3(Bs, 14) * edge[..., None] * 0.35
+    inner = gaussian_filter(a, 3)                           # 테두리 몇 픽셀만(넓으면 뿌연 후광처럼 보인다)
+    edge = np.clip(a - inner, 0, 1) * 1.5
+    wrap = blur3(Bs, 5) * edge[..., None] * 0.12
 
     C = F * a[..., None] + Bs * (1 - a[..., None]) + wrap
     out_img = srgb(C)

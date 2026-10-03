@@ -115,6 +115,15 @@ def make(src, out):
         ['quartz_block_side.png'] * 4,
         ['glowstone.png', 'glass_gray.png', 'glass_gray.png', 'glass_gray.png'],
     ])
+    T['crane'] = L('concrete_yellow.png')                   # 크레인도 노란 콘크리트 블록 그대로
+    T['fence'] = L('planks_big_oak.png')                     # 가로등 기둥: 짙은 참나무 울타리
+    # 캐릭터 스킨·구름·달: blocks 옆 폴더(entity, environment)에서 원본 크기 그대로
+    up = os.path.dirname(os.path.normpath(src))
+    raw = lambda *p: Image.open(os.path.join(up, *p)).convert('RGBA')
+    T['skin_steve'] = raw('entity', 'steve.png')
+    T['skin_alex'] = raw('entity', 'alex.png')
+    T['clouds_map'] = raw('environment', 'clouds.png')
+    T['moon'] = raw('environment', 'moon_phases.png').crop((0, 0, 32, 32))   # 보름달
     for name, im in T.items():
         im.save(os.path.join(out, name + '.png'))
     return sorted(T)

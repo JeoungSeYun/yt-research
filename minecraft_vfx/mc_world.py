@@ -187,7 +187,7 @@ def emit_blocks():
 
 
 # ─── 장면 조각 ───
-def terrain(rnd, J0=-4, J1=240):
+def terrain(rnd, J0=-4, J1=360):
     grass = dict(top=tex_mat('grass_top'), side=tex_mat('grass_side'), bottom=tex_mat('dirt'))
     path, smooth = tex_mat('path'), tex_mat('smooth')
     for j in range(J0, J1):
@@ -206,11 +206,11 @@ def terrain(rnd, J0=-4, J1=240):
         put(6, j, -2, grass)
         put(6, j, -3, tex_mat('dirt'))
         put(7, j, -3, tex_mat('stone'))
-    B.box(OX + 4, J0, 0, OX + 5, J1, 0.3, smooth)           # 낮은 연석
+    B.box(OX + 4, J0, 0, OX + 5, J1, 0.5, smooth)           # 연석: 매끄러운 돌 반 블록
     # 그리드 밖으로 길게 이어지는 길·화단(멀리)
     far = 760
     B.box(OX + 0, J1, -1, OX + 4, far, 0, path, skip=('bottom',))
-    B.box(OX + 4, J1, -1, OX + 5, far, 0.3, smooth, skip=('bottom',))
+    B.box(OX + 4, J1, -1, OX + 5, far, 0.5, smooth, skip=('bottom',))
     B.box(OX - 28, J1, -1, OX + 0, far, 0, grass, skip=('bottom',))
     B.box(OX + 5, J1, -2, OX + 7, far, 0, grass, skip=('bottom',))
     # 왼쪽 큰 옹벽
@@ -254,16 +254,16 @@ def garden(rnd):
     stone, cobble = tex_mat('stone'), tex_mat('cobble')
     tall, flower = tex_mat('tallgrass', alpha=True), tex_mat('flower_pink', alpha=True)
     # 가로수 줄: 길 가까운 줄(포플러·참나무 번갈아), 안쪽 줄, 옹벽 앞 줄
-    for n, j in enumerate(range(16, 236, 7)):
+    for n, j in enumerate(range(16, 356, 7)):
         if n % 2 == 0:
             poplar(-3, j, rnd.randint(11, 14), rnd)
         else:
             oak(-3, j, rnd.randint(5, 6), 2, rnd)
-    for j in range(18, 236, 9):
+    for j in range(18, 356, 9):
         oak(-8 + rnd.choice((0, -1)), j + rnd.randint(0, 3), rnd.randint(5, 7), rnd.choice((2, 3)), rnd)
-    for j in range(8, 236, 8):
+    for j in range(8, 356, 8):
         poplar(-19 + rnd.choice((0, 1)), j + rnd.randint(0, 3), rnd.randint(12, 15), rnd)
-    for j in range(4, 236, 6):
+    for j in range(4, 356, 6):
         poplar(-25, j + rnd.randint(0, 2), rnd.randint(13, 16), rnd, leaf='leaves')
     # 앞쪽 화단: 바위 둘 + 수국 + 낮은 덤불
     for c in [(-4, 7, 0), (-5, 7, 0), (-4, 8, 0), (-5, 8, 0)]:
@@ -275,8 +275,8 @@ def garden(rnd):
     for c in [(-6, 7, 0), (-8, 11, 0), (-6, 12, 0), (-9, 11, 0), (-3, 11, 0)]:
         put(*c, white if rnd.random() < 0.6 else pink, opaque=False)
     occupied = {(i, j) for i, j, k, s, o in BLOCKS if k >= 0}
-    for j in range(-4, 236):
-        for i in range(-27, -1):
+    for j in range(-4, 356):
+        for i in range(-27, 0):
             if (i, j) in occupied or i in (-13, -12):
                 continue
             near = j < 12 and i >= -7
@@ -285,29 +285,30 @@ def garden(rnd):
                 put(i, j, 0, bush, opaque=False)
             elif (i == -1 and 14 <= j <= 60 and p < 0.45):  # 길가 수국 띠
                 put(i, j, 0, pink if rnd.random() < 0.55 else white, opaque=False)
-            elif p < (0.92 if near else 0.4):
+            elif p < ((0.92 if j >= 5 else 0.4) if near else 0.4):
                 B.cross(OX + i + 0.5 + rnd.uniform(-0.2, 0.2), j + 0.5 + rnd.uniform(-0.2, 0.2), 0,
-                        flower if rnd.random() < 0.12 else tall, h=rnd.uniform(0.5, 1.0))
+                        flower if rnd.random() < 0.12 else tall, h=1.0)
     # 강둑 풀·갈대
     reeds = tex_mat('reeds', alpha=True)
-    for j in range(-4, 240):
+    for j in range(-4, 360):
         for i, z in ((5, 0.0), (6, -1.0)):
             if rnd.random() < 0.7:
                 B.cross(OX + i + 0.5 + rnd.uniform(-0.25, 0.25), j + 0.5, z, reeds if i == 6 else tall,
-                        h=rnd.uniform(0.6, 1.1))
+                        h=1.0)
 
 
 def lamps():
-    iron, lan = tex_mat('iron'), tex_mat('lantern', emit=6.0)
-    for j in range(24, 236, 25):
-        y = j + 0.5
-        B.box(OX - 1 + 0.375, y - 0.125, 0, OX - 1 + 0.625, y + 0.125, 6.5, iron)
-        B.box(OX - 1 + 0.5, y - 0.1, 6.3, OX + 0.6, y + 0.1, 6.5, iron)
-        B.box(OX + 0.25, y - 0.25, 5.75, OX + 0.75, y + 0.25, 6.25, lan)
+    """마크식 가로등: 짙은 참나무 울타리 기둥 5칸 + 맨 위 발광석 한 블록."""
+    post = tex_mat('fence') if has_tex('fence') else tex_mat('iron')
+    glow = tex_mat('lantern', emit=5.0)
+    for j in range(24, 356, 25):
+        x0, y0 = OX - 1, j
+        B.box(x0 + 0.375, y0 + 0.375, 0, x0 + 0.625, y0 + 0.625, 5, post)
+        B.box(x0, y0, 5, x0 + 1, y0 + 1, 6, glow)
         li = bpy.data.lights.new(f'lamp{j}', 'POINT')
-        li.energy, li.color, li.shadow_soft_size = 120, srgb('#FFC27A')[:3], 0.25
+        li.energy, li.color, li.shadow_soft_size = 160, srgb('#FFC27A')[:3], 0.45
         ob = bpy.data.objects.new(f'lamp{j}', li)
-        ob.location = (OX + 0.5, y, 5.6)
+        ob.location = (x0 + 0.5, y0 + 0.5, 4.7)
         bpy.context.scene.collection.objects.link(ob)
 
 
@@ -349,7 +350,83 @@ def walker(name, x, y, c, phase=1, s=0.82):
         limb(f'{name}_bag', (0.12 * s, 0.3 * s, 0.32 * s), False, c['bag'], (x + 0.33 * s, y - 0.02, hip - 0.12 * s))
 
 
+def skin_part(name, mat, parent, U, V, w, h, d, box, pivot, rot_x=0.0, inflate=0.0):
+    """마크 플레이어 모델의 한 부위. 스킨(64×64)의 펼친 상자 UV를 그대로 쓴다.
+    box: 부위 상자(px, 모델 원점=발밑 가운데, +Y가 앞, +X가 플레이어 오른쪽), pivot: 돌리는 축(px)."""
+    (xa, xb), (ya, yb), (za, zb) = box
+    px_, py_, pz_ = pivot
+    xa, xb, ya, yb, za, zb = xa - inflate - px_, xb + inflate - px_, ya - inflate - py_, yb + inflate - py_, \
+        za - inflate - pz_, zb + inflate - pz_
+    uv = lambda x, y: (x / 64, 1 - y / 64)
+    vT, vB = V + d, V + d + h
+    faces = [
+        # 뒤(-Y): 왼쪽이 -X
+        ([(xa, ya, za), (xb, ya, za), (xb, ya, zb), (xa, ya, zb)],
+         [uv(U + 2 * d + w, vB), uv(U + 2 * d + 2 * w, vB), uv(U + 2 * d + 2 * w, vT), uv(U + 2 * d + w, vT)]),
+        # 앞(+Y): 왼쪽이 +X(플레이어 오른쪽)
+        ([(xb, yb, za), (xa, yb, za), (xa, yb, zb), (xb, yb, zb)],
+         [uv(U + d, vB), uv(U + d + w, vB), uv(U + d + w, vT), uv(U + d, vT)]),
+        # 오른쪽(+X): 왼쪽이 -Y
+        ([(xb, ya, za), (xb, yb, za), (xb, yb, zb), (xb, ya, zb)],
+         [uv(U, vB), uv(U + d, vB), uv(U + d, vT), uv(U, vT)]),
+        # 왼쪽(-X): 왼쪽이 +Y
+        ([(xa, yb, za), (xa, ya, za), (xa, ya, zb), (xa, yb, zb)],
+         [uv(U + d + w, vB), uv(U + 2 * d + w, vB), uv(U + 2 * d + w, vT), uv(U + d + w, vT)]),
+        # 위: +X가 텍스처 왼쪽, +Y(앞)가 아래쪽
+        ([(xa, ya, zb), (xb, ya, zb), (xb, yb, zb), (xa, yb, zb)],
+         [uv(U + d + w, V), uv(U + d, V), uv(U + d, V + d), uv(U + d + w, V + d)]),
+        # 아래
+        ([(xa, yb, za), (xb, yb, za), (xb, ya, za), (xa, ya, za)],
+         [uv(U + d + 2 * w, V), uv(U + d + w, V), uv(U + d + w, V + d), uv(U + d + 2 * w, V + d)]),
+    ]
+    me = bpy.data.meshes.new(name)
+    verts, polys, uvs = [], [], []
+    for vs, us in faces:
+        polys.append(tuple(range(len(verts), len(verts) + 4)))
+        verts += vs
+        uvs.append(us)
+    me.from_pydata(verts, [], polys)
+    layer = me.uv_layers.new()
+    for p in me.polygons:
+        for k, li in enumerate(range(p.loop_start, p.loop_start + 4)):
+            layer.data[li].uv = uvs[p.index][k]
+    me.materials.append(MATS[mat])
+    ob = bpy.data.objects.new(name, me)
+    ob.parent = parent
+    ob.location = pivot
+    ob.rotation_euler = (math.radians(rot_x), 0, 0)
+    bpy.context.scene.collection.objects.link(ob)
+    return ob
+
+
+def player(name, skin, x, y, slim=False, swing=24.0, yaw=0.0):
+    """마크 플레이어(스티브·알렉스): 머리·몸·팔·다리 + 바깥 레이어(모자·재킷·소매·바지), 걷는 자세."""
+    mat = tex_mat(skin, alpha=True)
+    root = bpy.data.objects.new(name, None)
+    root.location = (x, y, 0)
+    root.rotation_euler = (0, 0, math.radians(yaw))
+    root.scale = (0.9375 / 16,) * 3                          # 1px = 1/16블록, 게임 속 크기 15/16 → 키 약 1.88m
+    bpy.context.scene.collection.objects.link(root)
+    aw = 3 if slim else 4
+    parts = [  # (이름, U, V, 바깥 U, 바깥 V, w, h, d, 상자, 축, 회전)
+        ('head', 0, 0, 32, 0, 8, 8, 8, ((-4, 4), (-4, 4), (24, 32)), (0, 0, 24), 0, 0.5),
+        ('body', 16, 16, 16, 32, 8, 12, 4, ((-4, 4), (-2, 2), (12, 24)), (0, 0, 12), 0, 0.25),
+        ('armR', 40, 16, 40, 32, aw, 12, 4, ((4, 4 + aw), (-2, 2), (12, 24)), (4 + aw / 2, 0, 22), -swing * 0.8, 0.25),
+        ('armL', 32, 48, 48, 48, aw, 12, 4, ((-4 - aw, -4), (-2, 2), (12, 24)), (-4 - aw / 2, 0, 22), swing * 0.8, 0.25),
+        ('legR', 0, 16, 0, 32, 4, 12, 4, ((0, 4), (-2, 2), (0, 12)), (2, 0, 12), swing, 0.25),
+        ('legL', 16, 48, 0, 48, 4, 12, 4, ((-4, 0), (-2, 2), (0, 12)), (-2, 0, 12), -swing, 0.25),
+    ]
+    for pn, U, V, U2, V2, w, h, d, box, pivot, rot, infl in parts:
+        skin_part(f'{name}_{pn}', mat, root, U, V, w, h, d, box, pivot, rot)
+        skin_part(f'{name}_{pn}_o', mat, root, U2, V2, w, h, d, box, pivot, rot, inflate=infl)
+    return root
+
+
 def people():
+    if has_tex('skin_steve'):                                # 진짜 마크 캐릭터: 스티브와 알렉스가 앞서 걷는다
+        player('steve', 'skin_steve', 2.3, 9.7, slim=False, swing=26)
+        player('alex', 'skin_alex', 3.0, 10.1, slim=True, swing=-22)
+        return
     if has_tex('cloth_black'):                               # 진짜 마크 텍스처: 양털 옷
         k, g, d, y, br = (tex_mat(n) for n in ('cloth_black', 'cloth_grey', 'cloth_dark', 'hair_blond', 'bag_brown'))
         A = dict(legs=k, body=k, arms=k, hair=k, bag=br)
@@ -373,12 +450,12 @@ def far_bank(rnd):
         cx, cy = D * math.sin(t), D * math.cos(t)
         w, h = rnd.uniform(18, 26), rnd.uniform(48, 72)
         B.box(cx - w / 2, cy - 10, -1.2, cx + w / 2, cy + 10, h, fac[n % 2], s=facade_scale())
-    cr = tex_mat('crane', haze=0.42, alpha=True)
+    cr = tex_mat('crane', haze=0.42, alpha=not has_tex('fence'))
     for th, h in ((8.9, 92), (12.1, 98), (15.2, 88), (17.3, 94)):
         t = math.radians(th)
         cx, cy = D * math.sin(t), D * math.cos(t) - 15
-        B.box(cx - 1.5, cy - 1.5, 0, cx + 1.5, cy + 1.5, h, cr, s=1 / 3)
-        B.box(cx - 14, cy - 1, h - 3, cx + 40, cy + 1, h - 1, cr, s=1 / 2)
+        B.box(cx - 1, cy - 1, 0, cx + 1, cy + 1, h, cr)
+        B.box(cx - 14, cy - 1, h - 3, cx + 40, cy + 1, h - 1, cr)
     # 다리: 시야를 가로지르는 긴 상판 + 교각
     con = tex_mat('concrete', haze=0.36)
     D2 = 1150
@@ -389,9 +466,9 @@ def far_bank(rnd):
         y0 = pts[0][1] + (pts[1][1] - pts[0][1]) * k / n
         x1 = pts[0][0] + (pts[1][0] - pts[0][0]) * (k + 1) / n
         y1 = pts[0][1] + (pts[1][1] - pts[0][1]) * (k + 1) / n
-        B.box(min(x0, x1), min(y0, y1) - 6, 9, max(x0, x1), max(y0, y1) + 6, 12.5, con, s=1 / 2)
+        B.box(min(x0, x1), min(y0, y1) - 6, 9, max(x0, x1), max(y0, y1) + 6, 12, con)
         if k % 3 == 0:
-            B.box(x0 - 3, y0 - 3, -1.2, x0 + 3, y0 + 3, 9, con, s=1 / 2)
+            B.box(x0 - 3, y0 - 3, -1.2, x0 + 3, y0 + 3, 9, con)
     # 오른쪽 언덕, 높은 건물, 맨 끝 산줄기
     hill = tex_mat('hill', haze=0.5)
     for th, w, h in ((21.5, 160, 36), (24.5, 220, 52), (28.0, 260, 44), (32.0, 300, 30)):
@@ -399,27 +476,28 @@ def far_bank(rnd):
         cx, cy = 1600 * math.sin(t), 1600 * math.cos(t)
         for step in range(3):
             f = 1 - step * 0.3
-            B.box(cx - w * f / 2, cy - 40, -1.2, cx + w * f / 2, cy + 40, h * (0.45 + step * 0.28), hill, s=1 / 8)
+            B.box(cx - w * f / 2, cy - 40, -1.2, cx + w * f / 2, cy + 40, round(h * (0.45 + step * 0.28)), hill)
     t = math.radians(27.2)
     B.box(1420 * math.sin(t) - 16, 1420 * math.cos(t) - 16, -1.2, 1420 * math.sin(t) + 16, 1420 * math.cos(t) + 16, 88,
           tex_mat('facade2', haze=0.46), s=facade_scale())
     for th in range(-30, 40, 5):                            # 가운데 지평선의 먼 숲·산
         t = math.radians(th + rnd.uniform(-2, 2))
         cx, cy = 2600 * math.sin(t), 2600 * math.cos(t)
-        B.box(cx - 140, cy - 60, -1.2, cx + 140, cy + 60, rnd.uniform(25, 60), tex_mat('hill', haze=0.6), s=1 / 10)
-    # 배 두 척
+        B.box(cx - 140, cy - 60, -1.2, cx + 140, cy + 60, rnd.randint(25, 60), tex_mat('hill', haze=0.6))
+    # 블록으로 지은 배 두 척(석영 선체 + 짙은 참나무 갑판실)
     wh = tex_mat('white', haze=0.25)
+    deck = tex_mat('fence', haze=0.25) if has_tex('fence') else wh
     for th, D3 in ((24.0, 640), (21.0, 980)):
         t = math.radians(th)
-        cx, cy = D3 * math.sin(t), D3 * math.cos(t)
-        B.box(cx - 6, cy - 2, -1.4, cx + 6, cy + 2, 0.6, wh, s=1 / 1)
-        B.box(cx - 3, cy - 1.5, 0.6, cx + 2, cy + 1.5, 2.4, wh, s=1 / 1)
+        cx, cy = round(D3 * math.sin(t)), round(D3 * math.cos(t))
+        B.box(cx - 6, cy - 2, -2, cx + 6, cy + 2, 0, wh)
+        B.box(cx - 3, cy - 1, 0, cx + 2, cy + 1, 2, deck)
 
 
 def far_trees(rnd):
     """그리드 밖(240m~)으로 이어지는 왼쪽 강변 숲."""
-    for y0 in range(240, 760, 12):
-        hz = 0.08 + 0.3 * (y0 - 240) / 520
+    for y0 in range(360, 760, 12):
+        hz = 0.1 + 0.28 * (y0 - 360) / 400
         L = tex_mat('leaves_poplar', haze=round(hz, 2), alpha=True)
         for x0 in (-27, -20, -9, -4):
             h = rnd.uniform(9, 15)
@@ -427,18 +505,29 @@ def far_trees(rnd):
 
 
 def clouds(rnd, z=170, cell=16):
-    """마크식 네모 구름: 값 노이즈를 문턱값으로 자른 칸."""
+    """네모 구름. 진짜 마크 구름 지도(clouds.png)가 있으면 그것을 12m 칸, 128m 높이(게임의 y=192)에 깐다."""
     mat = color_mat('cloud', '#DCDBE8', rough=1.0, emit=0.22)
     g = {}
-    span_y = range(10, 380)                                 # 16m 칸 × 370 = 약 6km
-    def noise(ix, iy):
-        a = math.sin(ix * 0.37 + iy * 0.11) + math.sin(ix * 0.13 - iy * 0.29 + 1.7) + math.sin(ix * 0.071 + iy * 0.053 + 4.1)
-        return a + rnd.uniform(-0.55, 0.55)
-    for iy in span_y:
-        w = int(iy * 0.62) + 6
-        for ix in range(-w, w + 1):
-            if noise(ix, iy) > 0.55:
-                g[(ix, iy)] = True
+    if has_tex('clouds_map'):
+        from PIL import Image
+        cm = Image.open(os.path.join(TEX, 'clouds_map.png')).convert('RGBA')
+        W, H = cm.size
+        z, cell = 128, 12
+        ox, oy = 37, 101                                    # 구름 지도에서 보기 좋은 자리
+        for iy in range(12, 520):
+            w = int(iy * 0.62) + 6
+            for ix in range(-w, w + 1):
+                if cm.getpixel(((ix + ox) % W, (iy + oy) % H))[3] > 0:
+                    g[(ix, iy)] = True
+    else:
+        def noise(ix, iy):
+            a = math.sin(ix * 0.37 + iy * 0.11) + math.sin(ix * 0.13 - iy * 0.29 + 1.7) + math.sin(ix * 0.071 + iy * 0.053 + 4.1)
+            return a + rnd.uniform(-0.55, 0.55)
+        for iy in range(10, 380):                           # 16m 칸 × 370 = 약 6km
+            w = int(iy * 0.62) + 6
+            for ix in range(-w, w + 1):
+                if noise(ix, iy) > 0.55:
+                    g[(ix, iy)] = True
     for (ix, iy) in g:
         x0, y0 = ix * cell, iy * cell
         skip = ['top']
@@ -451,6 +540,40 @@ def clouds(rnd, z=170, cell=16):
         if (ix, iy - 1) in g:
             skip.append('-y')
         B.box(x0, y0, z, x0 + cell, y0 + cell, z + 4, mat, skip=skip)
+
+
+def moon(az=17.0, el=11.0, dist=3000.0, size_deg=22.0):
+    """마크의 네모난 달(보름달). 검은 부분은 비치고 달만 빛난다."""
+    if not has_tex('moon'):
+        return
+    m = bpy.data.materials.new('moon')
+    m.use_nodes = True
+    nt = m.node_tree
+    nt.nodes.clear()
+    im = nt.nodes.new('ShaderNodeTexImage')
+    im.image = bpy.data.images.load(os.path.join(TEX, 'moon.png'), check_existing=True)
+    im.interpolation = 'Closest'
+    em = nt.nodes.new('ShaderNodeEmission')
+    em.inputs['Strength'].default_value = 2.2
+    tp = nt.nodes.new('ShaderNodeBsdfTransparent')
+    bw = nt.nodes.new('ShaderNodeRGBToBW')
+    mix = nt.nodes.new('ShaderNodeMixShader')
+    out = nt.nodes.new('ShaderNodeOutputMaterial')
+    nt.links.new(im.outputs['Color'], em.inputs['Color'])
+    nt.links.new(im.outputs['Color'], bw.inputs['Color'])
+    nt.links.new(bw.outputs['Val'], mix.inputs['Fac'])
+    nt.links.new(tp.outputs['BSDF'], mix.inputs[1])
+    nt.links.new(em.outputs['Emission'], mix.inputs[2])
+    nt.links.new(mix.outputs['Shader'], out.inputs['Surface'])
+    MATS['moon'] = m
+    a, e = math.radians(az), math.radians(el)
+    d = Vector((math.sin(a) * math.cos(e), math.cos(a) * math.cos(e), math.sin(e)))
+    c = Vector(CAM) + d * dist
+    r = dist * math.tan(math.radians(size_deg / 2))
+    right = d.cross(Vector((0, 0, 1))).normalized() * -1     # 카메라에서 볼 때 오른쪽
+    up = right.cross(d).normalized() * -1
+    q = [c - right * r - up * r, c + right * r - up * r, c + right * r + up * r, c - right * r + up * r]
+    B.quad('moon', [tuple(v) for v in q], [(0, 0), (1, 0), (1, 1), (0, 1)])
 
 
 # ─── 장면 설정 ───
@@ -536,6 +659,7 @@ def main():
     far_bank(rnd)
     far_trees(rnd)
     clouds(rnd)
+    moon()
     B.build()
     sc = bpy.context.scene
     sc.render.filepath = out

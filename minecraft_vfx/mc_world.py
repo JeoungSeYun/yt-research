@@ -15,7 +15,17 @@ import bpy
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TEX = os.path.join(HERE, 'build', 'tex')
+TEX = os.environ.get('MC_TEX', os.path.join(HERE, 'build', 'tex'))   # build/tex_real = 진짜 마크 텍스처(real_textures.py)
+
+
+def facade_scale():
+    """외벽 텍스처 한 장이 몇 m인지: 직접 그린 16px = 한 층(3.2m), 진짜 블록을 이어 붙인 64px = 4블록(4m)."""
+    from PIL import Image
+    return 1 / 4 if Image.open(os.path.join(TEX, 'facade.png')).size[0] == 64 else 1 / 3.2
+
+
+def has_tex(name):
+    return os.path.exists(os.path.join(TEX, name + '.png'))
 OX = -0.6                      # 블록 격자의 x 원점: 길 왼쪽 가장자리가 x=-0.6
 CAM = (0.0, 0.0, 1.55)
 SKY_H, SKY_Z = '#AEBBDA', '#6F86B9'                        # 지평선 쪽, 하늘 꼭대기 색
@@ -340,12 +350,17 @@ def walker(name, x, y, c, phase=1, s=0.82):
 
 
 def people():
-    A = dict(legs=color_mat('blackcloth', '#1C1C20'), body=color_mat('blackcoat', '#26262B'),
-             arms=color_mat('blackcoat', '#26262B'), hair=color_mat('hair_black', '#141416'),
-             bag=color_mat('brownbag', '#9A5A2E'))
-    Bp = dict(legs=color_mat('darkpants', '#2A2A2E'), body=color_mat('greyjacket', '#C9C9CF'),
-              arms=color_mat('greyjacket', '#C9C9CF'), hair=color_mat('hair_blond', '#E2C25A'),
-              pack=color_mat('blackpack', '#1E1E22'))
+    if has_tex('cloth_black'):                               # 진짜 마크 텍스처: 양털 옷
+        k, g, d, y, br = (tex_mat(n) for n in ('cloth_black', 'cloth_grey', 'cloth_dark', 'hair_blond', 'bag_brown'))
+        A = dict(legs=k, body=k, arms=k, hair=k, bag=br)
+        Bp = dict(legs=d, body=g, arms=g, hair=y, pack=k)
+    else:
+        A = dict(legs=color_mat('blackcloth', '#1C1C20'), body=color_mat('blackcoat', '#26262B'),
+                 arms=color_mat('blackcoat', '#26262B'), hair=color_mat('hair_black', '#141416'),
+                 bag=color_mat('brownbag', '#9A5A2E'))
+        Bp = dict(legs=color_mat('darkpants', '#2A2A2E'), body=color_mat('greyjacket', '#C9C9CF'),
+                  arms=color_mat('greyjacket', '#C9C9CF'), hair=color_mat('hair_blond', '#E2C25A'),
+                  pack=color_mat('blackpack', '#1E1E22'))
     walker('pA', 2.45, 9.7, A, phase=1)
     walker('pB', 3.1, 9.9, Bp, phase=-1)
 
@@ -357,7 +372,7 @@ def far_bank(rnd):
         t = math.radians(th)
         cx, cy = D * math.sin(t), D * math.cos(t)
         w, h = rnd.uniform(18, 26), rnd.uniform(48, 72)
-        B.box(cx - w / 2, cy - 10, -1.2, cx + w / 2, cy + 10, h, fac[n % 2], s=1 / 3.2)
+        B.box(cx - w / 2, cy - 10, -1.2, cx + w / 2, cy + 10, h, fac[n % 2], s=facade_scale())
     cr = tex_mat('crane', haze=0.42, alpha=True)
     for th, h in ((8.9, 92), (12.1, 98), (15.2, 88), (17.3, 94)):
         t = math.radians(th)
@@ -387,7 +402,7 @@ def far_bank(rnd):
             B.box(cx - w * f / 2, cy - 40, -1.2, cx + w * f / 2, cy + 40, h * (0.45 + step * 0.28), hill, s=1 / 8)
     t = math.radians(27.2)
     B.box(1420 * math.sin(t) - 16, 1420 * math.cos(t) - 16, -1.2, 1420 * math.sin(t) + 16, 1420 * math.cos(t) + 16, 88,
-          tex_mat('facade2', haze=0.46), s=1 / 3.2)
+          tex_mat('facade2', haze=0.46), s=facade_scale())
     for th in range(-30, 40, 5):                            # 가운데 지평선의 먼 숲·산
         t = math.radians(th + rnd.uniform(-2, 2))
         cx, cy = 2600 * math.sin(t), 2600 * math.cos(t)

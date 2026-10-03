@@ -4,8 +4,12 @@
 첫 시험은 한강 산책로 사진(해 질 녘, 뒷모습)이다.
 
 1. **사람 따기** `segment.py`: BiRefNet(rembg)으로 사람 마스크를 만든다. 주인공 한 명만 남고, 손에 든 봉지와 머리카락도 들어간다.
-2. **블록 텍스처** `textures.py`: 16×16 블록 텍스처(잔디·흙·돌·길·나무·잎·수국·물·벽·아파트 외벽 등)를 직접 그린다.
-   Mojang 텍스처는 쓰지 않는다.
+2. **블록 텍스처**: 두 가지 중에 고른다.
+   - `real_textures.py`(기본으로 씀): 진짜 마크 블록 텍스처. Mojang이 공식 공개한 Bedrock 리소스 팩
+     ([Mojang/bedrock-samples](https://github.com/Mojang/bedrock-samples))에서 잔디·참나무·자작나무 잎·진달래 덤불·
+     흰색 테라코타 길·매끄러운 돌 연석·돌벽돌·물·발광석 창·양털 옷을 가져와 바이옴 색을 입힌다.
+     Mojang 저작물(마인크래프트 EULA)이라 저장소에는 넣지 않고 `build/`에서만 쓴다. 유튜브 영상은 괜찮지만 공모전 출품용으로는 쓰기 어렵다.
+   - `textures.py`: Mojang 텍스처 없이 직접 그린 '마크 느낌' 16×16 텍스처. 공모전처럼 기존 IP를 피해야 할 때 쓴다.
 3. **마크 배경** `mc_world.py`: 1블록 = 1m로, 사진과 같은 카메라(눈높이 1.55m, 아이폰 기본 렌즈 화각)에 맞춰 만든다.
    - 왼쪽: 화단, 가로수, 가로등, 큰 옹벽
    - 가운데: 4m 폭 산책로, 앞서 걷는 두 사람(블록 캐릭터)
@@ -23,7 +27,12 @@
 python3 -m venv segenv && segenv/bin/pip install rembg onnxruntime pillow
 segenv/bin/python segment.py build/photo.jpg build/mask_raw.png
 
-python3 textures.py build/tex
+# 진짜 마크 텍스처
+git clone --depth 1 --filter=blob:none --sparse https://github.com/Mojang/bedrock-samples build/bedrock
+git -C build/bedrock sparse-checkout set resource_pack/textures/blocks
+python3 real_textures.py build/bedrock/resource_pack/textures/blocks build/tex_real
+export MC_TEX=build/tex_real          # 직접 그린 텍스처를 쓰려면: python3 textures.py build/tex 후 MC_TEX 없이
+
 python3 mc_world.py --res 483x644 --spp 16 --out build/bg_preview.png     # 미리보기 (약 10초)
 python3 mc_world.py --res 1932x2576 --spp 96 --out build/bg_full.png       # 최종 (CPU 4코어로 약 10분)
 python3 composite.py build/photo.jpg build/mask_raw.png build/bg_full.png build/final.jpg

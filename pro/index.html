@@ -4,18 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>떡상 리서치 PRO</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root {
     --bg: #000; --card: rgba(28, 28, 30, .68); --border: rgba(255, 255, 255, .09);
-    --text: #f5f5f7; --sub: #86868b; --accent: #2997ff; --gold: #ffb020; --green: #30d158;
+    --text: #f5f5f7; --sub: #a1a1a6; --accent: #2997ff; --gold: #ffb020; --green: #30d158;
     --bar: #2997ff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Apple SD Gothic Neo', Pretendard, 'Segoe UI', 'Malgun Gothic', sans-serif;
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Apple SD Gothic Neo', 'Segoe UI', 'Malgun Gothic', sans-serif;
     padding: 28px 24px; max-width: 1200px; margin: 0 auto;
-    letter-spacing: -.01em; -webkit-font-smoothing: antialiased;
+    line-height: 1.45; letter-spacing: -.01em; -webkit-font-smoothing: antialiased;
     color-scheme: dark;
   }
   select option, select optgroup { background: #181b22; color: var(--text); }
@@ -23,7 +24,7 @@
   h1 { font-size: 19px; margin-bottom: 18px; font-weight: 700; letter-spacing: -.02em; }
   h1 span { color: var(--accent); }
   h1 .pro { border: 1px solid var(--border); color: var(--sub); font-size: 10px; border-radius: 5px; padding: 2px 6px; vertical-align: middle; margin-left: 7px; letter-spacing: .05em; font-weight: 600; }
-  .panel { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 14px; }
+  .panel { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; margin-bottom: 16px; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field label { font-size: 12px; color: var(--sub); }
@@ -41,48 +42,49 @@
   button:hover { filter: brightness(1.12); }
   button:active { transform: scale(.97); }
   button:disabled { opacity: .4; cursor: wait; }
-  .status { font-size: 13px; color: var(--sub); margin-top: 8px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
-  th { color: var(--sub); font-size: 12px; cursor: pointer; user-select: none; white-space: nowrap; }
+  .status { font-size: 13.5px; color: var(--sub); margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 12px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+  th { color: var(--sub); font-size: 12.5px; font-weight: 500; cursor: pointer; user-select: none; white-space: nowrap; }
   th:hover { color: var(--text); }
   tr:hover td { background: rgba(255, 255, 255, .04); }
-  .thumb { width: 120px; border-radius: 10px; display: block; }
+  .thumb { width: 128px; border-radius: 10px; display: block; }
   .cthumb { width: 48px; height: 48px; border-radius: 50%; display: block; }
-  .vtitle { max-width: 340px; font-weight: 600; color: var(--text); text-decoration: none; display: block; }
+  .vtitle { max-width: 520px; font-size: 14.5px; line-height: 1.4; font-weight: 600; color: var(--text); text-decoration: none; display: block; margin-bottom: 4px; }
   .vtitle:hover { color: var(--accent); }
-  .ch { color: var(--sub); font-size: 12px; text-decoration: none; }
+  .ch { color: var(--sub); font-size: 13px; text-decoration: none; }
   .ch:hover { color: var(--text); }
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dim { color: var(--sub); }
   .hot { color: var(--gold); font-weight: 700; }
   .good { color: var(--green); font-weight: 600; }
   .badge { display: inline-block; background: #2a1a1a; color: var(--gold); border: 1px solid #5a3a1a; border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; }
-  .mini { padding: 5px 14px; font-size: 12px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); color: var(--sub); font-weight: 500; }
+  .mini { padding: 6px 14px; font-size: 12.5px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); color: var(--sub); font-weight: 500; }
   .mini:hover { color: var(--text); border-color: var(--accent); filter: none; }
-  .tbtn { cursor: pointer; padding: 2px 9px; font-size: 11px; border-radius: 6px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--sub); font-weight: 600; margin-left: 8px; vertical-align: middle; }
+  .tbtn { cursor: pointer; padding: 2px 9px; font-size: 11.5px; border-radius: 6px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--sub); font-weight: 600; margin-left: 8px; vertical-align: middle; }
   .tbtn:hover { color: var(--text); border-color: var(--accent); filter: none; }
   .tbtn.on { color: var(--green); border-color: rgba(48, 209, 88, .4); background: rgba(48, 209, 88, .12); cursor: default; }
   /* 탭 — 세그먼트 컨트롤 (활성 표시가 미끄러짐) */
   .tabs { display: inline-flex; gap: 4px; margin-bottom: 18px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 4px; position: relative; max-width: 100%; }
   .tab-indicator { position: absolute; top: 4px; bottom: 4px; border-radius: 980px; background: var(--accent); z-index: 0; transition: left .3s cubic-bezier(.4,.9,.3,1), width .3s cubic-bezier(.4,.9,.3,1); pointer-events: none; }
-  .tab { padding: 8px 18px; border-radius: 980px; color: var(--sub); font-weight: 600; font-size: 13.5px; cursor: pointer; transition: color .25s; position: relative; z-index: 1; white-space: nowrap; }
+  .tab { padding: 8px 18px; border-radius: 980px; color: var(--sub); font-weight: 600; font-size: 14.5px; cursor: pointer; transition: color .25s; position: relative; z-index: 1; white-space: nowrap; }
   .tab:hover { color: var(--text); }
   .tab.active { color: #fff; }
   .view { display: none; }
   .view.active { display: block; }
   /* 스탯 타일 */
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .tile { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
-  .tile .k { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
-  .tile .v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .tile .k { font-size: 13px; color: var(--sub); margin-bottom: 6px; }
+  .tile .v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
   /* 바 차트 */
   .chart { margin-top: 4px; }
   .brow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .brow .bl { width: 90px; font-size: 12px; color: var(--sub); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .brow .bl { width: 100px; font-size: 12.5px; color: var(--sub); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .brow .bt { flex: 1; height: 18px; display: flex; align-items: center; }
   .brow .bar { height: 14px; background: var(--bar); border-radius: 0 4px 4px 0; min-width: 2px; transition: filter .15s; }
   .brow:hover .bar { filter: brightness(1.25); }
-  .brow .bv { font-size: 12px; color: var(--text); margin-left: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .brow .bv { font-size: 12.5px; color: var(--text); margin-left: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .charts2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
   /* 썸네일 갤러리 */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
@@ -90,8 +92,8 @@
   .card:hover { transform: translateY(-2px); border-color: rgba(41, 151, 255, .4); }
   .card img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; }
   .card .ct { padding: 8px 10px; }
-  .card .t { font-size: 13px; font-weight: 600; line-height: 1.4; height: 2.8em; overflow: hidden; color: var(--text); text-decoration: none; display: block; }
-  .card .s { font-size: 12px; color: var(--sub); margin-top: 4px; display: flex; justify-content: space-between; }
+  .card .t { font-size: 13.5px; font-weight: 600; line-height: 1.4; height: 2.8em; overflow: hidden; color: var(--text); text-decoration: none; display: block; }
+  .card .s { font-size: 12.5px; color: var(--sub); margin-top: 4px; display: flex; justify-content: space-between; }
   .card .hotag { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,.75); color: var(--gold); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
   .card .star, .starbtn { cursor: pointer; background: none; border: none; font-size: 16px; padding: 0 4px; color: var(--sub); }
   .card .star { position: absolute; top: 4px; right: 6px; background: rgba(0,0,0,.6); border-radius: 4px; }
@@ -102,34 +104,35 @@
   .hero { text-align: left; padding: 52px 6px 40px; }
   .hero h2 { font-size: 34px; line-height: 1.28; margin-bottom: 12px; letter-spacing: -.02em; font-weight: 700; }
   .hero h2 em { font-style: normal; color: var(--accent); }
-  .hero p { color: var(--sub); font-size: 15px; margin-bottom: 24px; max-width: 560px; }
+  .hero p { color: var(--sub); font-size: 16px; margin-bottom: 24px; max-width: 560px; }
   .hero .searchbar { max-width: 720px; }
   .hero button { font-size: 14px; padding: 10px 22px; }
   .quickstart { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; max-width: 720px; }
-  .quickstart .qc { background: rgba(255,255,255,.06); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 14px; font-size: 12.5px; cursor: pointer; transition: color .15s, border-color .15s; }
+  .quickstart .qc { background: rgba(255,255,255,.06); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: color .15s, border-color .15s; }
   .quickstart .qc:hover { color: var(--text); border-color: var(--accent); }
   .feat4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 14px; }
   .feat { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 22px; cursor: pointer; transition: border-color .2s; }
   .feat:hover { border-color: rgba(41, 151, 255, .5); }
   .feat .fi { font-size: 28px; margin-bottom: 12px; }
   .feat .ft { font-weight: 700; margin-bottom: 6px; letter-spacing: -.01em; }
-  .feat .fd { font-size: 13px; color: var(--sub); line-height: 1.6; }
-  .chip { display: inline-block; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 15px; font-size: 13px; cursor: pointer; margin: 3px; transition: color .15s, border-color .15s; }
+  .feat .fd { font-size: 13.5px; color: var(--sub); line-height: 1.6; }
+  .chip { display: inline-block; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 15px; font-size: 13.5px; cursor: pointer; margin: 3px; transition: color .15s, border-color .15s; }
   .chip:hover { color: var(--text); border-color: var(--accent); }
-  footer { text-align: center; color: var(--sub); font-size: 12px; padding: 30px 0 10px; border-top: 1px solid var(--border); margin-top: 30px; }
+  footer { text-align: center; color: var(--sub); font-size: 12.5px; padding: 30px 0 10px; border-top: 1px solid var(--border); margin-top: 30px; }
   .keymini { display: flex; align-items: center; gap: 10px; font-size: 13px; }
   .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
   .topbar h1 { margin-bottom: 0; }
-  .panel h3 { font-size: 13px; font-weight: 600; color: var(--sub); margin-bottom: 12px; letter-spacing: .01em; }
+  .panel h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 14px; letter-spacing: -.01em; }
+  .panel h3 .hint { color: var(--sub); font-weight: 400; font-size: 13px; margin-left: 8px; letter-spacing: 0; }
   /* 검색바 — 스포트라이트 스타일 */
   .searchbar { display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); border-radius: 980px; padding: 6px 6px 6px 10px; transition: border-color .2s; }
   .searchbar:focus-within { border-color: var(--accent); }
-  .searchbar select { background: rgba(255, 255, 255, .09); border: none; border-radius: 980px; padding: 9px 14px; font-size: 13.5px; font-weight: 600; flex-shrink: 0; cursor: pointer; }
+  .searchbar select { background: rgba(255, 255, 255, .09); border: none; border-radius: 980px; padding: 9px 14px; font-size: 14px; font-weight: 600; flex-shrink: 0; cursor: pointer; }
   .searchbar input { flex: 1; background: none; border: none; font-size: 16px; padding: 10px 6px; min-width: 0; }
   .searchbar input:focus { background: none; border: none; }
   .searchbar button { flex-shrink: 0; padding: 10px 24px; }
   .filters { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .filters select { border-radius: 980px; font-size: 13px; padding: 7px 14px; color: var(--sub); cursor: pointer; }
+  .filters select { border-radius: 980px; font-size: 13.5px; padding: 7px 14px; color: var(--sub); cursor: pointer; }
   .filters select:hover { color: var(--text); }
   .resultsbar { display: flex; align-items: center; margin-bottom: 10px; }
   /* 로그인 */
@@ -142,8 +145,8 @@
   .candcard:hover { border-color: rgba(41, 151, 255, .4); }
   .candcard img { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
   .candcard .ci { flex: 1; min-width: 0; }
-  .candcard .cn { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .candcard .cs { font-size: 12px; color: var(--sub); margin-top: 1px; }
+  .candcard .cn { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .candcard .cs { font-size: 12.5px; color: var(--sub); margin-top: 1px; }
   .candcard button { flex-shrink: 0; padding: 6px 14px; font-size: 12px; }
   .candcard button.added { background: rgba(48, 209, 88, .14); color: var(--green); box-shadow: none; cursor: default; }
   /* 추적 중인 채널 카드 */
@@ -151,14 +154,14 @@
   .trackhead { display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
   .trackhead .hi { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; text-decoration: none; }
   .trackhead .cn { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .trackhead .cs { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .trackhead .cs { font-size: 12.5px; color: var(--sub); margin-top: 2px; }
   .trackhead .cs .up { color: var(--green); } .trackhead .cs .dn { color: var(--accent); }
   .trackbtns { display: flex; gap: 6px; flex-shrink: 0; }
   .trackvids { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
   .tvid { flex: 0 0 152px; text-decoration: none; position: relative; }
   .tvid img { width: 152px; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; display: block; background: #222; }
-  .tvid .tvt { font-size: 12px; color: var(--text); font-weight: 500; margin-top: 6px; line-height: 1.35; height: 2.7em; overflow: hidden; }
-  .tvid .tvm { font-size: 11px; color: var(--sub); margin-top: 3px; }
+  .tvid .tvt { font-size: 12.5px; color: var(--text); font-weight: 500; margin-top: 6px; line-height: 1.35; height: 2.7em; overflow: hidden; }
+  .tvid .tvm { font-size: 11.5px; color: var(--sub); margin-top: 3px; }
   .tvid .rb { color: var(--gold); font-weight: 700; }
   .tvid .nb { position: absolute; top: 6px; left: 6px; background: var(--green); color: #04110a; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
   /* 탭이 많아지면 좁은 화면에서 가로 스크롤 */
@@ -166,26 +169,39 @@
   .tabs::-webkit-scrollbar { display: none; }
   /* 급상승 탭 */
   .trendctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .trendctl select { border-radius: 980px; font-size: 13.5px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
-  .trendctl .tfilter { flex: 1; min-width: 200px; border-radius: 980px; font-size: 13.5px; padding: 8px 14px; }
+  .trendctl select { border-radius: 980px; font-size: 14px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+  .trendctl .tfilter { flex: 1; min-width: 200px; border-radius: 980px; font-size: 14px; padding: 8px 14px; }
   .trendctl .tupd { font-size: 12px; color: var(--sub); white-space: nowrap; }
   .catrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-  .catchip { background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 14px; font-size: 12.5px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; user-select: none; }
+  .catchip { background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 15px; font-size: 13px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; user-select: none; }
   .catchip:hover { color: var(--text); border-color: var(--accent); }
   .catchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .rank { font-size: 15px; font-weight: 700; color: var(--sub); text-align: center; width: 34px; font-variant-numeric: tabular-nums; }
+  .rank { font-size: 16px; font-weight: 700; color: var(--sub); text-align: center; width: 34px; font-variant-numeric: tabular-nums; }
   .rank.top { color: var(--text); }
   .nbadge { display: inline-block; background: rgba(48, 209, 88, .14); color: var(--green); border: 1px solid rgba(48, 209, 88, .35); border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; font-weight: 600; }
-  .hrow { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); text-decoration: none; }
-  .hrow:last-of-type { border-bottom: none; }
-  .hrow img { width: 96px; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #222; }
-  .hrow .hi { min-width: 0; flex: 1; }
-  .hrow .ht { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hrow .hm { font-size: 12px; color: var(--sub); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .hrow:hover .ht { color: var(--accent); }
-  .hnote { font-size: 12px; color: var(--sub); margin-top: 10px; line-height: 1.5; }
-  .hlink { display: inline-block; margin-top: 8px; font-size: 12.5px; color: var(--accent); text-decoration: none; }
+  /* 하입 후보 — 채널 추적의 최신 영상 카드와 같은 모양, 전체 폭 그리드 */
+  .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px 14px; }
+  .shelf .tvid { flex: none; }
+  .shelf .tvid img { width: 100%; }
+  .shelf .tvid:hover .tvt { color: var(--accent); }
+  .shelf .tvid .tvm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hnote { font-size: 12.5px; color: var(--sub); margin-top: 16px; line-height: 1.5; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+  .hlink { font-size: 12.5px; color: var(--accent); text-decoration: none; white-space: nowrap; }
   .hlink:hover { text-decoration: underline; }
+  /* 안내 문구만 있는 패널은 위 여백 없이 */
+  .panel > .status:first-child { margin-top: 0; }
+  /* 폰: 좌우 여백 줄여서 본문 폭 확보, 하입 후보는 2열 */
+  @media (max-width: 600px) {
+    body { padding: 20px 14px; }
+    .panel { padding: 18px 16px; }
+    .shelf { grid-template-columns: repeat(2, 1fr); gap: 14px 10px; }
+  }
+  /* 표·카드의 저장/추적 버튼은 마우스를 올렸을 때만 표시 (터치 기기는 항상 표시) */
+  @media (hover: hover) {
+    tbody .starbtn:not(.on), tbody .tbtn:not(.on), .card .star:not(.on), .card .tbtn:not(.on) { opacity: 0; transition: opacity .15s; }
+    tbody tr:hover .starbtn, tbody tr:hover .tbtn, tbody tr:focus-within .starbtn, tbody tr:focus-within .tbtn,
+    .card:hover .star, .card:hover .tbtn, .card:focus-within .star, .card:focus-within .tbtn { opacity: 1; }
+  }
 </style>
 </head>
 <body>
@@ -280,14 +296,11 @@
 </div>
 <div id="trBody" style="display:none">
   <div class="tiles" id="trTiles"></div>
-  <div class="charts2">
-    <div class="panel"><h3>지금 뜨는 키워드 — 클릭하면 바로 검색</h3><div id="trWords"></div></div>
-    <div class="panel">
-      <h3>하입 후보 — 구독자 50만 이하 · 7일 이내 롱폼</h3>
-      <div id="trHype"></div>
-      <div class="hnote">YouTube 하입 순위는 공개 API가 없어서, 하입 대상 조건에 맞는 급상승 영상을 보여줘요.</div>
-      <a class="hlink" id="trHypeLink" href="https://www.youtube.com/feed/hype" target="_blank">YouTube 공식 하입 순위 보기 ↗</a>
-    </div>
+  <div class="panel"><h3>지금 뜨는 키워드<span class="hint">클릭하면 바로 검색</span></h3><div id="trWords"></div></div>
+  <div class="panel">
+    <h3>하입 후보<span class="hint">구독자 50만 이하 · 7일 이내 롱폼</span></h3>
+    <div id="trHype" class="shelf"></div>
+    <div class="hnote"><span>YouTube 하입 순위는 공개 API가 없어서, 하입 대상 조건에 맞는 급상승 영상을 보여줘요.</span><a class="hlink" id="trHypeLink" href="https://www.youtube.com/feed/hype" target="_blank">YouTube 공식 하입 순위 보기 ↗</a></div>
   </div>
   <div class="panel" style="overflow-x:auto">
     <div class="resultsbar">
@@ -375,7 +388,7 @@
 </div>
 <div id="kwBody" style="display:none">
   <div class="tiles" id="kwTiles"></div>
-  <div class="panel"><h3>연관 키워드 — 클릭하면 바로 검색</h3><div id="kwRelated"></div></div>
+  <div class="panel"><h3>연관 키워드<span class="hint">클릭하면 바로 검색</span></h3><div id="kwRelated"></div></div>
 </div>
 </div>
 
@@ -411,7 +424,7 @@
     <div class="panel chart"><h3>제목 패턴</h3><div id="patterns" style="font-size:13px;line-height:2.1"></div></div>
     <div class="panel chart"><h3>업로드 시간대 분포</h3><div id="chartHours"></div></div>
     <div class="panel chart"><h3>떡상 제목 TOP 5 (조회/구독 배율순)</h3><div id="topTitles" style="font-size:13px;line-height:1.5"></div></div>
-    <div class="panel chart"><h3>상위 영상들이 쓰는 태그 (클릭하면 검색)</h3><div id="chartTags"></div></div>
+    <div class="panel chart"><h3>상위 영상들이 쓰는 태그<span class="hint">클릭하면 바로 검색</span></h3><div id="chartTags"></div></div>
   </div>
 </div>
 </div>
@@ -840,13 +853,13 @@ function renderVideos() {
         <a class="ch" href="https://youtube.com/channel/${r.channelId}" target="_blank">${r.channel}</a><button class="starbtn ${isBM(r.id) ? 'on' : ''}" data-star="${r.id}" title="저장함에 추가">★</button><button class="tbtn ${isTracked(r.channelId) ? 'on' : ''}" data-trackch="${idx}" data-cid="${r.channelId}">${isTracked(r.channelId) ? '✓ 추적 중' : '+ 채널 추적'}</button>
       </td>
       <td class="num">${fmtNum(r.views)}</td>
-      <td class="num">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
+      <td class="num dim">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
       <td class="num ${r.ratio >= 5 ? 'hot' : ''}">${r.ratio ? r.ratio.toFixed(1) + '×' : '-'}</td>
-      <td class="num">${fmtNum(r.vpd)}</td>
+      <td class="num dim">${fmtNum(r.vpd)}</td>
       <td class="num">${fmtNum(r.vph)}</td>
-      <td class="num">${fmtNum(r.likes)}</td>
-      <td class="num">${new Date(r.published).toLocaleDateString('ko-KR')}</td>
-      <td class="num">${fmtDur(r.dur)}</td>
+      <td class="num dim">${fmtNum(r.likes)}</td>
+      <td class="num dim">${new Date(r.published).toLocaleDateString('ko-KR')}</td>
+      <td class="num dim">${fmtDur(r.dur)}</td>
     </tr>`).join('');
   attachStars($('#results tbody'));
   attachTrackBtns($('#results tbody'));
@@ -868,8 +881,8 @@ function renderChannels() {
       <td><a class="vtitle" href="https://youtube.com/channel/${r.channelId}" target="_blank">${r.channel}</a><span class="ch">${r.desc}</span></td>
       <td class="num">${fmtNum(r.subs)}</td>
       <td class="num ${r.score >= 50 ? 'good' : ''}">${r.score}%</td>
-      <td class="num">${fmtNum(r.totalViews)}</td>
-      <td class="num">${fmtNum(r.videos)}</td>
+      <td class="num dim">${fmtNum(r.totalViews)}</td>
+      <td class="num dim">${fmtNum(r.videos)}</td>
       <td class="num">${fmtNum(r.avgViews)}</td>
       <td style="white-space:nowrap"><button class="mini" data-ch="${idx}">인기 영상</button><button class="mini" data-track="${idx}">추적</button></td>
     </tr>`).join('');
@@ -1167,7 +1180,7 @@ $('#trackQuery').addEventListener('keydown', e => e.key === 'Enter' && trackSear
 $('#trackRefreshBtn').addEventListener('click', refreshTracked);
 
 // ═══════════ 트렌드 분석 ═══════════
-const STOPWORDS = new Set(['그리고', '하는', '있는', '없는', '해서', '하다', '했다', '합니다', 'the', 'and', 'for', 'with', 'this', 'that', 'you', 'shorts', '쇼츠', '영상', '오늘', '진짜', '완전', '레전드', '함', '했음', '하기', '아니', '내가', '너무', '무슨', '이거', '그냥']);
+const STOPWORDS = new Set(['vs', '그리고', '하는', '있는', '없는', '해서', '하다', '했다', '합니다', 'the', 'and', 'for', 'with', 'this', 'that', 'you', 'shorts', '쇼츠', '영상', '오늘', '진짜', '완전', '레전드', '함', '했음', '하기', '아니', '내가', '너무', '무슨', '이거', '그냥']);
 
 function barChart(el, data, fmt) {
   // data: [{label, value}] — 단일 시리즈 가로 막대 (최댓값 기준 폭)
@@ -1380,7 +1393,7 @@ function trendWords(list) {
       if (!label[k]) label[k] = w;
     });
   });
-  return Object.keys(df).filter(k => df[k] >= 2).sort((a, b) => score[b] - score[a]).slice(0, 18).map(k => [label[k], df[k]]);
+  return Object.keys(df).filter(k => df[k] >= 2).sort((a, b) => score[b] - score[a]).slice(0, 24).map(k => [label[k], df[k]]);
 }
 
 function renderTrend() {
@@ -1421,14 +1434,15 @@ function renderTrend() {
 
   // 하입 후보: 하입 대상 조건(구독자 500~50만, 7일 이내, 롱폼)에 맞는 영상을 상승 속도순으로
   const hype = list.filter(r => r.subs >= 500 && r.subs <= 5e5 && r.hours <= 168 && r.dur > 180)
-    .sort((a, b) => b.vph - a.vph).slice(0, 8);
+    .sort((a, b) => b.vph - a.vph).slice(0, 6);
   $('#trHype').innerHTML = hype.length
-    ? hype.map(r => `<a class="hrow" href="https://youtu.be/${r.id}" target="_blank">
-        <img src="${esc(r.thumb)}" loading="lazy">
-        <div class="hi"><div class="ht">${esc(r.title)}</div>
-        <div class="hm">${esc(r.channel)} · ${T('구독자 ' + fmtNum(r.subs), fmtNum(r.subs) + ' subs')} · ${T('시간당 ' + fmtNum(r.vph), fmtNum(r.vph) + '/h')}</div></div>
+    ? hype.map(r => `<a class="tvid" href="https://youtu.be/${r.id}" target="_blank">
+        <img src="${esc(r.thumb)}" loading="lazy">${r.hours < 24 ? '<span class="nb">NEW</span>' : ''}
+        <div class="tvt">${esc(r.title)}</div>
+        <div class="tvm">${esc(r.channel)} · ${T('구독자 ' + fmtNum(r.subs), fmtNum(r.subs) + ' subs')}</div>
+        <div class="tvm"><span class="rb">${T('시간당 ' + fmtNum(r.vph), fmtNum(r.vph) + '/h')}</span></div>
       </a>`).join('')
-    : `<span class="ch" style="font-size:13px">${T('이 차트엔 하입 조건(구독자 500~50만 · 7일 이내 · 3분 초과)에 맞는 영상이 없어요.', 'No videos in this chart meet the Hype criteria (500–500K subs · last 7 days · over 3 min).')}</span>`;
+    : `<div class="ch" style="font-size:13px;grid-column:1/-1">${T('이 차트엔 하입 조건(구독자 500~50만 · 7일 이내 · 3분 초과)에 맞는 영상이 없어요.', 'No videos in this chart meet the Hype criteria (500–500K subs · last 7 days · over 3 min).')}</div>`;
 
   renderTrendTable(list);
 }
@@ -1460,9 +1474,9 @@ function renderTrendTable(list) {
       <td class="num">${fmtNum(r.views)}</td>
       <td class="num ${r === fastest ? 'hot' : ''}">${fmtNum(r.vph)}</td>
       <td class="num ${r.ratio >= 5 ? 'hot' : ''}">${r.ratio ? r.ratio.toFixed(1) + '×' : '-'}</td>
-      <td class="num">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
-      <td class="num">${ago(r.hours)}</td>
-      <td class="num">${fmtDur(r.dur)}</td>
+      <td class="num dim">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
+      <td class="num dim">${ago(r.hours)}</td>
+      <td class="num dim">${fmtDur(r.dur)}</td>
     </tr>`).join('')
     : `<tr><td colspan="9" class="ch" style="padding:18px 10px">${T('조건에 맞는 영상이 없어요.', 'No videos match.')}</td></tr>`;
   $('#trTable tbody').querySelectorAll('[data-tstar]').forEach(b => b.addEventListener('click', e => {
@@ -1753,6 +1767,9 @@ const USER_KEY = 'yt_user';
     'YouTube 하입 순위는 공개 API가 없어서, 하입 대상 조건에 맞는 급상승 영상을 보여줘요.': "YouTube's Hype leaderboard has no public API, so this lists trending videos that meet Hype's eligibility criteria.",
     'YouTube 공식 하입 순위 보기 ↗': "Open YouTube's official Hype leaderboard ↗",
     '이 차트로 트렌드 분석': 'Analyze this chart',
+    '지금 뜨는 키워드': 'Rising keywords', '하입 후보': 'Hype candidates', '연관 키워드': 'Related keywords',
+    '상위 영상들이 쓰는 태그': 'Tags used by top videos', '클릭하면 바로 검색': 'click to search',
+    '구독자 50만 이하 · 7일 이내 롱폼': 'channels ≤500K subs · long-form from the last 7 days',
     '✓ 추적 중': '✓ Tracking', '저장함에 추가': 'Save',
     // 히어로
     '어떤 영상이 떡상하는지,': "Find which videos break out —", '감이 아니라 데이터로.': 'with data, not guesswork.',

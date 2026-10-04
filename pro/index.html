@@ -20,7 +20,6 @@
     color-scheme: dark;
   }
   select option, select optgroup { background: #181b22; color: var(--text); }
-  #view-home { max-width: 980px; }
   h1 { font-size: 19px; margin-bottom: 18px; font-weight: 700; letter-spacing: -.02em; }
   h1 span { color: var(--accent); }
   h1 .pro { border: 1px solid var(--border); color: var(--sub); font-size: 10px; border-radius: 5px; padding: 2px 6px; vertical-align: middle; margin-left: 7px; letter-spacing: .05em; font-weight: 600; }
@@ -65,9 +64,9 @@
   .tbtn:hover { color: var(--text); border-color: var(--accent); filter: none; }
   .tbtn.on { color: var(--green); border-color: rgba(48, 209, 88, .4); background: rgba(48, 209, 88, .12); cursor: default; }
   /* 탭 — 세그먼트 컨트롤 (활성 표시가 미끄러짐) */
-  .tabs { display: inline-flex; gap: 4px; margin-bottom: 18px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 4px; position: relative; max-width: 100%; }
+  .tabs { display: flex; width: 100%; gap: 4px; margin-bottom: 18px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 4px; position: relative; }
   .tab-indicator { position: absolute; top: 4px; bottom: 4px; border-radius: 980px; background: var(--accent); z-index: 0; transition: left .3s cubic-bezier(.4,.9,.3,1), width .3s cubic-bezier(.4,.9,.3,1); pointer-events: none; }
-  .tab { padding: 8px 18px; border-radius: 980px; color: var(--sub); font-weight: 600; font-size: 14.5px; cursor: pointer; transition: color .25s; position: relative; z-index: 1; white-space: nowrap; }
+  .tab { flex: 1 1 0; text-align: center; padding: 8px 16px; border-radius: 980px; color: var(--sub); font-weight: 600; font-size: 14.5px; cursor: pointer; transition: color .25s; position: relative; z-index: 1; white-space: nowrap; }
   .tab:hover { color: var(--text); }
   .tab.active { color: #fff; }
   .view { display: none; }
@@ -101,13 +100,12 @@
   textarea.memo { width: 100%; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 7px 10px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
   .vtitle:hover { color: var(--accent); }
   /* 홈 랜딩 */
-  .hero { text-align: left; padding: 52px 6px 40px; }
+  .hero { text-align: left; padding: 52px 0 40px; }
   .hero h2 { font-size: 34px; line-height: 1.28; margin-bottom: 12px; letter-spacing: -.02em; font-weight: 700; }
   .hero h2 em { font-style: normal; color: var(--accent); }
   .hero p { color: var(--sub); font-size: 16px; margin-bottom: 24px; max-width: 560px; }
-  .hero .searchbar { max-width: 720px; }
   .hero button { font-size: 14px; padding: 10px 22px; }
-  .quickstart { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; max-width: 720px; }
+  .quickstart { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
   .quickstart .qc { background: rgba(255,255,255,.06); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: color .15s, border-color .15s; }
   .quickstart .qc:hover { color: var(--text); border-color: var(--accent); }
   .feat4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 14px; }

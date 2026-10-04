@@ -161,6 +161,31 @@
   .tvid .tvm { font-size: 11px; color: var(--sub); margin-top: 3px; }
   .tvid .rb { color: var(--gold); font-weight: 700; }
   .tvid .nb { position: absolute; top: 6px; left: 6px; background: var(--green); color: #04110a; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  /* 탭이 많아지면 좁은 화면에서 가로 스크롤 */
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  /* 급상승 탭 */
+  .trendctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .trendctl select { border-radius: 980px; font-size: 13.5px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+  .trendctl .tfilter { flex: 1; min-width: 200px; border-radius: 980px; font-size: 13.5px; padding: 8px 14px; }
+  .trendctl .tupd { font-size: 12px; color: var(--sub); white-space: nowrap; }
+  .catrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .catchip { background: rgba(255, 255, 255, .06); border: 1px solid var(--border); color: var(--sub); border-radius: 980px; padding: 6px 14px; font-size: 12.5px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; user-select: none; }
+  .catchip:hover { color: var(--text); border-color: var(--accent); }
+  .catchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .rank { font-size: 15px; font-weight: 700; color: var(--sub); text-align: center; width: 34px; font-variant-numeric: tabular-nums; }
+  .rank.top { color: var(--text); }
+  .nbadge { display: inline-block; background: rgba(48, 209, 88, .14); color: var(--green); border: 1px solid rgba(48, 209, 88, .35); border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; font-weight: 600; }
+  .hrow { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); text-decoration: none; }
+  .hrow:last-of-type { border-bottom: none; }
+  .hrow img { width: 96px; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #222; }
+  .hrow .hi { min-width: 0; flex: 1; }
+  .hrow .ht { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hrow .hm { font-size: 12px; color: var(--sub); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hrow:hover .ht { color: var(--accent); }
+  .hnote { font-size: 12px; color: var(--sub); margin-top: 10px; line-height: 1.5; }
+  .hlink { display: inline-block; margin-top: 8px; font-size: 12.5px; color: var(--accent); text-decoration: none; }
+  .hlink:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -199,6 +224,7 @@
 <div class="tabs">
   <div class="tab-indicator" id="tabIndicator"></div>
   <div class="tab active" data-view="home">홈</div>
+  <div class="tab" data-view="trend">급상승</div>
   <div class="tab" data-view="search">검색</div>
   <div class="tab" data-view="keyword">키워드</div>
   <div class="tab" data-view="track">채널 추적</div>
@@ -225,6 +251,52 @@
   </div>
   <div class="tiles" id="homeStats"></div>
   <div class="panel" id="historyPanel" style="display:none"><h3>최근 검색어</h3><div id="history"></div></div>
+</div>
+
+<!-- ═══════════ 급상승 탭 — 검색 없이 나라별 실시간 인기 차트 ═══════════ -->
+<div class="view" id="view-trend">
+<div class="panel">
+  <div class="trendctl">
+    <select id="trRegion">
+      <option value="KR">한국</option>
+      <option value="US">미국</option>
+      <option value="JP">일본</option>
+      <option value="GB">영국</option>
+      <option value="DE">독일</option>
+      <option value="FR">프랑스</option>
+      <option value="ES">스페인</option>
+      <option value="BR">브라질</option>
+      <option value="ID">인도네시아</option>
+      <option value="VN">베트남</option>
+      <option value="TH">태국</option>
+      <option value="RU">러시아</option>
+    </select>
+    <input id="trFilter" class="tfilter" autocomplete="off" placeholder="내 장르만 보기 — 예: 마인크래프트">
+    <span class="tupd" id="trUpdated"></span>
+    <button class="mini" id="trRefresh">새로고침</button>
+  </div>
+  <div class="catrow" id="trCats"></div>
+  <div class="status" id="trStatus">나라를 고르면 YouTube 공식 인기 차트를 바로 불러와요. 검색 할당량은 쓰지 않아요.</div>
+</div>
+<div id="trBody" style="display:none">
+  <div class="tiles" id="trTiles"></div>
+  <div class="charts2">
+    <div class="panel"><h3>지금 뜨는 키워드 — 클릭하면 바로 검색</h3><div id="trWords"></div></div>
+    <div class="panel">
+      <h3>하입 후보 — 구독자 50만 이하 · 7일 이내 롱폼</h3>
+      <div id="trHype"></div>
+      <div class="hnote">YouTube 하입 순위는 공개 API가 없어서, 하입 대상 조건에 맞는 급상승 영상을 보여줘요.</div>
+      <a class="hlink" id="trHypeLink" href="https://www.youtube.com/feed/hype" target="_blank">YouTube 공식 하입 순위 보기 ↗</a>
+    </div>
+  </div>
+  <div class="panel" style="overflow-x:auto">
+    <div class="resultsbar">
+      <span class="ch" style="font-size:13px" id="trListTitle">인기 급상승</span>
+      <span style="margin-left:auto"><button class="mini" id="trToInsight">이 차트로 트렌드 분석</button></span>
+    </div>
+    <table id="trTable"><thead></thead><tbody></tbody></table>
+  </div>
+</div>
 </div>
 
 <!-- ═══════════ 검색 탭 ═══════════ -->
@@ -1199,6 +1271,258 @@ function buildInsight() {
     괄호 ( ) 사용: <b>${pct(r => /[()]/.test(r.title))}</b> · "..." 말줄임: <b>${pct(r => /\.\.\.|…/.test(r.title))}</b>`;
 }
 
+// ═══════════ 급상승 — 검색 없이 나라별 실시간 인기 차트 ═══════════
+// videos.list chart=mostPopular 사용: 일반 할당량 1유닛/호출, search.list는 0회.
+// 결과는 메모리에만 10분 보관하고 저장하지 않음 (YouTube API 정책 III.E.4).
+const EN_UI = new URLSearchParams(location.search).get('lang') === 'en' || localStorage.getItem('yt_lang') === 'en';
+const T = (ko, en) => EN_UI ? en : ko;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const TR_CATS = [
+  ['', '전체', 'All'], ['20', '게임', 'Gaming'], ['10', '음악', 'Music'], ['24', '엔터', 'Entertainment'],
+  ['23', '코미디', 'Comedy'], ['17', '스포츠', 'Sports'], ['26', '노하우', 'How-to'],
+  ['28', '과학·기술', 'Science & Tech'], ['1', '애니·영화', 'Film & Animation'],
+];
+const TR_STOP = new Set(['official', 'video', 'mv', 'm/v', 'full', 'ver', 'feat', 'ft', 'vs', 'of', 'in', 'on', 'to', 'my', 'is', 'from', 'are', 'was', 'its', 'it', 'we', 'me', 'your', 'our', 'youtube', 'channel', 'ep', 'part', 'episode', '공식', '풀버전', '최초', '공개', '편', '게임', 'game', 'games', 'gaming', 'gameplay', '게임플레이']);
+const trCache = {};
+let trRows = [], trAt = 0, trReq = 0, trSortKey = 'rank', trSortDesc = false;
+let trRegion = localStorage.getItem('yt_tr_region') || (EN_UI ? 'US' : 'KR');
+let trCat = localStorage.getItem('yt_tr_cat') ?? '20';
+
+function ago(h) {
+  if (h < 1) return T('방금', 'just now');
+  if (h < 24) return T(Math.floor(h) + '시간 전', Math.floor(h) + 'h ago');
+  return T(Math.floor(h / 24) + '일 전', Math.floor(h / 24) + 'd ago');
+}
+const trRegionName = () => ($('#trRegion').selectedOptions[0]?.textContent || trRegion).trim();
+const trCatName = () => (TR_CATS.find(c => c[0] === trCat) || TR_CATS[0])[EN_UI ? 2 : 1];
+
+async function loadTrend(force) {
+  const key = trRegion + '|' + trCat, my = ++trReq;
+  const c = trCache[key];
+  if (!force && c && Date.now() - c.at < 10 * 60e3) {
+    trRows = c.rows; trAt = c.at; renderTrend();
+    $('#trRefresh').disabled = false;
+    return;
+  }
+  const btn = $('#trRefresh');
+  btn.disabled = true;
+  $('#trStatus').textContent = T('인기 차트 불러오는 중...', 'Loading the trending chart...');
+  try {
+    let items = [], pageToken = '';
+    for (let p = 0; p < 2; p++) {
+      const d = await yt('videos', { part: 'snippet,statistics,contentDetails', chart: 'mostPopular', regionCode: trRegion, videoCategoryId: trCat, maxResults: 50, pageToken });
+      items = items.concat(d.items || []);
+      if (!d.nextPageToken) break;
+      pageToken = d.nextPageToken;
+    }
+    const chans = {};
+    for (const ids of chunk([...new Set(items.map(v => v.snippet.channelId))], 50)) {
+      const d = await yt('channels', { part: 'snippet,statistics', id: ids.join(',') });
+      (d.items || []).forEach(ch => chans[ch.id] = ch);
+    }
+    if (my !== trReq) return; // 그 사이 나라/카테고리를 바꿨으면 버림
+    const now = Date.now();
+    trRows = items.map((v, i) => {
+      const ch = chans[v.snippet.channelId];
+      const views = +v.statistics?.viewCount || 0;
+      const subs = ch && !ch.statistics.hiddenSubscriberCount ? +ch.statistics.subscriberCount || 0 : 0;
+      const hours = Math.max(0.5, (now - new Date(v.snippet.publishedAt)) / 36e5);
+      return {
+        rank: i + 1, id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle, channelId: v.snippet.channelId,
+        thumb: v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url || '',
+        chThumb: ch?.snippet?.thumbnails?.default?.url || '', tags: v.snippet.tags || [],
+        views, subs, likes: +v.statistics?.likeCount || 0, published: v.snippet.publishedAt, hours,
+        vph: Math.round(views / hours), vpd: Math.round(views / Math.max(1, hours / 24)),
+        ratio: subs ? views / subs : 0, dur: parseDur(v.contentDetails?.duration || 'PT0S'),
+      };
+    });
+    trAt = now;
+    trCache[key] = { at: now, rows: trRows };
+    renderTrend();
+  } catch (e) {
+    if (my === trReq) $('#trStatus').textContent = /quota/i.test(e.message)
+      ? T('오늘 API 할당량을 다 썼어요. 한국시간 오후 4~5시에 리셋돼요.', 'Daily API quota used up — it resets at midnight Pacific time.')
+      : e.message;
+  } finally {
+    if (my === trReq) btn.disabled = false;
+  }
+}
+
+// "내 장르만 보기" — 불러온 차트 안에서만 거름 (추가 API 호출 없음)
+function trVisible() {
+  const q = $('#trFilter').value.trim();
+  if (!q) return trRows;
+  const groups = tokenGroups(q);
+  return trRows.filter(r => groups.every(g => groupIn(r.title + ' ' + r.tags.join(' ') + ' ' + r.channel, g)));
+}
+
+// 지금 뜨는 키워드: 여러 영상에 공통으로 나오는 단어를, 상승 속도가 빠른 영상일수록 높게 침
+function trendWords(list) {
+  const df = {}, score = {}, label = {};
+  const clean = w => {
+    w = w.replace(/^#/, '').trim();
+    if (/^[a-z0-9]/i.test(w)) w = w.toLowerCase();
+    const m = w.match(/(에서|으로|에게|까지|부터|처럼|보다|을|를|은|는|의)$/);
+    if (m && w.length - m[0].length >= 2) w = w.slice(0, -m[0].length);
+    return w;
+  };
+  const ok = w => w.length >= 2 && !/^\d+$/.test(w) && !STOPWORDS.has(w) && !TR_STOP.has(w);
+  list.forEach(r => {
+    const toks = new Map(); // 띄어쓰기 무시한 키 → 표시용 원문
+    const add = w => { const k = w.replace(/\s+/g, ''); if (ok(w) && ok(k) && !toks.has(k)) toks.set(k, w); };
+    // 제목은 단어 단위
+    r.title.replace(/[\[\](){}|!?~♥★…"'.,/\\:;<>«»【】「」『』《》〈〉+=*&^%$@]/g, ' ').split(/\s+/).forEach(w => add(clean(w)));
+    // 태그는 통째로 ("리그 오브 레전드"가 "리그"/"오브"로 쪼개지지 않게)
+    r.tags.slice(0, 10).forEach(t => { t = clean(t); if (t.length <= 20) add(t); });
+    toks.forEach((w, k) => {
+      df[k] = (df[k] || 0) + 1;
+      score[k] = (score[k] || 0) + Math.log10(r.vph + 10);
+      if (!label[k]) label[k] = w;
+    });
+  });
+  return Object.keys(df).filter(k => df[k] >= 2).sort((a, b) => score[b] - score[a]).slice(0, 18).map(k => [label[k], df[k]]);
+}
+
+function renderTrend() {
+  if (!trAt) return;
+  const list = trVisible(), q = $('#trFilter').value.trim();
+  const regionName = trRegionName(), catName = trCatName();
+  $('#trBody').style.display = 'block';
+  const time = new Date(trAt).toLocaleTimeString(EN_UI ? 'en-US' : 'ko-KR', { hour: 'numeric', minute: '2-digit' });
+  $('#trUpdated').textContent = T(time + ' 기준', 'as of ' + time);
+  $('#trStatus').textContent = q
+    ? T(`"${q}" 포함 ${list.length}개 · 전체 ${trRows.length}개 중`, `${list.length} of ${trRows.length} videos match "${q}"`)
+    : T(`${regionName} · ${catName} 인기 차트 ${trRows.length}개 — 검색 할당량은 쓰지 않아요`, `${trRows.length} trending videos · ${regionName} · ${catName} — no search quota used`);
+  $('#trListTitle').textContent = T(`${regionName} 인기 급상승 · ${catName}`, `Trending in ${regionName} · ${catName}`);
+  $('#trHypeLink').href = 'https://www.youtube.com/feed/hype?gl=' + trRegion;
+
+  // 요약 타일
+  const pct = n => list.length ? Math.round(n / list.length * 100) + '%' : '-';
+  const fastest = list.reduce((a, r) => (!a || r.vph > a.vph ? r : a), null);
+  $('#trTiles').innerHTML = [
+    [T('가장 빠른 상승 · 시간당 조회', 'Fastest rising · views/hour'), fastest ? fmtNum(fastest.vph) : '-'],
+    [T('24시간 안에 올라온 영상', 'Uploaded in the last 24h'), pct(list.filter(r => r.hours < 24).length)],
+    [T('구독자 50만 이하 채널', 'From channels ≤500K subs'), pct(list.filter(r => r.subs && r.subs <= 5e5).length)],
+    [T('쇼츠 비율', 'Shorts share'), pct(list.filter(r => r.dur <= 180).length)],
+  ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+  // 지금 뜨는 키워드 — 클릭하면 같은 나라로 바로 검색
+  const words = trendWords(list);
+  $('#trWords').innerHTML = words.length
+    ? words.map(([w, n]) => `<span class="chip" data-trq="${esc(w)}">${esc(w)} <b style="color:var(--gold)">${n}</b></span>`).join('')
+    : `<span class="ch" style="font-size:13px">${T('키워드를 뽑을 만큼 영상이 충분하지 않아요.', 'Not enough videos to extract keywords.')}</span>`;
+  $('#trWords').querySelectorAll('[data-trq]').forEach(c => c.addEventListener('click', () => {
+    $('#query').value = c.dataset.trq;
+    $('#mode').value = 'video';
+    $('#region').value = trRegion;
+    switchTab('search');
+    search();
+  }));
+
+  // 하입 후보: 하입 대상 조건(구독자 500~50만, 7일 이내, 롱폼)에 맞는 영상을 상승 속도순으로
+  const hype = list.filter(r => r.subs >= 500 && r.subs <= 5e5 && r.hours <= 168 && r.dur > 180)
+    .sort((a, b) => b.vph - a.vph).slice(0, 8);
+  $('#trHype').innerHTML = hype.length
+    ? hype.map(r => `<a class="hrow" href="https://youtu.be/${r.id}" target="_blank">
+        <img src="${esc(r.thumb)}" loading="lazy">
+        <div class="hi"><div class="ht">${esc(r.title)}</div>
+        <div class="hm">${esc(r.channel)} · ${T('구독자 ' + fmtNum(r.subs), fmtNum(r.subs) + ' subs')} · ${T('시간당 ' + fmtNum(r.vph), fmtNum(r.vph) + '/h')}</div></div>
+      </a>`).join('')
+    : `<span class="ch" style="font-size:13px">${T('이 차트엔 하입 조건(구독자 500~50만 · 7일 이내 · 3분 초과)에 맞는 영상이 없어요.', 'No videos in this chart meet the Hype criteria (500–500K subs · last 7 days · over 3 min).')}</span>`;
+
+  renderTrendTable(list);
+}
+
+function renderTrendTable(list) {
+  const fastest = list.reduce((a, r) => (!a || r.vph > a.vph ? r : a), null);
+  const cols = [
+    ['rank', T('순위', '#'), ''], ['', '', ''], ['title', T('제목', 'Title'), ''],
+    ['views', T('조회수', 'Views'), 'num'], ['vph', T('시간당 조회', 'Views/hour'), 'num'],
+    ['ratio', T('조회/구독 배율', 'Views ÷ subs'), 'num'], ['subs', T('구독자', 'Subscribers'), 'num'],
+    ['hours', T('업로드', 'Uploaded'), 'num'], ['dur', T('길이', 'Length'), 'num'],
+  ];
+  $('#trTable thead').innerHTML = '<tr>' + cols.map(([k, label, cls]) => k
+    ? `<th data-tsort="${k}" class="${cls}">${label}${k === trSortKey ? (trSortDesc ? ' ▼' : ' ▲') : ''}</th>`
+    : '<th></th>').join('') + '</tr>';
+  const sorted = [...list].sort((a, b) => {
+    const x = a[trSortKey], y = b[trSortKey];
+    const cmp = typeof x === 'string' ? x.localeCompare(y) : x - y;
+    return trSortDesc ? -cmp : cmp;
+  });
+  $('#trTable tbody').innerHTML = sorted.length ? sorted.map(r => `
+    <tr>
+      <td class="rank ${r.rank <= 3 ? 'top' : ''}">${r.rank}</td>
+      <td><a href="https://youtu.be/${r.id}" target="_blank"><img class="thumb" src="${esc(r.thumb)}" loading="lazy"></a></td>
+      <td>
+        <a class="vtitle" href="https://youtu.be/${r.id}" target="_blank">${esc(r.title)}${r.hours < 24 ? '<span class="nbadge">NEW</span>' : ''}${r.ratio >= 5 ? '<span class="badge">떡상</span>' : ''}</a>
+        <a class="ch" href="https://youtube.com/channel/${r.channelId}" target="_blank">${esc(r.channel)}</a><button class="starbtn ${isBM(r.id) ? 'on' : ''}" data-tstar="${r.id}" title="저장함에 추가">★</button><button class="tbtn ${isTracked(r.channelId) ? 'on' : ''}" data-ttrack="${r.id}" data-cid="${r.channelId}">${isTracked(r.channelId) ? '✓ 추적 중' : '+ 채널 추적'}</button>
+      </td>
+      <td class="num">${fmtNum(r.views)}</td>
+      <td class="num ${r === fastest ? 'hot' : ''}">${fmtNum(r.vph)}</td>
+      <td class="num ${r.ratio >= 5 ? 'hot' : ''}">${r.ratio ? r.ratio.toFixed(1) + '×' : '-'}</td>
+      <td class="num">${r.subs ? fmtNum(r.subs) : '비공개'}</td>
+      <td class="num">${ago(r.hours)}</td>
+      <td class="num">${fmtDur(r.dur)}</td>
+    </tr>`).join('')
+    : `<tr><td colspan="9" class="ch" style="padding:18px 10px">${T('조건에 맞는 영상이 없어요.', 'No videos match.')}</td></tr>`;
+  $('#trTable tbody').querySelectorAll('[data-tstar]').forEach(b => b.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const r = trRows.find(x => x.id === b.dataset.tstar);
+    if (r) { toggleBM(r); b.classList.toggle('on'); }
+  }));
+  $('#trTable tbody').querySelectorAll('[data-ttrack]').forEach(b => b.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const r = trRows.find(x => x.id === b.dataset.ttrack);
+    if (!r || isTracked(r.channelId)) return;
+    addTracked({ id: r.channelId, name: r.channel, thumb: r.chThumb || r.thumb });
+    document.querySelectorAll('[data-cid="' + r.channelId + '"]').forEach(x => { x.classList.add('on'); x.textContent = T('✓ 추적 중', '✓ Tracking'); });
+  }));
+}
+
+$('#trTable').addEventListener('click', e => {
+  const th = e.target.closest('th[data-tsort]');
+  if (!th) return;
+  const k = th.dataset.tsort;
+  if (trSortKey === k) trSortDesc = !trSortDesc;
+  else { trSortKey = k; trSortDesc = !(k === 'rank' || k === 'hours'); }
+  renderTrendTable(trVisible());
+});
+
+// 차트를 트렌드 분석 탭으로 넘김 — 업로드 시간대·길이·제목 패턴을 "지금 뜨는 영상" 기준으로 분석
+$('#trToInsight').addEventListener('click', () => {
+  const list = trVisible();
+  if (!list.length) return;
+  const keepRows = rows, keepMode = mode;
+  rows = list.map(r => ({ ...r }));
+  mode = 'video';
+  buildInsight();
+  rows = keepRows; mode = keepMode;
+  $('#insightStatus').textContent = T(`${trRegionName()} · ${trCatName()} 인기 차트 ${list.length}개 영상 기준 분석`, `Analysis of ${list.length} trending videos · ${trRegionName()} · ${trCatName()}`);
+  switchTab('insight');
+});
+
+function renderTrCats() {
+  $('#trCats').innerHTML = TR_CATS.map(([id, ko, en]) => `<span class="catchip ${id === trCat ? 'on' : ''}" data-cat="${id}">${T(ko, en)}</span>`).join('');
+  $('#trCats').querySelectorAll('[data-cat]').forEach(c => c.addEventListener('click', () => {
+    if (trCat === c.dataset.cat) return;
+    trCat = c.dataset.cat;
+    localStorage.setItem('yt_tr_cat', trCat);
+    renderTrCats();
+    loadTrend();
+  }));
+}
+if (![...$('#trRegion').options].some(o => o.value === trRegion)) trRegion = 'KR';
+if (!TR_CATS.some(c => c[0] === trCat)) trCat = '20';
+$('#trRegion').value = trRegion;
+$('#trRegion').addEventListener('change', e => { trRegion = e.target.value; localStorage.setItem('yt_tr_region', trRegion); loadTrend(); });
+$('#trFilter').addEventListener('input', renderTrend);
+$('#trRefresh').addEventListener('click', () => loadTrend(true));
+renderTrCats();
+// 급상승 탭을 보고 있으면 10분마다 자동 갱신
+setInterval(() => {
+  if ($('#view-trend').classList.contains('active') && !document.hidden && trAt && Date.now() - trAt >= 10 * 60e3) loadTrend(true);
+}, 60e3);
+
 // ═══════════ 탭 전환 (활성 표시가 옆으로 미끄러짐) ═══════════
 function moveIndicator() {
   const active = document.querySelector('.tab.active');
@@ -1212,6 +1536,7 @@ function switchTab(name) {
   document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
   $('#view-' + name).classList.add('active');
   moveIndicator();
+  if (name === 'trend') loadTrend();
   if (name === 'track') refreshTracked();
   if (name === 'saved') renderSaved();
   if (name === 'home') renderHome();
@@ -1419,6 +1744,16 @@ const USER_KEY = 'yt_user';
     // 탭
     '홈': 'Home', '검색': 'Search', '키워드': 'Keywords', '채널 추적': 'Channel Tracking',
     '트렌드 분석': 'Trends', '저장함': 'Saved',
+    // 급상승 탭
+    '급상승': 'Trending', '인기 급상승': 'Trending',
+    '내 장르만 보기 — 예: 마인크래프트': 'Only my genre — e.g. minecraft',
+    '나라를 고르면 YouTube 공식 인기 차트를 바로 불러와요. 검색 할당량은 쓰지 않아요.': "Pick a country to load YouTube's official trending chart instantly — no search quota used.",
+    '지금 뜨는 키워드 — 클릭하면 바로 검색': 'Rising keywords — click to search',
+    '하입 후보 — 구독자 50만 이하 · 7일 이내 롱폼': 'Hype candidates — channels ≤500K subs · long-form from the last 7 days',
+    'YouTube 하입 순위는 공개 API가 없어서, 하입 대상 조건에 맞는 급상승 영상을 보여줘요.': "YouTube's Hype leaderboard has no public API, so this lists trending videos that meet Hype's eligibility criteria.",
+    'YouTube 공식 하입 순위 보기 ↗': "Open YouTube's official Hype leaderboard ↗",
+    '이 차트로 트렌드 분석': 'Analyze this chart',
+    '✓ 추적 중': '✓ Tracking', '저장함에 추가': 'Save',
     // 히어로
     '어떤 영상이 떡상하는지,': "Find which videos break out —", '감이 아니라 데이터로.': 'with data, not guesswork.',
     '떡상': 'Breakout',

@@ -128,4 +128,4 @@ docker compose up -d --build
 
 Docker 이미지는 Node.js 24, 비관리자 사용자, 영구 `studio-data` 볼륨을 사용합니다. `.env`와 로컬 데이터는 이미지에 포함하지 않습니다. 외부 TLS 프록시는 앞의 Nginx 설정을 적용합니다. `.env`의 `PUBLIC_BASE_URL`은 실제 HTTPS 도메인이고 `BASE_PATH=/dm`이어야 합니다. 연결정보와 미디어용 영구 저장소를 유지하는 단일 인스턴스로 운영합니다.
 
-배포 패키지에는 서버·프런트·검증 코드와 Docker 설정만 포함됩니다. 데이터베이스, 실제 계정 정보, 비밀번호, 앱 시크릿은 포함하지 않습니다. Docker 실행 검증과 실제 호스팅 배포는 아직 완료되지 않았습니다.
+배포 패키지에는 서버·프런트·검증 코드와 Docker 설정만 포함됩니다. 데이터베이스, 실제 계정 정보, 비밀번호, 앱 시크릿은 포함하지 않습니다. [GitHub CI](https://github.com/JeoungSeYun/yt-research/actions/runs/38131979677)에서 테스트 59개, Docker 빌드·시작, 관리자 인증 차단, 영구 볼륨 파일 생성까지 통과했습니다. 실제 호스팅 배포와 Instagram 실계정 검증은 아직 완료되지 않았습니다.

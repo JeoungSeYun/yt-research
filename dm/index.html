@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head><meta name="dm-runtime" content="browser"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f6f6f4"><title>DM Studio | 떡상</title><meta name="description" content="키워드로 연결하는 인스타그램 자동응답 워크스페이스"><link rel="stylesheet" href="./style.css"><script type="module" src="./app.js"></script></head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview"><span class="brand-icon">d<span>m</span></span><span>DM Studio<small>YOUR CONVERSATION SPACE</small></span></a>
+      <div class="workspace"><span class="workspace-avatar">S</span><div>내 워크스페이스<small>Instagram automation</small></div><span class="workspace-dot"></span></div>
+      <p class="nav-label">WORKSPACE</p>
+      <nav aria-label="메인 메뉴">
+        <a href="#overview" data-nav="overview"><span data-icon="grid"></span>대시보드</a>
+        <a href="#rules" data-nav="rules"><span data-icon="bolt"></span>자동화 규칙<span class="nav-count" id="rule-count">0</span></a>
+        <a href="#test" data-nav="test"><span data-icon="message"></span>테스트 스튜디오</a>
+        <a href="#history" data-nav="history"><span data-icon="clock"></span>발송 기록</a>
+        <a href="#settings" data-nav="settings"><span data-icon="settings"></span>계정 연결 · 설정</a>
+      </nav>
+      <div class="side-tip"><span data-icon="spark"></span><strong>작은 대화, 큰 연결.</strong><p>반복되는 문의는 자동으로.<br>중요한 대화에 집중하세요.</p><a href="#test">첫 자동응답 테스트하기 <span>↗</span></a></div>
+      <div class="sidebar-footer"><span class="avatar">ME</span><div>나의 DM Studio<small>로컬 워크스페이스</small></div><button class="icon-button" id="logout" title="로그아웃" aria-label="로그아웃">↪</button></div>
+    </aside>
+    <div class="main-wrap"><header class="topbar"><div class="breadcrumb">워크스페이스 <span>/</span> <strong id="page-name">대시보드</strong></div><div class="topbar-right"><span class="mode-pill" id="mode-label">테스트 모드</span><a href="#settings" class="account-pill"><span class="mini-ig">◎</span><span id="account-label">계정 연결하기</span><span>↗</span></a></div></header>
+      <main id="main" tabindex="-1"></main><footer class="main-footer"><span>DM Studio · 대화를 이어주는 자동화</span><span id="sync-label">불러오는 중</span></footer>
+    </div>
+  </div>
+  <dialog id="rule-dialog"><form id="rule-form"><div class="dialog-heading"><div><p class="eyebrow">AUTOMATION</p><h2 id="dialog-title">새 자동화 만들기</h2></div><button type="button" class="icon-button" data-close aria-label="닫기">✕</button></div>
+    <input type="hidden" name="id"><label>자동화 이름<input name="name" maxlength="80" required placeholder="예: 상품 가격 안내"></label>
+    <div class="form-row"><label>시작 조건<select name="trigger"><option value="dm">DM을 받았을 때</option><option value="comment">댓글이 달렸을 때</option></select></label><label>키워드 조건<select name="match"><option value="contains">키워드 포함</option><option value="exact">정확히 일치</option></select></label></div>
+    <label>키워드<input name="keywords" required placeholder="가격, 얼마, price"><small>쉼표로 구분하세요. 하나라도 일치하면 실행됩니다.</small></label>
+    <label>자동 답장<textarea name="reply" rows="5" maxlength="2000" required placeholder="고객에게 전달할 메시지를 작성하세요."></textarea><small>최대 1,000자 · 링크도 함께 넣을 수 있어요.</small></label>
+    <div class="form-row"><label>재발송 간격 (분)<input name="cooldown" type="number" min="0" max="10080" value="60" required></label><label>게시물 ID (선택)<input name="mediaId" inputmode="numeric" placeholder="댓글 규칙만 해당"></label></div>
+    <label class="check-label"><input type="checkbox" name="enabled" checked>저장 후 규칙 활성화</label><p class="muted small">여러 규칙이 일치하면 먼저 만든 활성 규칙 하나만 실행됩니다.</p>
+    <div class="dialog-actions"><button type="button" class="button secondary" data-close>취소</button><button type="submit" class="button primary">규칙 저장하기 <span>↗</span></button></div>
+  </form></dialog>
+  <dialog id="login-dialog"><form id="login-form"><p class="eyebrow">WELCOME BACK</p><h2>워크스페이스 로그인</h2><p class="muted">서버에 설정한 관리자 비밀번호를 입력하세요.</p><label>관리자 비밀번호<input type="password" name="password" autocomplete="current-password" required></label><button class="button primary full" type="submit">로그인</button></form></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+</body></html>

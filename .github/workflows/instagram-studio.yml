@@ -1,0 +1,57 @@
+name: Instagram Studio checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/instagram-studio/**'
+      - '.github/workflows/instagram-studio.yml'
+      - 'render.yaml'
+  pull_request:
+    paths:
+      - 'services/instagram-studio/**'
+      - '.github/workflows/instagram-studio.yml'
+      - 'render.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/instagram-studio
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Test authentication, OAuth, webhooks, DM and Reels with mocked Meta
+        run: npm test
+      - name: Build production container without credentials
+        run: docker build --tag instagram-studio:ci .
+      - name: Check container startup, administrator gate and persistent storage
+        run: |
+          docker volume create instagram-studio-ci
+          docker run -d --name studio-ci -p 127.0.0.1:4318:4318 \
+            -v instagram-studio-ci:/app/data \
+            -e PUBLIC_BASE_URL=https://ci.example.invalid \
+            -e ADMIN_PASSWORD=ci-only-not-a-production-password \
+            instagram-studio:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4318/health; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4318/health
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' -H 'Host: ci.example.invalid' http://127.0.0.1:4318/dm/api/state)" = 401
+          docker exec studio-ci node --input-type=module -e "import { statSync } from 'node:fs'; if (!statSync('/app/data/studio.sqlite').isFile()) process.exit(1)"
+      - name: Remove test container and volume
+        if: always()
+        run: |
+          docker rm -f studio-ci || true
+          docker volume rm instagram-studio-ci || true

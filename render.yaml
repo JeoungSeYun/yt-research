@@ -1,0 +1,45 @@
+# This Blueprint provisions a PAID, persistent server only after approval in Render.
+# No resources are created by committing this file or running GitHub tests.
+services:
+  - type: web
+    name: teoksang-instagram-studio
+    runtime: node
+    region: singapore
+    plan: 0.5c-512mb
+    rootDir: services/instagram-studio
+    buildCommand: npm test
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 300
+    disk:
+      name: instagram-studio-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      - key: HOST
+        value: 0.0.0.0
+      - key: BASE_PATH
+        value: /dm
+      - key: DATA_DIR
+        value: /var/data/studio
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: WEBHOOK_VERIFY_TOKEN
+        generateValue: true
+      - key: GRAPH_API_VERSION
+        value: v26.0
+      - key: ALLOW_LIVE_SEND
+        value: 'true'
+      - key: ALLOW_REEL_PUBLISH
+        value: 'true'
+      - key: INSTAGRAM_APP_ID
+        sync: false
+      - key: INSTAGRAM_APP_SECRET
+        sync: false
+      - key: META_APP_SECRET
+        sync: false

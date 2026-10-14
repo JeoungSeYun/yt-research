@@ -4,9 +4,10 @@
 segenv(numpy 2 + OpenCV)에서 돌린다.
 
   <venv>/bin/python dog_composite.py frame 1 300      # 몇 장만 미리보기 → build/dog/check_0001.jpg …
-  <venv>/bin/python dog_composite.py all              # 667장 → build/dog/final.mp4
+  <venv>/bin/python dog_composite.py all              # 44초부터 667장 합성 → 원본 0~44초와 이어서 build/dog/final.mp4
+  <venv>/bin/python dog_composite.py encode           # 합성한 프레임은 두고 이어 붙이기·인코딩만
 
-입력(build/dog): frames/0001.jpg…(44초부터 30fps), dog/(segment_dog.py, 두 장에 한 장), hand/(segment_rvm.py),
+입력(build/dog): frames/0001.jpg…(44초부터 30fps), frames_tm/(같은 장을 HDR→일반 화면 톤 매핑), dog/(segment_dog.py, 두 장에 한 장), hand/(segment_rvm.py),
 track.json(track_floor.py: 기준 프레임 → 각 프레임 바닥 호모그래피), bg.png(mc_dog.py --margin, 기준 화면 + 사방 여백)
 
 프레임마다:
@@ -27,8 +28,12 @@ MX, MY = 330, 380                                           # bg.png 여백(mc_d
 FOCAL, CAM_H, PITCH = 1598.4, 2.0, math.radians(56.4)       # mc_dog.py와 같은 카메라(블록 단위)
 SUN = np.array([0.62, 0.50, 0.60]); SUN /= np.linalg.norm(SUN)
 SHADOW = 0.55
-START = 44.0                                                # 원본에서 잘라 쓴 시작(초)
+START = 44.0                                                # 원본에서 마크로 바뀌는 시작(초)
+FIRST_SRC = 2638                                            # 그 시작 프레임(원본 59.94fps 번호): 44초 이후 첫 장, 이후 두 장마다 한 장
 FPS = '30000/1001'
+TRANS = 12                                                  # 전환 길이(프레임)
+TM = ('zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobius:param=0.3:desat=0,'
+      'zscale=t=bt709:m=bt709:r=tv,format=yuv420p')        # 아이폰 HDR(HLG, BT.2020) → 일반 화면(BT.709)
 
 
 def lin(x):
@@ -53,7 +58,8 @@ class Clip:
         self.dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
 
     def rgb(self, i):
-        return cv2.cvtColor(cv2.imread(os.path.join(DOG, 'frames', self.files[i])), cv2.COLOR_BGR2RGB)
+        """색: HDR(HLG)을 일반 화면용으로 톤 매핑해서 뽑은 프레임(frames_tm). 마스크·추적은 frames로 만들었지만 자리는 같다."""
+        return cv2.cvtColor(cv2.imread(os.path.join(DOG, 'frames_tm', self.files[i])), cv2.COLOR_BGR2RGB)
 
     def gray_half(self, i):
         return cv2.resize(cv2.imread(os.path.join(DOG, 'frames', self.files[i]), cv2.IMREAD_GRAYSCALE), (W_ // 2, H_ // 2))
@@ -156,6 +162,13 @@ def composite(clip, i, BG):
     rng = np.random.default_rng(1000 + i)                   # 렌더 쪽에만 폰 영상 같은 노이즈
     g = blur(rng.normal(0, 1, (H_, W_)).astype(np.float32), 0.6) * 0.012
     out = out + (g * (1 - a))[..., None]
+    if i < TRANS:                                           # 44초: 원본이 블록으로 깨지며 마크 세상으로
+        s = (i + 0.5) / TRANS
+        k = s * s * (3 - 2 * s)
+        out = srgb(P) * (1 - k) + out * k
+        blk = int(round(2 + 46 * math.sin(math.pi * s)))
+        small = cv2.resize(out.astype(np.float32), (max(1, W_ // blk), max(1, H_ // blk)), interpolation=cv2.INTER_AREA)
+        out = cv2.resize(small, (W_, H_), interpolation=cv2.INTER_NEAREST)
     return (np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8)
 
 
@@ -179,11 +192,16 @@ def main():
 
 
 def encode():
+    """0~44초는 원본 그대로(같은 톤 매핑, 30fps), 44초부터는 합성한 프레임. 소리는 원본 전체."""
     out = os.path.join(DOG, 'final.mp4')
-    subprocess.run(['ffmpeg', '-y', '-v', 'error', '-framerate', FPS, '-i', os.path.join(DOG, 'out', 'c_%04d.png'),
-                    '-ss', str(START), '-i', os.path.join(DOG, 'input.mov'), '-map', '0:v', '-map', '1:a',
+    fg = (f"[0:v]select='lt(n\\,{FIRST_SRC})*not(mod(n\\,2))',{TM},setpts=N/({FPS})/TB[a];"
+          f"[1:v]format=yuv420p,setpts=N/({FPS})/TB[b];[a][b]concat=n=2:v=1:a=0,format=yuv420p[v]")
+    subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', os.path.join(DOG, 'input.mov'),
+                    '-framerate', FPS, '-i', os.path.join(DOG, 'out', 'c_%04d.png'),
+                    '-filter_complex', fg, '-map', '[v]', '-map', '0:a', '-r', FPS,
                     '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p',
-                    '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out], check=True)
+                    '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
+                    '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out], check=True)
     print('saved', out)
 
 

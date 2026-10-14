@@ -41,14 +41,27 @@ def main():
     os.makedirs(out, exist_ok=True)
     so = ort.SessionOptions()
     so.add_session_config_entry('session.intra_op.allow_spinning', '0')
-    sess = ort.InferenceSession(model, so, providers=['CPUExecutionProvider'])
+    so.enable_cpu_mem_arena = False                         # 켜 두면 장마다 메모리가 쌓여 200장쯤에서 12GB를 넘는다
+    new_session = lambda: ort.InferenceSession(model, so, providers=['CPUExecutionProvider'])
+    sess = new_session()
     name = sess.get_inputs()[0].name
     files = sorted(f for f in os.listdir(src) if f.endswith('.jpg'))
     todo = list(range(0, len(files), step))
     if todo[-1] != len(files) - 1:
         todo.append(len(files) - 1)                         # 마지막 장도 꼭 딴다(사이 메우기용)
     prev, t0 = None, time.time()
+    done = [i for i in todo if os.path.exists(os.path.join(out, files[i][:-4] + '.png'))]
+    if done:                                                # 이어서 하기: 마지막으로 딴 장에서 강아지 자리를 가져온다
+        last = np.asarray(Image.open(os.path.join(out, files[done[-1]][:-4] + '.png')).convert('L')) > 128
+        if last.any():
+            ys, xs = np.nonzero(last)
+            center, prev = np.array([xs.mean(), ys.mean()]), last
+        todo = [i for i in todo if i > done[-1]]
+        print('resume after frame', done[-1] + 1, 'left', len(todo), flush=True)
     for n, i in enumerate(todo):
+        if n and n % 40 == 0:                               # 혹시 모를 누수 대비: 가끔 세션을 새로
+            del sess
+            sess = new_session()
         f = files[i]
         dst = os.path.join(out, f[:-4] + '.png')
         im = Image.open(os.path.join(src, f)).convert('RGB')
@@ -74,8 +87,9 @@ def main():
         Image.fromarray((full * 255 + 0.5).astype(np.uint8)).save(dst)
         if n % 10 == 0:
             el = time.time() - t0
+            rss = int(open('/proc/self/statm').read().split()[1]) * os.sysconf('SC_PAGE_SIZE') / 2 ** 30
             print(f'{n + 1}/{len(todo)} frame {i + 1} {el:.0f}s (~{el / (n + 1) * (len(todo) - n - 1) / 60:.0f}min left) '
-                  f'center {center.round(0)}', flush=True)
+                  f'center {center.round(0)} mem {rss:.1f}GB', flush=True)
     print('done', len(todo), f'{time.time() - t0:.0f}s')
 
 

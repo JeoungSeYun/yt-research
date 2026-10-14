@@ -126,8 +126,14 @@ def make(src, out):
                  'path_top': 'grass_path_top.png', 'path_side': 'grass_path_side.png', 'farmland': 'farmland_wet.png',
                  'wheat': 'wheat_stage_7.png', 'door_lower': 'door_wood_lower.png', 'door_upper': 'door_wood_upper.png',
                  'hay_side': 'hay_block_side.png', 'hay_top': 'hay_block_top.png', 'dandelion': 'flower_dandelion.png',
-                 'poppy': 'flower_rose.png', 'daisy': 'flower_oxeye_daisy.png', 'torch': 'torch_on.png'}.items():
+                 'poppy': 'flower_rose.png', 'daisy': 'flower_oxeye_daisy.png', 'torch': 'torch_on.png',
+                 # 강아지 장면: 꽃·바닥에 깔린 꽃잎·등불
+                 'cornflower': 'flower_cornflower.png', 'allium': 'flower_allium.png', 'bluet': 'flower_houstonia.png',
+                 'tulip_red': 'flower_tulip_red.png', 'tulip_orange': 'flower_tulip_orange.png',
+                 'tulip_white': 'flower_tulip_white.png', 'orchid': 'flower_blue_orchid.png',
+                 'lily': 'flower_lily_of_the_valley.png', 'petals': 'pink_petals.png', 'lantern': 'lantern.png'}.items():
         T[k] = L(n)
+    T['wildflowers'] = L('wildflowers.png')                  # 바닥에 깔리는 들꽃(줄기 없이 꽃만)
     # 주민(평원): 기본 몸 + 평원 옷을 겹친 64×64 스킨, 화난 주민 효과(파티클 아틀라스의 8×8 한 칸)
     vil = raw('entity', 'villager2', 'villager.png')
     vil.alpha_composite(raw('entity', 'villager2', 'biomes', 'biome_plains.png'))

@@ -102,6 +102,8 @@ def hill(rnd):
         while j < 12:                                       # 마을 땅(y≥6)과 겹칠 때까지 빈틈없이
             top = max(-6, top - (1 if rnd.random() < 0.7 else 2))
             for jj in range(j, j + (1 if rnd.random() < 0.6 else 2)):
+                if top == -6 and jj >= 6:                   # 마을 땅(같은 높이)이 이미 있는 곳: 겹치면 서로 그림자를 드리워 까매진다
+                    continue
                 put(i, jj, top - 1, grass)
                 for k in range(-8, top - 1):
                     put(i, jj, k, stone if k < top - 3 else dirt)

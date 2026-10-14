@@ -176,6 +176,8 @@ def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else 'all'
     clip = Clip()
     BG = lin(cv2.cvtColor(cv2.imread(os.path.join(DOG, 'bg.png')), cv2.COLOR_BGR2RGB).astype(np.float32) / 255)
+    lum = (BG @ np.array([0.2126, 0.7152, 0.0722], np.float32))[..., None]
+    BG = np.clip(lum + (BG - lum) * 1.15, 0, None)         # 마크 잔디가 칙칙해 보이지 않게 채도만 살짝
     if cmd == 'frame':
         for f in sys.argv[2:]:
             img = composite(clip, int(f) - 1, BG)

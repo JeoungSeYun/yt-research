@@ -15,7 +15,8 @@ track.json(track_floor.py: 기준 프레임 → 각 프레임 바닥 호모그�
 2) 꾹이 마스크: 딴 장은 그대로, 사이 장은 앞뒤 장 마스크를 광학 흐름(DIS)으로 옮겨 평균.
 3) 꾹이 그림자: 기준 화면에서 꾹이를 발 깊이에 선 얇은 판으로 보고 마크 해(오른쪽 뒤 위) 반대쪽 땅으로 투영 →
    그 프레임으로 옮긴다. 발밑엔 접촉 그림자.
-4) 꾹이·손: 가장자리 원래 바닥색 번짐을 빼고, 마크 빛이 테두리에 살짝 스며들게(라이트 랩).
+4) 꾹이·손: 살짝 선명하게 하고, 가장자리는 Blur-Fusion으로 털 질감을 살린 채 원래 바닥색만 빼고,
+   마크 빛이 테두리에 아주 살짝 스며들게(라이트 랩).
 """
 import json, math, os, subprocess, sys
 import numpy as np
@@ -85,17 +86,24 @@ class Clip:
         return acc / max(n, 1)
 
 
-def decontaminate(P, a):
-    """가장자리: 확실한 앞쪽(알파>0.97) 색을 바깥으로 번지게 해서 원래 바닥색이 섞인 색을 바꾼다."""
-    core = (a > 0.97).astype(np.float32)
-    F = P.copy()
-    acc = P * core[..., None]
-    for s in (2, 4, 8, 16):
-        num = np.stack([blur(acc[..., c], s) for c in range(3)], -1)
-        den = blur(core, s)[..., None]
-        band = (a > 0.0) & (a < 0.97) & (den[..., 0] > 1e-3)
-        F[band] = (num / np.maximum(den, 1e-6))[band]
-    return core[..., None] * P + (1 - core[..., None]) * (0.25 * P + 0.75 * F)
+def fg_colors(I, a):
+    """가장자리 앞쪽 색 추정(Blur-Fusion, Forte & Pitié 2021): 원본 털 질감은 그대로 두고 섞인 바닥색만 뺀다.
+    (예전처럼 테두리 띠를 매끈한 색으로 덮으면 털이 물감처럼 번져 보인다)"""
+    def step(F, B, r):
+        A = a[..., None]
+        ba = cv2.blur(a, (r, r))[..., None]
+        bF = cv2.blur(F * A, (r, r)) / (ba + 1e-5)
+        bB = cv2.blur(B * (1 - A), (r, r)) / (1 - ba + 1e-5)
+        return np.clip(bF + A * (I - A * bF - (1 - A) * bB), 0, 1), bB
+    F, B = step(I, I, 91)
+    F, _ = step(F, B, 7)
+    return F
+
+
+def sharpen(rgb8, amount=0.7, sigma=1.0):
+    """폰 영상의 꾹이가 선명한 마크 블록 옆에서 흐려 보이지 않게 살짝(화면 색 공간에서)."""
+    x = rgb8.astype(np.float32) / 255
+    return np.clip(x + amount * (x - cv2.GaussianBlur(x, (0, 0), sigma)), 0, 1)
 
 
 # 기준 화면에서 땅(z=0) 위 각 픽셀의 3D 점(카메라 원점 위 CAM_H, 56.4° 내려다봄)
@@ -137,11 +145,14 @@ def composite(clip, i, BG):
     H = clip.H[i]
     T = H @ np.array([[1, 0, -MX], [0, 1, -MY], [0, 0, 1]], np.float64)
     bg = cv2.warpPerspective(BG, T, (W_, H_), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
-    P = lin(clip.rgb(i).astype(np.float32) / 255)
+    raw = clip.rgb(i)
+    P = lin(sharpen(raw))
     ad = clip.dog(i)
     ah = clip.mask('hand', i)
     a = np.maximum(ad, ah if ah is not None else 0)
-    F = decontaminate(P, a)
+    a = np.clip((a - 0.12) / 0.76, 0, 1)
+    a = a * a * (3 - 2 * a)                                 # 반투명 테두리를 좁혀 또렷하게(털 끝은 남는다)
+    F = fg_colors(P, a)
     # 꾹이 그림자(기준 화면에서 계산해서 이 프레임으로)
     Hi = np.linalg.inv(H)
     a_ref = cv2.warpPerspective(ad, Hi, (W_, H_))
@@ -156,16 +167,16 @@ def composite(clip, i, BG):
     C = bg * (1 - SHADOW * sh)[..., None]
     # 라이트 랩 + 합성
     edge = np.clip(a - blur(a, 3), 0, 1) * 1.5
-    wrap = np.stack([blur(C[..., c], 5) for c in range(3)], -1) * edge[..., None] * 0.14
+    wrap = np.stack([blur(C[..., c], 4) for c in range(3)], -1) * edge[..., None] * 0.05   # 세면 테두리가 번져 보인다
     C = F * a[..., None] + C * (1 - a[..., None]) + wrap
     out = srgb(C)
     rng = np.random.default_rng(1000 + i)                   # 렌더 쪽에만 폰 영상 같은 노이즈
-    g = blur(rng.normal(0, 1, (H_, W_)).astype(np.float32), 0.6) * 0.012
+    g = blur(rng.normal(0, 1, (H_, W_)).astype(np.float32), 0.6) * 0.005   # 약하게: 노이즈가 압축 용량을 잡아먹어 꾹이가 흐려진다
     out = out + (g * (1 - a))[..., None]
     if i < TRANS:                                           # 44초: 원본이 블록으로 깨지며 마크 세상으로
         s = (i + 0.5) / TRANS
         k = s * s * (3 - 2 * s)
-        out = srgb(P) * (1 - k) + out * k
+        out = raw.astype(np.float32) / 255 * (1 - k) + out * k   # 앞 장(원본 그대로)과 이어지게 선명화 전 원본에서
         blk = int(round(2 + 46 * math.sin(math.pi * s)))
         small = cv2.resize(out.astype(np.float32), (max(1, W_ // blk), max(1, H_ // blk)), interpolation=cv2.INTER_AREA)
         out = cv2.resize(small, (W_, H_), interpolation=cv2.INTER_NEAREST)

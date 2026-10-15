@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 영상에서 강아지만 따기: BiRefNet(경량, Swin-T)을 강아지 주변 640px 조각(→1024px)에 돌린다.
-이 컴퓨터(CPU 4코어)에서 한 번에 약 10초라 두 장에 한 장만 따고(--step 2), 사이 장은 interp_dog.py가 광학 흐름으로 메운다.
+이 컴퓨터(CPU 4코어)에서 한 번에 약 10초. step 2로 두 장에 한 장만 따면 사이 장은 dog_composite.py가 광학 흐름으로 메우고,
+나중에 step 1로 다시 돌리면 빠진 장만 마저 딴다(가장자리가 장마다 고르게).
 조각 중심은 앞 장의 강아지 마스크(손 마스크는 뺀, 앞 장 강아지와 가장 많이 겹치는 덩어리)의 무게중심을 따라간다.
 
   <venv>/bin/python segment_dog.py BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx build/dog/frames build/dog/hand build/dog/dog X Y [step]
@@ -50,20 +51,22 @@ def main():
     if todo[-1] != len(files) - 1:
         todo.append(len(files) - 1)                         # 마지막 장도 꼭 딴다(사이 메우기용)
     prev, t0 = None, time.time()
-    done = [i for i in todo if os.path.exists(os.path.join(out, files[i][:-4] + '.png'))]
-    if done:                                                # 이어서 하기: 마지막으로 딴 장에서 강아지 자리를 가져온다
-        last = np.asarray(Image.open(os.path.join(out, files[done[-1]][:-4] + '.png')).convert('L')) > 128
-        if last.any():
-            ys, xs = np.nonzero(last)
-            center, prev = np.array([xs.mean(), ys.mean()]), last
-        todo = [i for i in todo if i > done[-1]]
-        print('resume after frame', done[-1] + 1, 'left', len(todo), flush=True)
+    have = lambda k: os.path.exists(os.path.join(out, files[k][:-4] + '.png'))
+    left = [i for i in todo if not have(i)]                 # 이어서 하기: 이미 딴 장은 건너뛴다
+    if len(left) < len(todo):
+        print('already done', len(todo) - len(left), 'left', len(left), flush=True)
+    todo = left
     for n, i in enumerate(todo):
         if n and n % 40 == 0:                               # 혹시 모를 누수 대비: 가끔 세션을 새로
             del sess
             sess = new_session()
         f = files[i]
         dst = os.path.join(out, f[:-4] + '.png')
+        if i > 0 and have(i - 1):                           # 바로 앞 장 마스크가 있으면 거기서 강아지 자리를 가져온다
+            last = np.asarray(Image.open(os.path.join(out, files[i - 1][:-4] + '.png')).convert('L')) > 128
+            if last.any():
+                ys, xs = np.nonzero(last)
+                center, prev = np.array([xs.mean(), ys.mean()]), last
         im = Image.open(os.path.join(src, f)).convert('RGB')
         W, H = im.size
         cx = int(np.clip(center[0], CROP // 2, W - CROP // 2))

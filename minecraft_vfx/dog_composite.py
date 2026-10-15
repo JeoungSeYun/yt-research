@@ -13,8 +13,9 @@ track.json(track_floor.py: 기준 프레임 → 각 프레임 바닥 호모그�
 프레임마다:
 1) 배경: 넓게 렌더한 마크 배경을 그 프레임의 바닥 호모그래피로 옮긴다 → 손떨림을 따라 마크 땅이 같이 흔들린다.
 2) 꾹이 마스크: 딴 장은 그대로, 사이 장은 앞뒤 장 마스크를 광학 흐름(DIS)으로 옮겨 평균.
-3) 꾹이 그림자: 기준 화면에서 꾹이를 발 깊이에 선 얇은 판으로 보고 마크 해(오른쪽 뒤 위) 반대쪽 땅으로 투영 →
-   그 프레임으로 옮긴다. 발밑엔 접촉 그림자.
+3) 꾹이 그림자: 발 자리에 꾹이 크기의 입체 모형(몸통·머리·귀·다리·꼬리)을 세워 마크 해(오른쪽 뒤 위) 반대쪽
+   땅에 떨어뜨린다(기준 화면 → 그 프레임). 발밑엔 접촉 그림자. 바닥 호모그래피는 꾹이 발 자리는 그대로 두고
+   나머지 화면의 떨림만 시간으로 다듬어서 쓴다.
 4) 꾹이·손: 살짝 선명하게 하고, 가장자리는 Blur-Fusion으로 털 질감을 살린 채 원래 바닥색만 빼고,
    마크 빛이 테두리에 아주 살짝 스며들게(라이트 랩).
 """
@@ -54,7 +55,7 @@ class Clip:
     def __init__(self):
         self.files = sorted(f for f in os.listdir(os.path.join(DOG, 'frames')) if f.endswith('.jpg'))
         t = json.load(open(os.path.join(DOG, 'track.json')))
-        self.H = {f - 1: np.array(h) for f, h in zip(t['frames'], t['H'])}
+        self.H = smooth_homographies({f - 1: np.array(h) for f, h in zip(t['frames'], t['H'])})
         self.dog_done = {int(f[:4]) - 1 for f in os.listdir(os.path.join(DOG, 'dog')) if f.endswith('.png')}
         self.dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
         # 빠르게 지나가는 흐린 손을 강아지로 잘못 잡은 장: 면적이 앞뒤 21장 가운데값보다 8% 넘게 튄다 → 앞뒤 정상 장에서 끌어온다
@@ -66,6 +67,23 @@ class Clip:
         self.dog_lost = {k for k, r in zip(idx, ratio) if r < 0.85}   # 강아지를 놓침
         self.dog_bad = self.dog_big | self.dog_lost
         print('dog mattes replaced from neighbours:', sorted(k + 1 for k in self.dog_bad), flush=True)
+        self.feet = self._feet_track()
+
+    def _feet_track(self):
+        """꾹이 발 가운데의 땅 위치(블록)를 장마다 재서 시간으로 매끈하게(그림자 모형을 세울 자리)."""
+        from scipy.ndimage import median_filter, gaussian_filter1d
+        xy = []
+        for i in range(len(self.files)):
+            a, _ = self.dog(i)
+            ys, xs = np.nonzero(a > 0.5)
+            if len(ys) < 200:
+                xy.append(xy[-1] if xy else (0.04, 1.13))
+                continue
+            sel = ys > ys.max() - 30
+            p = cv2.perspectiveTransform(np.float32([[[xs[sel].mean(), ys.max()]]]), np.linalg.inv(self.H[i]).astype(np.float32))[0, 0]
+            xy.append(ground_xy(p[0], p[1]))
+        xy = median_filter(np.array(xy), size=(7, 1), mode='nearest')
+        return gaussian_filter1d(xy, 4, axis=0, mode='nearest')
 
     def rgb(self, i):
         """색: HDR(HLG)을 일반 화면용으로 톤 매핑해서 뽑은 프레임(frames_tm). 마스크·추적은 frames로 만들었지만 자리는 같다."""
@@ -141,6 +159,87 @@ _G = _ray * _t[..., None] + np.array([0, 0, CAM_H])
 _ok = _ray[..., 2] < -1e-4
 
 
+ANCHOR = (565.0, 1062.0)                                     # 기준 화면에서 꾹이 발 자리(바닥에 붙어 있어야 하는 곳)
+
+
+def smooth_homographies(H):
+    """바닥 호모그래피 떨림 정리: 꾹이 발 자리는 그대로 두고, 거기에 대한 나머지 화면의 상대 위치(기울기·원근)만
+    시간으로 다듬는다. 화면 구석은 손·봉투·사람 그림자에 가려 바닥 점이 적어서 장마다 10~20px씩 튀었다(깜빡임)."""
+    from scipy.ndimage import median_filter, gaussian_filter1d
+    keys = sorted(H)
+    gx, gy = np.meshgrid(np.linspace(0, W_, 7), np.linspace(0, H_, 12))
+    q = np.float32(np.stack([gx.ravel(), gy.ravel()], 1))[:, None]
+    qa = np.float32([[ANCHOR]])
+    P = np.array([cv2.perspectiveTransform(q, H[k].astype(np.float32))[:, 0] for k in keys])
+    A = np.array([cv2.perspectiveTransform(qa, H[k].astype(np.float32))[0, 0] for k in keys])
+    A = median_filter(A, size=(3, 1), mode='nearest')      # 발 자리는 튀는 한 장만 지운다
+    R = gaussian_filter1d(median_filter(P - A[:, None], size=(5, 1, 1), mode='nearest'), 1.5, axis=0, mode='nearest')
+    src = np.concatenate([q[:, 0], np.repeat(qa[0], 30, 0)])   # 발 자리를 무겁게(거의 정확히 지나가게)
+    out = {}
+    for n, k in enumerate(keys):
+        dst = np.concatenate([A[n] + R[n], np.repeat(A[n][None], 30, 0)])
+        out[k], _ = cv2.findHomography(src.astype(np.float32), dst.astype(np.float32), 0)
+    return out
+
+
+def ground_xy(u, v):
+    """기준 화면 px → 땅(z=0) 위 (X, Y) 블록."""
+    r = np.array([(u - W_ / 2) / FOCAL, _fw[1] + (H_ / 2 - v) / FOCAL * _up[1], _fw[2] + (H_ / 2 - v) / FOCAL * _up[2]])
+    s = CAM_H / -r[2]
+    return r[0] * s, r[1] * s
+
+
+def to_ref_px(P):
+    """땅 위 점들(N×3, 블록) → 기준 화면 px."""
+    d = P - np.array([0, 0, CAM_H])
+    zc = d @ _fw
+    return np.stack([W_ / 2 + FOCAL * d[:, 0] / zc, H_ / 2 - FOCAL * (d @ _up) / zc], 1)
+
+
+def _ellipsoid(c, f, l, a, b, h, n=14):
+    th, ph = np.meshgrid(np.linspace(0, np.pi, n), np.linspace(0, 2 * np.pi, 2 * n))
+    x, y, z = np.sin(th) * np.cos(ph), np.sin(th) * np.sin(ph), np.cos(th)
+    return (c + np.outer(x.ravel() * a, f) + np.outer(y.ravel() * b, l) + np.outer(z.ravel() * h, [0, 0, 1]))
+
+
+def _cylinder(c, r, z0, z1, n=16):
+    t = np.linspace(0, 2 * np.pi, n, endpoint=False)
+    ring = np.stack([np.cos(t) * r, np.sin(t) * r, np.zeros(n)], 1)
+    return np.concatenate([c + ring + [0, 0, z0], c + ring + [0, 0, z1]])
+
+
+DOG_FACING = np.array([-0.92, -0.38])                       # 꾹이는 대체로 왼쪽 앞을 본다
+# 꾹이 그림자용 해: 방향은 마크 해와 같고(왼쪽 앞으로 진다), 고도는 60°로 높여 짧고 부드럽게.
+# 원본의 꾹이는 창문 빛을 부드럽게 받고 있어서, 마크 해(37°) 그대로의 길고 진한 그림자는 오히려 어색했다.
+_h = SUN[:2] / np.linalg.norm(SUN[:2])
+SUN_DOG = np.array([_h[0] * 0.5, _h[1] * 0.5, math.sqrt(3) / 2])
+
+
+def dog_proxy_shadow(X, Y):
+    """꾹이를 단순한 입체(몸통·머리·주둥이·귀·다리·꼬리, 블록 단위, 어깨 약 0.7)로 세우고 마크 해 반대쪽 땅에
+    그림자를 떨어뜨린다(기준 화면). 마스크로 만들면 위에서 본 다리가 막대처럼 길게 늘어지고 장마다 떨렸다."""
+    f = np.array([*DOG_FACING / np.linalg.norm(DOG_FACING), 0])
+    l = np.array([-f[1], f[0], 0])
+    up = np.array([0, 0, 1.0])
+    c = np.array([X, Y, 0])
+    parts = [_ellipsoid(c + up * 0.48, f, l, 0.36, 0.14, 0.15),                      # 몸통
+             _ellipsoid(c + f * 0.38 + up * 0.74, f, l, 0.14, 0.13, 0.13),          # 머리
+             _ellipsoid(c + f * 0.52 + up * 0.70, f, l, 0.07, 0.05, 0.05),          # 주둥이
+             _ellipsoid(c + f * 0.34 + l * 0.08 + up * 0.92, f, l, 0.04, 0.02, 0.11),   # 귀
+             _ellipsoid(c + f * 0.34 - l * 0.08 + up * 0.92, f, l, 0.04, 0.02, 0.11),
+             _ellipsoid(c - f * 0.42 + up * 0.56, f, l, 0.10, 0.03, 0.03)]          # 꼬리
+    for s in (0.26, -0.26):
+        for t in (0.08, -0.08):
+            parts.append(_cylinder(c + f * s + l * t, 0.045, 0.0, 0.44))            # 다리
+    m = np.zeros((H_, W_), np.uint8)
+    for P in parts:
+        g = P - np.outer(P[:, 2] / SUN_DOG[2], SUN_DOG)                             # 해 반대쪽으로 땅(z=0)까지
+        px = to_ref_px(g).astype(np.float32)
+        hull = cv2.convexHull(px)
+        cv2.fillPoly(m, [np.round(hull).astype(np.int32)], 255)
+    return blur(m.astype(np.float32) / 255, 7.0) * 0.8
+
+
 def ground_y(v):
     """기준 화면 y(px) → 땅의 깊이 Y(블록)."""
     r = np.array([0, _fw[1] + (H_ / 2 - v) / FOCAL * _up[1], _fw[2] + (H_ / 2 - v) / FOCAL * _up[2]])
@@ -180,17 +279,16 @@ def composite(clip, i, BG):
     a = np.clip((a - 0.12) / 0.76, 0, 1)
     a = a * a * (3 - 2 * a)                                 # 반투명 테두리를 좁혀 또렷하게(털 끝은 남는다)
     F = fg_colors(P, a)
-    # 꾹이 그림자(기준 화면에서 계산해서 이 프레임으로)
+    # 꾹이 그림자: 발 자리에 세운 입체 모형의 그림자(기준 화면) + 발밑 접촉 그림자 → 이 프레임으로
     Hi = np.linalg.inv(H)
     a_ref = cv2.warpPerspective(ad, Hi, (W_, H_))
+    sh_ref = dog_proxy_shadow(*clip.feet[i])
     rows = np.nonzero((a_ref > 0.5).sum(1) > 4)[0]
-    sh = np.zeros((H_, W_), np.float32)
     if len(rows):
         feet = float(rows.max())
-        sh_ref = dog_shadow_ref(a_ref, feet)
-        band = a_ref * ((np.arange(H_)[:, None] > feet - 40) & (np.arange(H_)[:, None] < feet + 3))
-        ao = np.clip(blur(np.roll(band, 6, axis=0), 6) * 2.2, 0, 1) * 0.5     # 발밑 접촉 그림자
-        sh = cv2.warpPerspective(np.maximum(sh_ref, ao), H, (W_, H_))
+        band = a_ref * ((np.arange(H_)[:, None] > feet - 30) & (np.arange(H_)[:, None] < feet + 3))
+        sh_ref = np.maximum(sh_ref, np.clip(blur(np.roll(band, 5, axis=0), 5) * 2.0, 0, 1) * 0.35)
+    sh = cv2.warpPerspective(sh_ref, H, (W_, H_))
     C = bg * (1 - SHADOW * sh)[..., None]
     # 라이트 랩 + 합성
     edge = np.clip(a - blur(a, 3), 0, 1) * 1.5

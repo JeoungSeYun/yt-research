@@ -57,6 +57,15 @@ class Clip:
         self.H = {f - 1: np.array(h) for f, h in zip(t['frames'], t['H'])}
         self.dog_done = {int(f[:4]) - 1 for f in os.listdir(os.path.join(DOG, 'dog')) if f.endswith('.png')}
         self.dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+        # 빠르게 지나가는 흐린 손을 강아지로 잘못 잡은 장: 면적이 앞뒤 21장 가운데값보다 8% 넘게 튄다 → 앞뒤 정상 장에서 끌어온다
+        from scipy.ndimage import median_filter
+        idx = sorted(self.dog_done)
+        area = np.array([(cv2.resize(self.mask('dog', k), (270, 480)) > 0.5).sum() for k in idx], np.float32)
+        ratio = area / np.maximum(median_filter(area, size=21, mode='nearest'), 1)
+        self.dog_big = {k for k, r in zip(idx, ratio) if r > 1.08}    # 흐린 손 번짐까지 강아지로 잡음
+        self.dog_lost = {k for k, r in zip(idx, ratio) if r < 0.85}   # 강아지를 놓침
+        self.dog_bad = self.dog_big | self.dog_lost
+        print('dog mattes replaced from neighbours:', sorted(k + 1 for k in self.dog_bad), flush=True)
 
     def rgb(self, i):
         """색: HDR(HLG)을 일반 화면용으로 톤 매핑해서 뽑은 프레임(frames_tm). 마스크·추적은 frames로 만들었지만 자리는 같다."""
@@ -70,20 +79,35 @@ class Clip:
         return cv2.imread(p, cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255 if os.path.exists(p) else None
 
     def dog(self, i):
-        """꾹이 알파: 딴 장은 그대로, 사이 장은 앞뒤 장을 광학 흐름으로 끌어와 평균."""
-        if i in self.dog_done:
-            return self.mask('dog', i)
-        acc, n = np.zeros((H_, W_), np.float32), 0
-        gi = self.gray_half(i)
-        for j in (i - 1, i + 1):
-            if j not in self.dog_done:
-                continue
-            flow = self.dis.calc(gi, self.gray_half(j), None)                  # i의 각 점이 j에서 어디 있나(절반 크기)
-            flow = cv2.resize(flow, (W_, H_)) * 2
-            gx, gy = np.meshgrid(np.arange(W_, dtype=np.float32), np.arange(H_, dtype=np.float32))
-            acc += cv2.remap(self.mask('dog', j), gx + flow[..., 0], gy + flow[..., 1], cv2.INTER_LINEAR)
-            n += 1
-        return acc / max(n, 1)
+        """꾹이 알파와(필요하면) 꾹이 픽셀. 잘못 딴 장·안 딴 장은 가장 가까운 정상 장을 바닥 호모그래피로 옮겨 쓴다
+        (한 장 사이 꾹이 움직임은 작고, 손떨림은 호모그래피가 정확히 따라간다). 흐린 손이 꾹이를 덮은 장은 픽셀도 옆 장에서."""
+        good = lambda k: k in self.dog_done and k not in self.dog_bad
+        if good(i):
+            return self.mask('dog', i), None
+        j = next((k for d in (1, 2, 3, 4) for k in (i - d, i + d) if 0 <= k < len(self.files) and good(k)), None)
+        if j is None:
+            return np.zeros((H_, W_), np.float32), None
+        Wm = self.H[i] @ np.linalg.inv(self.H[j])
+        a = cv2.warpPerspective(self.mask('dog', j), Wm, (W_, H_), flags=cv2.INTER_LINEAR)
+        rgb = None
+        if i in self.dog_big:
+            h = hand_only(self.mask('hand', i))
+            if not (isinstance(h, np.ndarray) and (h * a).sum() > 0.02 * a.sum()):   # 보이는 손이 꾹이를 가린 게 아니면
+                rgb = cv2.warpPerspective(self.rgb(j), Wm, (W_, H_), flags=cv2.INTER_LINEAR)
+        return a, rgb
+
+
+def hand_only(h):
+    """RVM 마스크에서 화면 가장자리로 들어온 덩어리(손·팔)만. 사람 모델이 강아지·그림자를 반투명하게 잡은 건 버린다."""
+    if h is None:
+        return 0.0
+    n, lab, st, _ = cv2.connectedComponentsWithStats((h > 0.5).astype(np.uint8))
+    keep = np.zeros(h.shape, np.uint8)
+    for k in range(1, n):
+        x, y, w, hh, area = st[k]
+        if area > 500 and (x <= 3 or y <= 3 or x + w >= W_ - 3 or y + hh >= H_ - 3):
+            keep[lab == k] = 1
+    return h * (cv2.dilate(keep, np.ones((31, 31), np.uint8)) > 0)
 
 
 def fg_colors(I, a):
@@ -146,10 +170,13 @@ def composite(clip, i, BG):
     T = H @ np.array([[1, 0, -MX], [0, 1, -MY], [0, 0, 1]], np.float64)
     bg = cv2.warpPerspective(BG, T, (W_, H_), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
     raw = clip.rgb(i)
-    P = lin(sharpen(raw))
-    ad = clip.dog(i)
-    ah = clip.mask('hand', i)
-    a = np.maximum(ad, ah if ah is not None else 0)
+    ad, dog_rgb = clip.dog(i)
+    src_rgb = raw
+    if dog_rgb is not None:                                 # 꾹이 자리(조금 넓게)만 옆 장 픽셀로
+        reg = cv2.dilate((ad > 0.02).astype(np.uint8), np.ones((15, 15), np.uint8)).astype(bool)
+        src_rgb = np.where(reg[..., None], dog_rgb, raw)
+    P = lin(sharpen(src_rgb))
+    a = np.maximum(ad, hand_only(clip.mask('hand', i)))
     a = np.clip((a - 0.12) / 0.76, 0, 1)
     a = a * a * (3 - 2 * a)                                 # 반투명 테두리를 좁혀 또렷하게(털 끝은 남는다)
     F = fg_colors(P, a)

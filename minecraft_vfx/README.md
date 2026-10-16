@@ -110,16 +110,19 @@ python3 vid_composite.py all                                     # build/vid/fin
 1. **색**: 원본은 HLG·BT.2020(돌비 비전)이라 그대로 꺼내면 색이 바랜다. 0~44초와 44초 이후 모두 같은 톤 매핑
    (`zscale` + `tonemap=mobius`)으로 일반 화면(BT.709)에 맞춘다.
 2. **따기**: 손은 RobustVideoMatting(`segment_rvm.py`). 사람 전용 모델이라 꾹이는 못 잡아서,
-   꾹이는 `segment_dog.py`(BiRefNet 경량)를 꾹이 주변 640px 조각에 돌린다. CPU로 한 장 10초라 두 장에 한 장만 따고
-   사이 장은 광학 흐름(DIS)으로 메운다. 바닥에 놓인 약 봉투·종이는 지운다.
+   꾹이는 `segment_dog.py`(BiRefNet 경량)를 꾹이 주변 640px 조각에 돌린다. CPU로 한 장 10초라 먼저 두 장에 한 장 따서 보고
+   나머지 장을 마저 딴다. 흐린 손까지 잡았거나 꾹이를 놓친 장은 옆 장 마스크를 바닥 호모그래피로 옮겨 쓴다.
+   바닥에 놓인 약 봉투·종이는 지운다.
 3. **바닥 추적** `track_floor.py`: 손떨림을 따라 마크 땅이 같이 흔들려야 꾹이 발이 땅에 붙어 있다. 바닥 나무결 점을 앞뒤 장끼리
    광학 흐름으로 잇고, 키프레임의 점을 예측 자리에서 다시 찾아 누적 오차를 지운다(기준 프레임 → 각 프레임 바닥 호모그래피).
 4. **카메라·크기**: 문틀 세로선의 소실점으로 56.4° 내려다봄, 꾹이 어깨 높이(약 22cm)로 폰 높이 약 0.6m.
    블록 하나를 약 30cm로 잡아 꾹이가 마크 늑대만 하게(귀까지 약 1블록) 보이게 했다.
 5. **마크 장면** `mc_dog.py`: 꾹이가 선 잔디 언덕(꽃·바닥 꽃잎·건초·등불) 끝에서 계단식 비탈로 6블록 내려가면 마을이 보인다.
    해는 원본의 창문 역광과 같은 방향(꾹이 뒤 오른쪽 위)의 늦은 오후 금빛. 손떨림만큼 움직일 여유로 사방에 여백을 더 렌더한다.
-6. **합성** `dog_composite.py`: 배경을 프레임마다 바닥 호모그래피로 옮기고, 꾹이를 발 깊이의 얇은 판으로 보고 해 반대쪽으로
-   그림자를 투영한다(+ 발밑 접촉 그림자). 가장자리 바닥색 번짐 제거, 라이트 랩, 노이즈. 마지막에 원본 0~44초와 이어 붙인다.
+6. **합성** `dog_composite.py`: 배경을 프레임마다 바닥 호모그래피로 옮긴다. 꾹이 그림자는 꾹이 마스크로 만든다: 마스크 픽셀마다
+   땅에서의 높이를 어림해(발끝 0) 해 반대쪽 땅에 떨어뜨리고(해 고도만 70°로 높여 짧게), 마크 그림자와 같은 푸르스름한 색으로
+   칠한다(+ 발밑 접촉 그림자). 그래서 그림자가 발에 붙고 자세를 따라간다. 꾹이 머리 위엔 마크 이름표 '꾹이'(Unifont).
+   가장자리 바닥색 번짐 제거, 라이트 랩, 노이즈. 마지막에 원본 0~44초와 이어 붙인다.
 
 ```bash
 cd build/dog
@@ -128,7 +131,7 @@ TM="zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobi
 ffmpeg -ss 44 -i input.mov -vf "select='not(mod(n\,2))',$TM" -vsync 0 -q:v 2 frames_tm/%04d.jpg  # 합성 색
 cd ../..
 segenv/bin/python segment_rvm.py rvm_mobilenetv3_fp32.onnx build/dog/frames build/dog/hand 0.5
-segenv/bin/python segment_dog.py BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx build/dog/frames build/dog/hand build/dog/dog 598 856 2
+segenv/bin/python segment_dog.py BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx build/dog/frames build/dog/hand build/dog/dog 598 856 1
 segenv/bin/python track_floor.py build/dog/frames build/dog/hand build/dog/dog build/dog/track.json 300
 MC_TEX=build/tex_real python3 mc_dog.py --margin 330x380 --spp 64 --out build/dog/bg.png         # 약 12분(혼자 돌릴 때)
 segenv/bin/python dog_composite.py all                                                         # 약 15분 → build/dog/final.mp4

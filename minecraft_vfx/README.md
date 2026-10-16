@@ -134,7 +134,7 @@ segenv/bin/python segment_rvm.py rvm_mobilenetv3_fp32.onnx build/dog/frames buil
 segenv/bin/python segment_dog.py BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx build/dog/frames build/dog/hand build/dog/dog 598 856 1
 segenv/bin/python track_floor.py build/dog/frames build/dog/hand build/dog/dog build/dog/track.json 300
 MC_TEX=build/tex_real python3 mc_dog.py --margin 330x380 --spp 64 --out build/dog/bg.png         # 약 12분(혼자 돌릴 때)
-segenv/bin/python dog_composite.py all                                                         # 약 15분 → build/dog/final.mp4
+segenv/bin/python dog_composite.py all                                                         # 약 35분 → build/dog/final.mp4
 ```
 
 BiRefNet은 ONNX 메모리 풀을 켜 두면 장마다 메모리가 쌓여 수백 장에서 12GB를 넘는다(`segment_dog.py`는 끈다).

@@ -16,7 +16,8 @@ track.json(track_floor.py: 기준 프레임 → 각 프레임 바닥 호모그�
 3) 꾹이 그림자: 발 자리에 꾹이 크기의 입체 모형(몸통·머리·귀·다리·꼬리)을 세워 마크 해(오른쪽 뒤 위) 반대쪽
    땅에 떨어뜨린다(기준 화면 → 그 프레임). 발밑엔 접촉 그림자. 바닥 호모그래피는 꾹이 발 자리는 그대로 두고
    나머지 화면의 떨림만 시간으로 다듬어서 쓴다.
-4) 꾹이·손: 살짝 선명하게 하고, 가장자리는 Blur-Fusion으로 털 질감을 살린 채 원래 바닥색만 빼고,
+4) 마크 이름표 '꾹이'(Unifont, 흰 글씨 + 반투명 검은 배경)를 꾹이 머리 위에 띄운다. 손이 앞을 지나가면 손에 가린다.
+5) 꾹이·손: 살짝 선명하게 하고, 가장자리는 Blur-Fusion으로 털 질감을 살린 채 원래 바닥색만 빼고,
    마크 빛이 테두리에 아주 살짝 스며들게(라이트 랩).
 """
 import json, math, os, subprocess, sys
@@ -34,6 +35,7 @@ START = 44.0                                                # 원본에서 마�
 FIRST_SRC = 2638                                            # 그 시작 프레임(원본 59.94fps 번호): 44초 이후 첫 장, 이후 두 장마다 한 장
 FPS = '30000/1001'
 TRANS = 12                                                  # 전환 길이(프레임)
+NAME, NAME_PX, NAME_GAP = '꾹이', 6, 55                      # 마크 이름표: 글자, Unifont 1px = 화면 6px, 머리 위 간격(px)
 TM = ('zscale=t=linear:npl=203,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=mobius:param=0.3:desat=0,'
       'zscale=t=bt709:m=bt709:r=tv,format=yuv420p')        # 아이폰 HDR(HLG, BT.2020) → 일반 화면(BT.709)
 
@@ -68,6 +70,23 @@ class Clip:
         self.dog_bad = self.dog_big | self.dog_lost
         print('dog mattes replaced from neighbours:', sorted(k + 1 for k in self.dog_bad), flush=True)
         self.feet = self._feet_track()
+        self.tag = self._tag_track()
+
+    def _tag_track(self):
+        """이름표 자리(기준 화면 px): 꾹이 마스크의 가운데 x와 꼭대기 y. 귀가 움직여 떨리지 않게 시간으로 매끈하게
+        (기준 화면에서 다듬고 그릴 때 그 프레임으로 옮기니 손떨림은 그대로 따라간다)."""
+        from scipy.ndimage import median_filter, gaussian_filter1d
+        pts = []
+        for i in range(len(self.files)):
+            a, _ = self.dog(i)
+            ys, xs = np.nonzero(a > 0.5)
+            if len(ys) < 200:
+                pts.append(pts[-1] if pts else (565.0, 640.0))
+                continue
+            p = cv2.perspectiveTransform(np.float32([[[xs.mean(), ys.min()]]]), np.linalg.inv(self.H[i]).astype(np.float32))[0, 0]
+            pts.append((float(p[0]), float(p[1])))
+        pts = median_filter(np.array(pts), size=(7, 1), mode='nearest')
+        return gaussian_filter1d(pts, 3, axis=0, mode='nearest')
 
     def _feet_track(self):
         """꾹이 발 가운데의 땅 위치(블록)를 장마다 재서 시간으로 매끈하게(그림자 모형을 세울 자리)."""
@@ -113,6 +132,37 @@ class Clip:
             if not (isinstance(h, np.ndarray) and (h * a).sum() > 0.02 * a.sum()):   # 보이는 손이 꾹이를 가린 게 아니면
                 rgb = cv2.warpPerspective(self.rgb(j), Wm, (W_, H_), flags=cv2.INTER_LINEAR)
         return a, rgb
+
+
+def make_nametag(text):
+    """마크 이름표: 한글은 마크처럼 GNU Unifont(16px 비트맵)로, 흰 글씨 + 반투명 검은 배경(그림자 없음).
+    글자 둘레 여백은 Unifont 3px. NAME_PX배로 키워 픽셀이 또렷하게. 돌려주는 값: (선형 RGB, 알파)."""
+    from PIL import Image, ImageDraw, ImageFont
+    font = ImageFont.truetype(os.path.join(DOG, 'unifont.otf'), 16)
+    im = Image.new('L', (16 * len(text) + 8, 20), 0)
+    d = ImageDraw.Draw(im)
+    d.fontmode = '1'
+    d.text((4, 2), text, font=font, fill=255)
+    ink = np.asarray(im) > 127
+    ys, xs = np.nonzero(ink)
+    pad = 3
+    ink = ink[ys.min() - pad:ys.max() + pad + 1, xs.min() - pad:xs.max() + pad + 1]
+    a = np.where(ink, 1.0, 0.35).astype(np.float32)          # 글자는 불투명, 배경은 마크(25%)보다 조금 진하게: 밝은 잔디 위에서도 보이게
+    rgb = np.where(ink[..., None], 1.0, 0.0).astype(np.float32) * np.ones(3, np.float32)
+    up = lambda x: np.repeat(np.repeat(x, NAME_PX, 0), NAME_PX, 1)
+    return up(rgb), up(a)
+
+
+def paste(C, layer, alpha, cx, bottom):
+    """C(선형 RGB)에 layer를 가운데 아래 기준(cx, bottom)으로 얹는다(화면 밖은 자른다)."""
+    h, w = alpha.shape
+    x0, y0 = int(round(cx - w / 2)), int(round(bottom - h))
+    xa, ya, xb, yb = max(0, x0), max(0, y0), min(W_, x0 + w), min(H_, y0 + h)
+    if xa >= xb or ya >= yb:
+        return C
+    A = alpha[ya - y0:yb - y0, xa - x0:xb - x0, None]
+    C[ya:yb, xa:xb] = layer[ya - y0:yb - y0, xa - x0:xb - x0] * A + C[ya:yb, xa:xb] * (1 - A)
+    return C
 
 
 def hand_only(h):
@@ -290,6 +340,9 @@ def composite(clip, i, BG):
         sh_ref = np.maximum(sh_ref, np.clip(blur(np.roll(band, 5, axis=0), 5) * 2.0, 0, 1) * 0.35)
     sh = cv2.warpPerspective(sh_ref, H, (W_, H_))
     C = bg * (1 - SHADOW * sh)[..., None]
+    if i >= TRANS:                                          # 마크 이름표(전환이 끝난 뒤부터)
+        p = cv2.perspectiveTransform(np.float32([[clip.tag[i]]]), H.astype(np.float32))[0, 0]
+        C = paste(C, TAG_RGB, TAG_A, p[0], p[1] - NAME_GAP)
     # 라이트 랩 + 합성
     edge = np.clip(a - blur(a, 3), 0, 1) * 1.5
     wrap = np.stack([blur(C[..., c], 4) for c in range(3)], -1) * edge[..., None] * 0.05   # 세면 테두리가 번져 보인다
@@ -310,6 +363,8 @@ def composite(clip, i, BG):
 
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else 'all'
+    global TAG_RGB, TAG_A
+    TAG_RGB, TAG_A = make_nametag(NAME)
     clip = Clip()
     BG = lin(cv2.cvtColor(cv2.imread(os.path.join(DOG, 'bg.png')), cv2.COLOR_BGR2RGB).astype(np.float32) / 255)
     lum = (BG @ np.array([0.2126, 0.7152, 0.0722], np.float32))[..., None]

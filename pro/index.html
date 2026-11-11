@@ -179,7 +179,7 @@
   .nbadge { display: inline-block; background: rgba(48, 209, 88, .14); color: var(--green); border: 1px solid rgba(48, 209, 88, .35); border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; font-weight: 600; }
   /* 하입 후보 — 채널 추적의 최신 영상 카드와 같은 모양, 전체 폭 그리드 */
   .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px 14px; }
-  .shelf .tvid { flex: none; }
+  .shelf .tvid { flex: none; min-width: 0; }
   .shelf .tvid img { width: 100%; }
   .shelf .tvid:hover .tvt { color: var(--accent); }
   .shelf .tvid .tvm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -188,11 +188,29 @@
   .hlink:hover { text-decoration: underline; }
   /* 안내 문구만 있는 패널은 위 여백 없이 */
   .panel > .status:first-child { margin-top: 0; }
+  [hidden] { display: none !important; }
+  /* 검색: 같이 뜨는 키워드 */
+  .relkw { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .relkw .lbl { font-size: 13px; color: var(--sub); margin-right: 4px; }
+  .relkw .chip { margin: 0; padding: 4px 12px; font-size: 12.5px; }
+  /* 검색: 눈에 띄는 영상 */
+  .hlhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .hlhead h3 { margin-bottom: 0; }
+  .seg { display: inline-flex; gap: 2px; background: rgba(255, 255, 255, .06); border: 1px solid var(--border); border-radius: 980px; padding: 3px; }
+  .seg button { background: none; color: var(--sub); padding: 5px 14px; font-size: 13px; font-weight: 600; border-radius: 980px; }
+  .seg button:hover { color: var(--text); filter: none; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .tvid .cb { position: absolute; top: 6px; right: 6px; background: rgba(0, 0, 0, .75); color: var(--gold); font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  /* 결과 바 */
+  .rcount { font-size: 14px; color: var(--sub); }
+  .rcount b { color: var(--text); font-weight: 600; }
+  .sortsel { border-radius: 980px; font-size: 13px; padding: 6px 12px; color: var(--text); cursor: pointer; }
+  .cbadge { display: inline-block; background: rgba(255, 176, 32, .12); color: var(--gold); border: 1px solid rgba(255, 176, 32, .35); border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; font-weight: 600; }
   /* 폰: 좌우 여백 줄여서 본문 폭 확보, 하입 후보는 2열 */
   @media (max-width: 600px) {
     body { padding: 20px 14px; }
     .panel { padding: 18px 16px; }
-    .shelf { grid-template-columns: repeat(2, 1fr); gap: 14px 10px; }
+    .shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
   }
   /* 표·카드의 저장/추적 버튼은 마우스를 올렸을 때만 표시 (터치 기기는 항상 표시) */
   @media (hover: hover) {
@@ -358,12 +376,28 @@
   </div>
   <div id="presets" style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div class="status" id="status"></div>
+  <div class="relkw" id="relKw" hidden></div>
+</div>
+
+<div class="panel" id="hlPanel" hidden>
+  <div class="hlhead">
+    <h3>눈에 띄는 영상</h3>
+    <div class="seg" id="hlSeg"></div>
+  </div>
+  <div class="shelf" id="hlShelf"></div>
 </div>
 
 <div class="panel" style="overflow-x:auto">
   <div class="resultsbar">
-    <span class="ch" style="font-size:13px">결과</span>
-    <span style="margin-left:auto;display:flex;gap:8px">
+    <span class="rcount" id="resCount">결과</span>
+    <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <select id="sortSel" class="sortsel" title="트렌드순 = 시간당 조회수 기준 (올라온 지 12시간이 안 된 영상은 12시간으로 계산)" hidden>
+        <option value="trend">트렌드순</option>
+        <option value="views">조회수순</option>
+        <option value="ratio">떡상 배율순</option>
+        <option value="published">최신순</option>
+        <option value="" hidden>표에서 정렬</option>
+      </select>
       <button class="mini" id="viewToggle">갤러리 보기</button>
     </span>
   </div>
@@ -574,14 +608,15 @@ async function buildVideoRows(items) {
     if (!v) return null;
     const views = +v.statistics.viewCount || 0;
     const subs = +(c?.statistics.subscriberCount) || 0;
-    const ageDays = Math.max(1, (Date.now() - new Date(i.snippet.publishedAt)) / 864e5);
+    const hours = Math.max(1, (Date.now() - new Date(i.snippet.publishedAt)) / 36e5);
+    const ageDays = Math.max(1, hours / 24);
     return {
-      id: i.id.videoId, title: i.snippet.title, desc: i.snippet.description || '',
+      id: i.id.videoId, title: v.snippet?.title || i.snippet.title, desc: i.snippet.description || '',
       tags: v.snippet?.tags || [], uploads: c?.contentDetails?.relatedPlaylists?.uploads,
-      channel: i.snippet.channelTitle, channelId: i.snippet.channelId,
+      channel: v.snippet?.channelTitle || i.snippet.channelTitle, channelId: i.snippet.channelId,
       thumb: i.snippet.thumbnails.medium?.url, views, subs,
       ratio: subs ? views / subs : 0, vpd: Math.round(views / ageDays),
-      vph: Math.round(views / Math.max(1, ageDays * 24)),
+      vph: Math.round(views / Math.max(hours, 12)), hours, trend: views / Math.max(hours, 12),
       likes: +v.statistics.likeCount || 0, published: i.snippet.publishedAt,
       dur: parseDur(v.contentDetails.duration),
     };
@@ -589,7 +624,10 @@ async function buildVideoRows(items) {
 }
 
 function applyVideoFilters(list) {
-  if ($('#duration').value === 'short') list = list.filter(r => r.dur <= 180);
+  const dsel = $('#duration').value;
+  if (dsel === 'short') list = list.filter(r => r.dur <= 180);
+  else if (dsel === 'medium') list = list.filter(r => r.dur >= 240 && r.dur <= 1200);
+  else if (dsel === 'long') list = list.filter(r => r.dur > 1200);
   list = regionFilter(list, r => r.title + ' ' + r.channel);
   const q = $('#query').value;
   const groups = tokenGroups(q);
@@ -616,6 +654,11 @@ async function searchVideos(status) {
 
   const variants = await queryVariants($('#query').value);
   status.textContent = `검색어 ${variants.length}종으로 수집 중... (${variants.slice(0, 5).join(', ')}…)`;
+  // 지역 인기 차트: 검색 할당량 없이 일반 할당량 ~6유닛 — 검색어에 맞는 차트 영상도 후보에 넣고 순위 표시
+  const chartP = chartIndex($('#region').value).catch(() => ({ map: new Map(), items: [] }));
+  const groupsQ = tokenGroups($('#query').value);
+  const sinceMs = days ? Date.now() - days * 864e5 : 0;
+  const FRESH_DAYS = 7;
   const pools = await Promise.all([
     ...[['relevance', want], ['viewCount', want * 2]].map(async ([order, target]) => {
       let items = [], pageToken = '';
@@ -627,9 +670,19 @@ async function searchVideos(status) {
       }
       return items;
     }),
+    // 최근 7일 조회수순 — 기간을 길게 골라도 지금 뜨는 영상이 빠지지 않게
+    (!days || days > FRESH_DAYS)
+      ? yt('search', { ...base, order: 'viewCount', publishedAfter: new Date(Date.now() - FRESH_DAYS * 864e5).toISOString() }).then(d => d.items).catch(() => [])
+      : [],
+    // 변형 검색어는 조회수순 — 인기 콘텐츠 위주로 모음
     ...variants.slice(1, 5).map(q =>
-      yt('search', { ...base, q, order: 'relevance' }).then(d => d.items).catch(() => [])),
+      yt('search', { ...base, q, order: 'viewCount' }).then(d => d.items).catch(() => [])),
+    chartP.then(ch => ch.items
+      .filter(v => new Date(v.snippet.publishedAt).getTime() >= sinceMs
+        && groupsQ.every(g => groupIn(v.snippet.title + ' ' + (v.snippet.tags || []).join(' ') + ' ' + v.snippet.channelTitle, g)))
+      .map(v => ({ id: { videoId: v.id }, snippet: v.snippet }))),
   ]);
+  const chart = await chartP;
   const seen = new Set();
   const items = pools.flat().filter(i => {
     if (!i.id.videoId || seen.has(i.id.videoId)) return false;
@@ -663,16 +716,116 @@ async function searchVideos(status) {
   saveDB(db);
   rows.forEach(r => r.chanRatios = profile[r.channelId]);
 
-  rows.sort((a, b) => b.views - a.views);
-  rows = applyVideoFilters(rows).slice(0, want);
+  rows.forEach(r => { const c = chart.map.get(r.id); if (c) r.chart = c; });
+  // 결과 고르기: 인기 차트에 오른 영상 → 지금 빠르게 크는 영상(시간당 조회) 절반 → 조회수 높은 영상으로 채움
+  const filtered = applyVideoFilters(rows);
+  const pick = new Map();
+  const add = r => { if (pick.size < want) pick.set(r.id, r); };
+  filtered.filter(r => r.chart).forEach(add);
+  [...filtered].sort((a, b) => b.trend - a.trend).slice(0, Math.ceil(want / 2)).forEach(add);
+  [...filtered].sort((a, b) => b.views - a.views).forEach(add);
+  rows = [...pick.values()];
 
   let note = '';
   if ($('#region').value && $('#region').value !== 'KR' && /[가-힣]/.test($('#query').value))
     note = ' · 해외 영상은 그 나라 언어 검색어로 검색해야 잘 나옴';
-  status.textContent = `${rows.length}개 영상 (조회수순) · 트렌드 분석 탭에서 이 결과의 패턴을 볼 수 있어요` + note;
-  mode = 'video'; sortKey = 'views'; sortDesc = true;
+  const onChart = rows.filter(r => r.chart).length;
+  status.textContent = T(`${rows.length}개 영상 · 트렌드순${onChart ? ` · 인기 차트 ${onChart}개 포함` : ''}`,
+    `${rows.length} videos · trending first${onChart ? ` · ${onChart} on the trending chart` : ''}`) + note;
+  mode = 'video'; sortKey = 'trend'; sortDesc = true;
   renderVideos();
+  renderHighlights();
+  renderRelKw();
   buildInsight();
+}
+
+// ─── 지역 인기 차트 (전체 200위 + 게임 100위) — 메모리에만 10분 보관 ───
+const chartCache = {};
+async function chartIndex(region) {
+  if (!region) return { map: new Map(), items: [] };
+  const c = chartCache[region];
+  if (c && Date.now() - c.at < 10 * 60e3) return c;
+  const map = new Map(), items = [];
+  for (const [cat, pages] of [['', 4], ['20', 2]]) {
+    let pageToken = '', rank = 0;
+    for (let p = 0; p < pages; p++) {
+      const d = await yt('videos', { part: 'snippet', chart: 'mostPopular', regionCode: region, videoCategoryId: cat, maxResults: 50, pageToken }).catch(() => null);
+      if (!d) break;
+      for (const v of d.items || []) {
+        rank++;
+        if (!map.has(v.id)) { map.set(v.id, { rank, cat }); items.push(v); }
+      }
+      if (!d.nextPageToken) break;
+      pageToken = d.nextPageToken;
+    }
+  }
+  return (chartCache[region] = { at: Date.now(), map, items });
+}
+function chartLabel(c) {
+  return c.cat === '20' ? T(`게임 ${c.rank}위`, `Gaming #${c.rank}`) : T(`인기 ${c.rank}위`, `Trending #${c.rank}`);
+}
+
+// ─── 눈에 띄는 영상: 지금 뜨는 · 작은 채널 떡상 · 인기 차트 ───
+let hlTab = 'hot';
+function clearHighlights() { $('#hlPanel').hidden = true; $('#relKw').hidden = true; }
+function renderHighlights() {
+  if (mode !== 'video' || !rows.length) { $('#hlPanel').hidden = true; return; }
+  const recent = rows.filter(r => r.hours <= 14 * 24);
+  const sets = {
+    hot: [...(recent.length >= 3 ? recent : rows)].sort((a, b) => b.trend - a.trend).slice(0, 6),
+    small: rows.filter(r => r.subs && r.subs <= 5e5 && r.ratio >= 1).sort((a, b) => b.ratio - a.ratio).slice(0, 6),
+    chart: rows.filter(r => r.chart).sort((a, b) => (a.chart.cat === b.chart.cat ? 0 : a.chart.cat ? 1 : -1) || a.chart.rank - b.chart.rank).slice(0, 6),
+  };
+  const labels = { hot: T('지금 뜨는', 'Rising now'), small: T('작은 채널 떡상', 'Small-channel breakouts'), chart: T('인기 차트', 'On the charts') };
+  const tabs = Object.keys(sets).filter(k => sets[k].length);
+  if (!tabs.length) { $('#hlPanel').hidden = true; return; }
+  if (!tabs.includes(hlTab)) hlTab = tabs[0];
+  $('#hlPanel').hidden = false;
+  $('#hlSeg').innerHTML = tabs.map(k => `<button class="${k === hlTab ? 'on' : ''}" data-hl="${k}">${labels[k]}</button>`).join('');
+  $('#hlSeg').querySelectorAll('[data-hl]').forEach(b => b.addEventListener('click', () => { hlTab = b.dataset.hl; renderHighlights(); }));
+  $('#hlShelf').innerHTML = sets[hlTab].map(r => {
+    const metric = hlTab === 'small' ? T(`조회/구독 ${r.ratio.toFixed(1)}×`, `${r.ratio.toFixed(1)}× views/subs`)
+      : hlTab === 'chart' ? `${chartLabel(r.chart)} · ${T('시간당 ' + fmtNum(r.vph), fmtNum(r.vph) + '/h')}`
+      : T('시간당 ' + fmtNum(r.vph), fmtNum(r.vph) + '/h');
+    return `<a class="tvid" href="https://youtu.be/${r.id}" target="_blank">
+      <img src="${esc(r.thumb || '')}" loading="lazy">${r.hours < 24 ? '<span class="nb">NEW</span>' : ''}${r.chart && hlTab !== 'chart' ? `<span class="cb">${chartLabel(r.chart)}</span>` : ''}
+      <div class="tvt">${esc(r.title)}</div>
+      <div class="tvm">${esc(r.channel)} · ${r.subs ? T('구독자 ' + fmtNum(r.subs), fmtNum(r.subs) + ' subs') : T('구독자 비공개', 'subs hidden')} · ${ago(r.hours)}</div>
+      <div class="tvm"><span class="rb">${metric}</span></div>
+    </a>`;
+  }).join('');
+}
+
+// ─── 같이 뜨는 키워드: 이번 결과 제목·태그에서 여러 영상에 겹치는 말 (클릭하면 그걸로 검색) ───
+function renderRelKw() {
+  const box = $('#relKw');
+  const norm = w => w.toLowerCase().replace(/\s+/g, '');
+  const q = norm($('#query').value);
+  const syn = tokenGroups($('#query').value).flat().map(norm);
+  const FRAG = /^[가-힣]{1,3}$/;
+  const FRAG_END = /(에|는|은|던|고|면|서|지|다|요|게|도|만|로|와|과|랑|한|할|된|될|인|을|를|의)$/;
+  let words = mode === 'video' && rows.length
+    ? trendWords(rows).filter(([w]) => {
+        const n = norm(w);
+        return !q.includes(n) && !syn.includes(n) && !(FRAG.test(w) && FRAG_END.test(w));
+      })
+    : [];
+  const strong = words.filter(([, df]) => df >= 3);
+  words = (strong.length >= 6 ? strong : words).slice(0, 10);
+  if (!words.length) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = `<span class="lbl">${T('같이 뜨는 키워드', 'Also rising')}</span>`
+    + words.map(([w]) => `<span class="chip" data-rk="${esc(w)}">${esc(w)}</span>`).join('');
+  box.querySelectorAll('[data-rk]').forEach(c => c.addEventListener('click', () => { $('#query').value = c.dataset.rk; search(); }));
+}
+
+// ─── 결과 바: 개수 + 정렬 선택 ───
+function syncResultsBar() {
+  const n = rows.length, sel = $('#sortSel');
+  $('#resCount').innerHTML = !n ? T('결과', 'Results')
+    : mode === 'video' ? T(`영상 <b>${n}</b>개`, `<b>${n}</b> videos`) : T(`채널 <b>${n}</b>개`, `<b>${n}</b> channels`);
+  sel.hidden = mode !== 'video' || !n;
+  sel.value = sortDesc && ['trend', 'views', 'ratio', 'published'].includes(sortKey) ? sortKey : '';
 }
 
 async function searchChannels(status) {
@@ -761,6 +914,7 @@ async function channelVideos(channelId, channelTitle) {
   const btn = $('#searchBtn'), status = $('#status');
   btn.disabled = true;
   status.textContent = `"${channelTitle}" 인기 영상 검색 중...`;
+  clearHighlights();
   try {
     // 채널의 역대(전체 기간) 인기 영상 — 기간 필터 무시
     const base = { part: 'snippet', type: 'video', maxResults: 50, channelId, order: 'viewCount' };
@@ -784,6 +938,7 @@ async function search() {
   const btn = $('#searchBtn'), status = $('#status');
   btn.disabled = true;
   status.textContent = '검색 중...';
+  clearHighlights();
   try {
     pushHist($('#query').value);
     if ($('#mode').value === 'channel') await searchChannels(status);
@@ -826,7 +981,7 @@ function renderGrid() {
       <button class="star ${isBM(r.id) ? 'on' : ''}" data-star="${r.id}">★</button>
       <a href="https://youtu.be/${r.id}" target="_blank"><img src="${r.thumb}" loading="lazy"></a>
       <div class="ct">
-        <a class="t" href="https://youtu.be/${r.id}" target="_blank">${r.title}</a>
+        <a class="t" href="https://youtu.be/${r.id}" target="_blank">${esc(r.title)}</a>
         <div class="s"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${r.channel}</span><span>${fmtNum(r.views)}회 · ${fmtDur(r.dur)}</span></div>
         <button class="tbtn ${isTracked(r.channelId) ? 'on' : ''}" data-trackch="${idx}" data-cid="${r.channelId}" style="width:100%;margin:8px 0 0;text-align:center">${isTracked(r.channelId) ? '✓ 추적 중' : '+ 채널 추적'}</button>
       </div>
@@ -847,7 +1002,7 @@ function renderVideos() {
     <tr>
       <td><a href="https://youtu.be/${r.id}" target="_blank"><img class="thumb" src="${r.thumb}" loading="lazy"></a></td>
       <td>
-        <a class="vtitle" href="https://youtu.be/${r.id}" target="_blank">${r.title}${r.ratio >= 5 ? '<span class="badge">떡상</span>' : ''}</a>
+        <a class="vtitle" href="https://youtu.be/${r.id}" target="_blank">${esc(r.title)}${r.hours < 24 ? '<span class="nbadge">NEW</span>' : ''}${r.chart ? `<span class="cbadge">${chartLabel(r.chart)}</span>` : ''}${r.ratio >= 5 ? '<span class="badge">떡상</span>' : ''}</a>
         <a class="ch" href="https://youtube.com/channel/${r.channelId}" target="_blank">${r.channel}</a><button class="starbtn ${isBM(r.id) ? 'on' : ''}" data-star="${r.id}" title="저장함에 추가">★</button><button class="tbtn ${isTracked(r.channelId) ? 'on' : ''}" data-trackch="${idx}" data-cid="${r.channelId}">${isTracked(r.channelId) ? '✓ 추적 중' : '+ 채널 추적'}</button>
       </td>
       <td class="num">${fmtNum(r.views)}</td>
@@ -864,6 +1019,7 @@ function renderVideos() {
   renderGrid();
   applyViewMode();
   markSort();
+  syncResultsBar();
 }
 
 function renderChannels() {
@@ -890,6 +1046,7 @@ function renderChannels() {
     b.addEventListener('click', () => { const r = rows[+b.dataset.track]; addTracked({ id: r.channelId, name: r.channel, thumb: r.thumb }); b.textContent = '✓ 추적 중'; }));
   applyViewMode();
   markSort();
+  syncResultsBar();
 }
 
 $('#results').addEventListener('click', e => {
@@ -1061,6 +1218,11 @@ async function refreshTracked() {
   }
 }
 
+$('#sortSel').addEventListener('change', e => {
+  if (!e.target.value || mode !== 'video') return;
+  sortKey = e.target.value; sortDesc = true;
+  renderVideos();
+});
 $('#viewToggle').addEventListener('click', () => {
   viewMode = viewMode === 'grid' ? 'list' : 'grid';
   localStorage.setItem('yt_viewmode', viewMode);
@@ -1258,7 +1420,7 @@ function buildInsight() {
   const top5 = [...rows].sort((a, b) => b.ratio - a.ratio).slice(0, 5);
   $('#topTitles').innerHTML = top5.map((r, i) => `
     <div style="margin-bottom:10px">
-      <span class="hot">${i + 1}.</span><a class="vtitle" style="display:inline" href="https://youtu.be/${r.id}" target="_blank">${r.title}</a><br>
+      <span class="hot">${i + 1}.</span><a class="vtitle" style="display:inline" href="https://youtu.be/${r.id}" target="_blank">${esc(r.title)}</a><br>
       <span class="ch">${r.channel} · ${fmtNum(r.views)}회 · 구독자 ${fmtNum(r.subs)} → <b class="hot">${r.ratio.toFixed(1)}×</b></span>
     </div>`).join('');
 
@@ -1791,6 +1953,9 @@ const USER_KEY = 'yt_user';
     '모든 길이': 'Any length', '쇼츠 (≤3분)': 'Shorts (≤3 min)', '4~20분': '4–20 min', '20분 이상': '20+ min',
     '25개': '25 results', '50개': '50 results', '100개': '100 results',
     '결과': 'Results', '갤러리 보기': 'Gallery view', '목록 보기': 'List view',
+    '눈에 띄는 영상': 'Standouts', '트렌드순': 'Trending first', '조회수순': 'Most viewed', '떡상 배율순': 'Breakout ratio',
+    '최신순': 'Newest', '표에서 정렬': 'Custom', '정렬': 'Sort',
+    '트렌드순 = 시간당 조회수 기준 (올라온 지 12시간이 안 된 영상은 12시간으로 계산)': 'Trending first = views per hour (videos younger than 12 hours count as 12 hours)',
     // 표 헤더
     '제목': 'Title', '조회수': 'Views', '구독자': 'Subscribers', '조회/구독 배율': 'Views ÷ Subs',
     '일평균 조회': 'Views/day', '시간당 조회': 'Views/hour', '좋아요': 'Likes', '업로드': 'Published', '길이': 'Length',
@@ -1868,6 +2033,7 @@ const USER_KEY = 'yt_user';
     [/^(.+) · ([\d.,]+[만억KMB]?)회 · 구독자 (.+)$/, (_, c, v, s) => `${c} · ${v} views · ${s} subs`],
     [/^저장한 영상 (\d+)개 · 메모는 자동 저장됨$/, (_, n) => `${n} saved videos · Notes save automatically`],
   ];
+  R.unshift([/^(.+) ([▼▲])$/, (_, h, a) => M[h] !== undefined ? M[h] + ' ' + a : null]);
   const tr = t => {
     if (M[t] !== undefined) return M[t];
     for (const [re, fn] of R) { const m = t.match(re); if (m) return fn(...m); }

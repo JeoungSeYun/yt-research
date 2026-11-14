@@ -206,6 +206,67 @@
   .rcount b { color: var(--text); font-weight: 600; }
   .sortsel { border-radius: 980px; font-size: 13px; padding: 6px 12px; color: var(--text); cursor: pointer; }
   .cbadge { display: inline-block; background: rgba(255, 176, 32, .12); color: var(--gold); border: 1px solid rgba(255, 176, 32, .35); border-radius: 4px; font-size: 11px; padding: 1px 6px; margin-left: 6px; font-weight: 600; }
+  /* 홈: 유튜브 순위 (Playboard식 카드) */
+  .homebar { margin: 6px 0 4px; }
+  .rkhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 26px 0 14px; }
+  .rkhead h2 { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+  .rksub { font-size: 13.5px; color: var(--sub); margin-top: 4px; }
+  .rkctl { display: flex; gap: 8px; align-items: center; }
+  .rkctl select { border-radius: 980px; font-size: 14px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+  .rkstatus { margin: 0 0 12px; }
+  .rkgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+  .rkcard { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 8px; min-width: 0; display: flex; flex-direction: column; }
+  .rk-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .rk-h h3, .rk-t { font-size: 15px; font-weight: 600; color: var(--text); margin: 0; }
+  .rk-hint { font-size: 12px; color: var(--sub); white-space: nowrap; }
+  button.rk-hint { background: none; padding: 0; font-weight: 500; }
+  button.rk-hint:hover { color: var(--text); filter: none; }
+  .rk-list { flex: 1; }
+  .rk-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; text-decoration: none; min-width: 0; }
+  .rkcard:not(.open) .rk-row:nth-child(n+6) { display: none; }
+  .rk-n { width: 18px; text-align: center; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; flex-shrink: 0; font-size: 14px; }
+  .rk-row:nth-child(-n+3) .rk-n { color: var(--text); }
+  .rk-av { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #222; }
+  .rk-th { width: 64px; aspect-ratio: 16/9; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #222; }
+  .rk-mid { min-width: 0; flex: 1; }
+  .rk-name { display: block; font-size: 13.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rk-sub2 { display: block; font-size: 12px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .rk-v { font-size: 13px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+  .rk-v.gold { color: var(--gold); }
+  .rk-v.live { color: #ff6961; }
+  .rk-row:hover .rk-name { color: var(--accent); }
+  .rk-more { display: block; width: 100%; margin-top: 6px; background: none; color: var(--sub); font-size: 12.5px; font-weight: 500; padding: 9px 0 6px; border-top: 1px solid var(--border); border-radius: 0; }
+  .rk-more:hover { color: var(--text); filter: none; }
+  .rk-empty { font-size: 13px; color: var(--sub); padding: 14px 0; }
+  .rksec { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 12px; }
+  .rksec h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+  .tvid .lb { position: absolute; top: 6px; left: 6px; background: #ff3b30; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; letter-spacing: .03em; }
+  .tvid .tvm.live { color: #ff6961; }
+  .rkcard .rk-txt { font-size: 13px; color: var(--sub); line-height: 1.6; margin: 2px 0 12px; }
+  .rkcard .rk-links { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .rkcard .rk-links a, .rkcard .rk-links button { font-size: 12.5px; padding: 6px 13px; border-radius: 980px; background: rgba(255, 255, 255, .07); border: 1px solid var(--border); color: var(--text); text-decoration: none; font-weight: 500; }
+  .rkcard .rk-links a:hover, .rkcard .rk-links button:hover { border-color: var(--accent); filter: none; }
+  @media (max-width: 980px) { .rkgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { .rkgrid { grid-template-columns: minmax(0, 1fr); } .rkhead h2 { font-size: 21px; } }
+  /* 인스타 탭 */
+  .igsteps { margin: 2px 0 16px 20px; font-size: 14px; color: var(--sub); line-height: 1.9; }
+  .igsteps b { color: var(--text); font-weight: 600; }
+  .igsteps a { color: var(--accent); text-decoration: none; }
+  .igsteps a:hover { text-decoration: underline; }
+  .igsteps code { background: rgba(255, 255, 255, .08); color: var(--text); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+  .igacct { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .igacct img { width: 36px; height: 36px; border-radius: 50%; background: #222; object-fit: cover; }
+  .igacct > span { flex: 1; display: flex; flex-direction: column; }
+  .igctl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .igctl .searchbar { flex: 1; min-width: 240px; }
+  .igshelf .igm { display: block; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #222; }
+  .igshelf .igm img, .igshelf .igm video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; display: block; border-radius: 0; }
+  .igph { display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 12px; height: 100%; background: #222; }
+  .igprof { display: flex; gap: 16px; align-items: center; }
+  .igprof .igav { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: #222; flex-shrink: 0; }
+  .igprof .ign { font-size: 18px; font-weight: 700; }
+  .igprof .igbio { font-size: 13px; color: var(--sub); margin-top: 6px; white-space: pre-line; max-height: 4.6em; overflow: hidden; }
+  .rk-th.sq { width: 40px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--sub); }
   /* 폰: 좌우 여백 줄여서 본문 폭 확보, 하입 후보는 2열 */
   @media (max-width: 600px) {
     body { padding: 20px 14px; }
@@ -257,6 +318,7 @@
   <div class="tab-indicator" id="tabIndicator"></div>
   <div class="tab active" data-view="home">홈</div>
   <div class="tab" data-view="trend">급상승</div>
+  <div class="tab" data-view="insta">인스타</div>
   <div class="tab" data-view="search">검색</div>
   <div class="tab" data-view="keyword">키워드</div>
   <div class="tab" data-view="track">채널 추적</div>
@@ -266,23 +328,44 @@
 
 <!-- ═══════════ 홈 탭 ═══════════ -->
 <div class="view active" id="view-home">
-  <div class="hero">
-    <h2>어떤 영상이 <em>떡상</em>하는지,<br>감이 아니라 데이터로.</h2>
-    <p>장르를 검색하면 채널 규모 대비 터진 영상을 찾아주고, 제목·업로드 패턴까지 분석합니다.</p>
-    <div class="searchbar">
-      <input id="homeQuery" autocomplete="off" placeholder="어떤 장르를 벤치마킹할까요? — 예: 마인크래프트 미니게임">
-      <button id="homeSearchBtn">검색</button>
+  <div class="searchbar homebar">
+    <input id="homeQuery" autocomplete="off" placeholder="장르·키워드로 떡상 영상 찾기 — 예: 마인크래프트 미니게임">
+    <button id="homeSearchBtn">검색</button>
+  </div>
+  <div class="rkhead">
+    <div>
+      <h2>유튜브 순위</h2>
+      <div class="rksub">YouTube 공식 인기 차트와 라이브를 실시간으로 모았어요</div>
     </div>
-    <div class="quickstart" id="quickstart"></div>
+    <div class="rkctl">
+      <select id="rkRegion">
+        <option value="KR">한국</option>
+        <option value="US">미국</option>
+        <option value="JP">일본</option>
+        <option value="GB">영국</option>
+        <option value="DE">독일</option>
+        <option value="FR">프랑스</option>
+        <option value="ES">스페인</option>
+        <option value="BR">브라질</option>
+        <option value="ID">인도네시아</option>
+        <option value="VN">베트남</option>
+        <option value="TH">태국</option>
+        <option value="RU">러시아</option>
+      </select>
+      <span class="tupd" id="rkUpdated"></span>
+      <button class="mini" id="rkRefresh">새로고침</button>
+    </div>
   </div>
-  <div class="feat4">
-    <div class="feat" data-go="search"><div class="ft">떡상 영상 검색</div><div class="fd">조회수÷구독자 배율로 채널 체급 대비 터진 영상만 골라냄. 12개국 지원.</div></div>
-    <div class="feat" data-go="keyword"><div class="ft">키워드 분석</div><div class="fd">기회 점수와 연관 키워드로 어떤 주제를 팔지 결정.</div></div>
-    <div class="feat" data-go="track"><div class="ft">채널 추적</div><div class="fd">경쟁 채널을 등록하면 최신 영상의 떡상 여부를 자동 감지.</div></div>
-    <div class="feat" data-go="insight"><div class="ft">트렌드 분석</div><div class="fd">떡상 제목 단어, 업로드 요일·시간대, 진입 난이도까지 자동 리포트.</div></div>
+  <div class="status rkstatus" id="rkStatus" hidden></div>
+  <div class="rkgrid" id="rkGrid"></div>
+  <div class="panel" id="rkLivePanel" hidden>
+    <div class="rk-h"><h3>실시간 인기 라이브</h3><span class="rk-hint" id="rkLiveHint"></span></div>
+    <div class="shelf" id="rkLive"></div>
   </div>
-  <div class="tiles" id="homeStats"></div>
-  <div class="panel" id="historyPanel" style="display:none"><h3>최근 검색어</h3><div id="history"></div></div>
+  <div class="rksec" id="rkTopicsHead" hidden><h3>주제별 차트</h3><span class="rk-hint">카테고리별 인기 영상</span></div>
+  <div class="rkgrid" id="rkTopics"></div>
+  <div class="rksec"><h3>다른 플랫폼</h3></div>
+  <div class="rkgrid" id="rkSocial"></div>
 </div>
 
 <!-- ═══════════ 급상승 탭 — 검색 없이 나라별 실시간 인기 차트 ═══════════ -->
@@ -326,6 +409,24 @@
     <table id="trTable"><thead></thead><tbody></tbody></table>
   </div>
 </div>
+</div>
+
+<!-- ═══════════ 인스타 탭 — 내 인스타 프로페셔널 계정 연결 (Instagram Graph API) ═══════════ -->
+<div class="view" id="view-insta">
+<div class="panel" id="igSetup"></div>
+<div class="panel" id="igMain" hidden>
+  <div class="igacct">
+    <img id="igPic" alt=""><span><b id="igUser"></b><span class="ch">연결됨</span></span>
+    <button class="mini" id="igOut">연결 해제</button>
+  </div>
+  <div class="igctl">
+    <div class="seg" id="igModeSeg"><button data-igm="tag" class="on">해시태그</button><button data-igm="user">크리에이터</button></div>
+    <div class="searchbar"><input id="igQuery" autocomplete="off"><button id="igGo">보기</button></div>
+  </div>
+  <div class="relkw" id="igRecent" hidden></div>
+  <div class="status" id="igStatus2"></div>
+</div>
+<div id="igResult"></div>
 </div>
 
 <!-- ═══════════ 검색 탭 ═══════════ -->
@@ -749,7 +850,7 @@ async function chartIndex(region) {
   for (const [cat, pages] of [['', 4], ['20', 2]]) {
     let pageToken = '', rank = 0;
     for (let p = 0; p < pages; p++) {
-      const d = await yt('videos', { part: 'snippet', chart: 'mostPopular', regionCode: region, videoCategoryId: cat, maxResults: 50, pageToken }).catch(() => null);
+      const d = await yt('videos', { part: 'snippet,statistics,contentDetails', chart: 'mostPopular', regionCode: region, videoCategoryId: cat, maxResults: 50, pageToken }).catch(() => null);
       if (!d) break;
       for (const v of d.items || []) {
         rank++;
@@ -1711,6 +1812,7 @@ function switchTab(name) {
   $('#view-' + name).classList.add('active');
   moveIndicator();
   if (name === 'trend') loadTrend();
+  if (name === 'insta') renderInsta();
   if (name === 'track') refreshTracked();
   if (name === 'saved') renderSaved();
   if (name === 'home') renderHome();
@@ -1741,25 +1843,465 @@ function pushHist(q) {
   h.unshift(q);
   localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 10)));
 }
-const QUICKSTART = ['마인크래프트 미니게임', '마인크래프트 정보', '마크 야생', '로블록스', 'ASMR', '브이로그'];
-function renderHome() {
-  // 인기 장르 바로가기
-  $('#quickstart').innerHTML = QUICKSTART.map(q => `<span class="qc" data-qs="${q}">${q}</span>`).join('');
-  document.querySelectorAll('[data-qs]').forEach(c =>
-    c.addEventListener('click', () => { $('#query').value = c.dataset.qs; switchTab('search'); search(); }));
-  // 내 활동 통계
-  $('#homeStats').innerHTML = [
-    ['발굴한 채널 DB', Object.keys(loadDB()).length + '개'],
-    ['저장한 영상', loadBM().length + '개'],
-    ['추적 중인 채널', loadTracked().length + '개'],
-  ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
-  // 최근 검색어 — 있을 때만 표시
-  const h = loadHist();
-  $('#historyPanel').style.display = h.length ? 'block' : 'none';
-  $('#history').innerHTML = h.map(q => `<span class="chip" data-hq="${q}">${q}</span>`).join('');
-  document.querySelectorAll('[data-hq]').forEach(c =>
-    c.addEventListener('click', () => { $('#query').value = c.dataset.hq; switchTab('search'); search(); }));
+// ═══════════ 인스타그램 — 내 프로페셔널 계정 연결 (Instagram Graph API · 페이스북 로그인 방식) ═══════════
+// 토큰은 이 브라우저(localStorage)에만 저장하고 클라우드 동기화도 안 함. 게시물·통계는 볼 때만 불러오고 메모리에 10분만 보관.
+const IG_KEY = 'yt_ig', IG_RECENT = 'yt_ig_recent', IG_API = 'https://graph.facebook.com/';
+const loadIG = () => { try { return JSON.parse(localStorage.getItem(IG_KEY)) || null; } catch { return null; } };
+const saveIG = v => v ? localStorage.setItem(IG_KEY, JSON.stringify(v)) : localStorage.removeItem(IG_KEY);
+const loadIgRecent = () => { try { return JSON.parse(localStorage.getItem(IG_RECENT)) || []; } catch { return []; } };
+function pushIgRecent(item) {
+  const r = loadIgRecent().filter(x => x.toLowerCase() !== item.toLowerCase());
+  r.unshift(item);
+  localStorage.setItem(IG_RECENT, JSON.stringify(r.slice(0, 12)));
 }
+const igCache = {};
+let igMode = 'tag', igSort = 'top';
+
+async function ig(path, params) {
+  const token = params?.access_token || loadIG()?.token;
+  if (!token) throw new Error(T('먼저 인스타를 연결해 주세요.', 'Connect Instagram first.'));
+  const url = new URL(IG_API + path);
+  Object.entries({ ...params, access_token: token }).forEach(([k, v]) => v !== undefined && v !== '' && url.searchParams.set(k, v));
+  const data = await (await fetch(url)).json();
+  if (data.error) {
+    const e = data.error;
+    if (e.code === 190) throw new Error(T('토큰이 만료됐거나 잘못됐어요. 새 토큰으로 다시 연결해 주세요.', 'The token expired or is invalid — reconnect with a new token.'));
+    if (e.code === 10 || e.code === 200 || e.code === 100 && /permission/i.test(e.message || ''))
+      throw new Error(T('권한이 부족해요. 토큰 만들 때 권한 4개를 다 넣었는지 확인해 주세요. ', 'Missing permission — check the four token permissions. ') + '(' + (e.message || '') + ')');
+    throw new Error((e.message || 'Instagram API error') + (e.code ? ` (#${e.code})` : ''));
+  }
+  return data;
+}
+function igPost(p) {
+  const kid = p.children?.data?.[0];
+  const img = p.media_type === 'VIDEO' ? '' : (kid && kid.media_type !== 'VIDEO' ? kid.media_url : p.media_url);
+  const vid = p.media_type === 'VIDEO' ? p.media_url : (kid?.media_type === 'VIDEO' ? kid.media_url : '');
+  return { id: p.id, caption: (p.caption || '').trim(), img: img || '', vid: vid || '', link: p.permalink || '',
+    likes: p.like_count ?? null, comments: p.comments_count ?? 0, at: p.timestamp || '', video: p.media_type === 'VIDEO' };
+}
+async function igHashtag(tag, sort) {
+  const key = 'tag|' + tag.toLowerCase() + '|' + sort;
+  const c = igCache[key];
+  if (c && Date.now() - c.at < 10 * 60e3) return c.data;
+  const acct = loadIG();
+  const h = await ig('ig_hashtag_search', { user_id: acct.id, q: tag });
+  const hid = h.data?.[0]?.id;
+  if (!hid) throw new Error(T('그 해시태그를 찾지 못했어요.', 'Hashtag not found.'));
+  const m = await ig(hid + '/' + (sort === 'recent' ? 'recent_media' : 'top_media'), {
+    user_id: acct.id, limit: 50,
+    fields: 'id,caption,media_type,media_url,permalink,like_count,comments_count,timestamp,children{media_url,media_type}',
+  });
+  const data = (m.data || []).map(igPost);
+  igCache[key] = { at: Date.now(), data };
+  return data;
+}
+async function igCreator(username) {
+  const key = 'user|' + username.toLowerCase();
+  const c = igCache[key];
+  if (c && Date.now() - c.at < 10 * 60e3) return c.data;
+  const acct = loadIG();
+  const d = await ig(acct.id, {
+    fields: `business_discovery.username(${username}){username,name,profile_picture_url,followers_count,media_count,biography,media.limit(30){id,caption,media_type,media_url,permalink,like_count,comments_count,timestamp}}`,
+  });
+  const b = d.business_discovery || {};
+  const data = { username: b.username || username, name: b.name || '', pic: b.profile_picture_url || '', followers: b.followers_count || 0,
+    mediaCount: b.media_count || 0, bio: b.biography || '', posts: (b.media?.data || []).map(igPost) };
+  igCache[key] = { at: Date.now(), data };
+  return data;
+}
+
+function igSetupHtml() {
+  return `<h3>${T('인스타그램 연결', 'Connect Instagram')}<span class="hint">${T('내 계정으로만 · 토큰은 이 브라우저에만 저장돼요', 'your own account only · the token stays in this browser')}</span></h3>
+  <ol class="igsteps">
+    <li>${T('인스타 계정을 <b>프로페셔널(크리에이터·비즈니스)</b>로 바꾸고 페이스북 페이지에 연결해요.', 'Switch your Instagram account to <b>Professional (Creator or Business)</b> and link it to a Facebook Page.')}</li>
+    <li>${T('<a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta 개발자 센터</a>에서 앱을 만들고 <b>Instagram</b> 제품(페이스북 로그인 방식)을 추가해요.', 'Create an app in the <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta for Developers</a> dashboard and add the <b>Instagram</b> product (Facebook Login).')}</li>
+    <li>${T('<a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API 탐색기</a>에서 그 앱을 고르고 권한 <code>instagram_basic</code> <code>pages_show_list</code> <code>pages_read_engagement</code> <code>business_management</code>을 넣은 뒤 토큰을 만들어요.', 'In the <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API Explorer</a>, pick that app, add <code>instagram_basic</code> <code>pages_show_list</code> <code>pages_read_engagement</code> <code>business_management</code>, and generate a token.')}</li>
+    <li>${T('<a href="https://developers.facebook.com/tools/debug/accesstoken/" target="_blank" rel="noopener">액세스 토큰 디버거</a>에서 <b>액세스 토큰 연장</b>을 누르면 60일 동안 써요.', 'Press <b>Extend Access Token</b> in the <a href="https://developers.facebook.com/tools/debug/accesstoken/" target="_blank" rel="noopener">Access Token Debugger</a> to make it last 60 days.')}</li>
+  </ol>
+  <div class="searchbar"><input id="igToken" type="password" autocomplete="off" placeholder="${T('EAA로 시작하는 액세스 토큰 붙여넣기', 'Paste the access token (starts with EAA)')}"><button id="igConnect">${T('연결', 'Connect')}</button></div>
+  <div class="status" id="igStatus"></div>`;
+}
+async function igConnect() {
+  const token = $('#igToken').value.trim(), st = $('#igStatus');
+  if (!token) return;
+  $('#igConnect').disabled = true;
+  st.textContent = T('연결 중...', 'Connecting...');
+  try {
+    const d = await ig('me/accounts', { fields: 'name,instagram_business_account{id,username,profile_picture_url}', limit: 100, access_token: token });
+    const page = (d.data || []).find(p => p.instagram_business_account);
+    if (!page) throw new Error(T('페이스북 페이지에 연결된 인스타 프로페셔널 계정을 못 찾았어요. 1번을 확인해 주세요.', 'No Instagram professional account is linked to your Facebook Pages — check step 1.'));
+    const a = page.instagram_business_account;
+    saveIG({ token, id: a.id, username: a.username, pic: a.profile_picture_url || '' });
+    renderInsta();
+    renderSocial();
+  } catch (e) {
+    st.textContent = e.message;
+  } finally {
+    const b = $('#igConnect'); if (b) b.disabled = false;
+  }
+}
+function renderInsta() {
+  const acct = loadIG();
+  $('#igSetup').hidden = !!acct;
+  $('#igMain').hidden = !acct;
+  if (!acct) {
+    $('#igSetup').innerHTML = igSetupHtml();
+    $('#igConnect').addEventListener('click', igConnect);
+    $('#igToken').addEventListener('keydown', e => e.key === 'Enter' && igConnect());
+    $('#igResult').innerHTML = '';
+    return;
+  }
+  $('#igPic').src = acct.pic || '';
+  $('#igPic').hidden = !acct.pic;
+  $('#igUser').textContent = '@' + acct.username;
+  syncIgMode();
+}
+function syncIgMode() {
+  $('#igModeSeg').querySelectorAll('[data-igm]').forEach(b => b.classList.toggle('on', b.dataset.igm === igMode));
+  $('#igQuery').placeholder = igMode === 'tag' ? T('해시태그 — 예: 마인크래프트', 'Hashtag — e.g. minecraft') : T('인스타 계정 이름 — 예: natgeo', 'Instagram username — e.g. natgeo');
+  const pre = igMode === 'tag' ? '#' : '@';
+  const rec = loadIgRecent().filter(x => x.startsWith(pre));
+  const box = $('#igRecent');
+  box.hidden = !rec.length;
+  box.innerHTML = `<span class="lbl">${T('최근', 'Recent')}</span>` + rec.map(x => `<span class="chip" data-igr="${esc(x)}">${esc(x)}</span>`).join('');
+  box.querySelectorAll('[data-igr]').forEach(c => c.addEventListener('click', () => { $('#igQuery').value = c.dataset.igr.slice(1); igGo(); }));
+}
+async function igGo() {
+  let q = $('#igQuery').value.trim().replace(/^[#@]/, '');
+  const st = $('#igStatus2');
+  if (!q) return;
+  if (igMode === 'tag') q = q.replace(/\s+/g, '');
+  else if (!/^[A-Za-z0-9._]{1,30}$/.test(q)) { st.textContent = T('계정 이름은 영문·숫자·밑줄·마침표만 돼요.', 'Usernames can only contain letters, numbers, _ and .'); return; }
+  $('#igGo').disabled = true;
+  st.textContent = T('불러오는 중...', 'Loading...');
+  try {
+    if (igMode === 'tag') { const posts = await igHashtag(q, igSort); pushIgRecent('#' + q); renderIgTag(q, posts); }
+    else { const u = await igCreator(q); pushIgRecent('@' + q); renderIgUser(u); }
+    st.textContent = '';
+    syncIgMode();
+    renderSocial();
+  } catch (e) {
+    st.textContent = e.message;
+    $('#igResult').innerHTML = '';
+  } finally {
+    $('#igGo').disabled = false;
+  }
+}
+function igCard(p, badge) {
+  const media = p.img ? `<img src="${esc(p.img)}" loading="lazy" alt="">`
+    : p.vid ? `<video src="${esc(p.vid)}" muted playsinline preload="metadata"></video>`
+    : `<span class="igph">${T('미리보기 없음', 'No preview')}</span>`;
+  const cap = p.caption.split('\n')[0].slice(0, 90) || T('(설명 없음)', '(no caption)');
+  const likes = p.likes == null ? T('좋아요 숨김', 'likes hidden') : T('좋아요 ' + fmtNum(p.likes), fmtNum(p.likes) + ' likes');
+  return `<a class="tvid" href="${esc(p.link)}" target="_blank" rel="noopener">
+    <span class="igm">${media}</span>${badge || ''}
+    <div class="tvt">${esc(cap)}</div>
+    <div class="tvm">${likes} · ${T('댓글 ' + fmtNum(p.comments), fmtNum(p.comments) + ' comments')}</div>
+    <div class="tvm">${p.at ? ago(Math.max(1, (Date.now() - new Date(p.at)) / 36e5)) : ''}</div>
+  </a>`;
+}
+function renderIgTag(tag, posts) {
+  $('#igResult').innerHTML = `<div class="panel">
+    <div class="hlhead"><h3>#${esc(tag)}<span class="hint">${T(`게시물 ${posts.length}개 · 해시태그는 7일에 30개까지 조회돼요`, `${posts.length} posts · up to 30 hashtags per 7 days`)}</span></h3>
+      <div class="seg"><button data-igs="top" class="${igSort === 'top' ? 'on' : ''}">${T('인기', 'Top')}</button><button data-igs="recent" class="${igSort === 'recent' ? 'on' : ''}">${T('최근 24시간', 'Last 24 hours')}</button></div></div>
+    <div class="shelf igshelf">${posts.map(p => igCard(p)).join('') || `<div class="ch" style="grid-column:1/-1">${T('게시물이 없어요.', 'No posts.')}</div>`}</div>
+  </div>`;
+  $('#igResult').querySelectorAll('[data-igs]').forEach(b => b.addEventListener('click', () => {
+    if (igSort === b.dataset.igs) return;
+    igSort = b.dataset.igs;
+    $('#igQuery').value = tag;
+    igGo();
+  }));
+}
+function renderIgUser(u) {
+  const posts = u.posts;
+  const liked = posts.filter(p => p.likes != null);
+  const avgL = liked.length ? liked.reduce((a, p) => a + p.likes, 0) / liked.length : 0;
+  const avgC = posts.length ? posts.reduce((a, p) => a + p.comments, 0) / posts.length : 0;
+  const er = u.followers ? (avgL + avgC) / u.followers * 100 : 0;
+  const sorted = [...posts].sort((a, b) => (b.likes ?? -1) - (a.likes ?? -1));
+  const tiles = [
+    [T('팔로워', 'Followers'), fmtNum(u.followers)], [T('게시물', 'Posts'), fmtNum(u.mediaCount)],
+    [T(`평균 좋아요 (최근 ${posts.length}개)`, `Avg likes (last ${posts.length})`), fmtNum(Math.round(avgL))],
+    [T('평균 댓글', 'Avg comments'), fmtNum(Math.round(avgC))], [T('참여율', 'Engagement'), er.toFixed(2) + '%'],
+  ];
+  $('#igResult').innerHTML = `
+    <div class="panel igprof"><img class="igav" src="${esc(u.pic)}" alt="">
+      <div><div class="ign">${esc(u.name || u.username)}</div><a class="ch" href="https://www.instagram.com/${esc(u.username)}/" target="_blank" rel="noopener">@${esc(u.username)}</a>${u.bio ? `<div class="igbio">${esc(u.bio)}</div>` : ''}</div></div>
+    <div class="tiles">${tiles.map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
+    <div class="panel"><h3>${T('최근 게시물', 'Recent posts')}<span class="hint">${T('좋아요 많은 순 · 평균의 2배를 넘으면 표시', 'most liked first · posts above 2× the average are flagged')}</span></h3>
+      <div class="shelf igshelf">${sorted.map(p => igCard(p, avgL && p.likes >= avgL * 2
+        ? `<span class="cb">${T('평균의 ' + (p.likes / avgL).toFixed(1) + '배', (p.likes / avgL).toFixed(1) + '× avg')}</span>` : '')).join('')}</div></div>`;
+}
+// 홈 '다른 플랫폼' 줄의 인스타 카드: 마지막으로 본 해시태그의 인기 게시물
+function igHomeCard() {
+  const acct = loadIG();
+  if (!acct) return '';
+  const tag = loadIgRecent().find(x => x.startsWith('#'));
+  if (!tag) return `<div class="rkcard"><div class="rk-h"><span class="rk-t">${T('인스타그램', 'Instagram')}</span><span class="rk-hint">@${esc(acct.username)}</span></div>
+    <div class="rk-txt">${T('인스타 탭에서 해시태그를 한 번 보면 여기에 그 해시태그 인기 게시물이 떠요.', 'Look up a hashtag in the Instagram tab and its top posts will show up here.')}</div>
+    <div class="rk-links"><button data-go-insta>${T('인스타 탭 열기', 'Open Instagram tab')}</button></div></div>`;
+  setTimeout(igFillHome, 0);
+  return `<div class="rkcard"><div class="rk-h"><span class="rk-t">${T('인스타 인기 게시물', 'Top Instagram posts')}</span><button class="rk-hint" data-go-insta>${esc(tag)} →</button></div>
+    <div class="rk-list" id="igHomeList"><div class="rk-empty">${T('불러오는 중...', 'Loading...')}</div></div></div>`;
+}
+async function igFillHome() {
+  const box = $('#igHomeList');
+  if (!box) return;
+  const tag = (loadIgRecent().find(x => x.startsWith('#')) || '').slice(1);
+  try {
+    const posts = await igHashtag(tag, 'top');
+    box.innerHTML = posts.slice(0, 5).map((p, i) => `<a class="rk-row" href="${esc(p.link)}" target="_blank" rel="noopener">
+      <span class="rk-n">${i + 1}</span>${p.img ? `<img class="rk-th sq" src="${esc(p.img)}" loading="lazy" alt="">` : `<span class="rk-th sq igph">${p.video ? T('릴스', 'Reel') : ''}</span>`}
+      <span class="rk-mid"><span class="rk-name">${esc(p.caption.split('\n')[0] || T('(설명 없음)', '(no caption)'))}</span><span class="rk-sub2">${p.at ? ago(Math.max(1, (Date.now() - new Date(p.at)) / 36e5)) : ''}</span></span>
+      <span class="rk-v">${p.likes == null ? '-' : fmtNum(p.likes)}</span></a>`).join('') || `<div class="rk-empty">${T('게시물이 없어요.', 'No posts.')}</div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="rk-empty">${esc(e.message)}</div>`;
+  }
+}
+window.igHomeCard = igHomeCard;
+$('#igOut').addEventListener('click', () => { saveIG(null); Object.keys(igCache).forEach(k => delete igCache[k]); renderInsta(); renderSocial(); });
+$('#igGo').addEventListener('click', igGo);
+$('#igQuery').addEventListener('keydown', e => e.key === 'Enter' && igGo());
+$('#igModeSeg').querySelectorAll('[data-igm]').forEach(b => b.addEventListener('click', () => {
+  igMode = b.dataset.igm;
+  $('#igResult').innerHTML = '';
+  $('#igStatus2').textContent = '';
+  syncIgMode();
+}));
+
+// ═══════════ 홈: 유튜브 순위 (Playboard식) ═══════════
+// 전부 YouTube 공식 데이터를 실시간으로 조회 — 메모리·탭 세션에 10분만 보관하고 저장하지 않음 (정책 III.E.4)
+// 한 번 불러올 때: 검색 할당량 2~4 (라이브·쇼츠) + 일반 ~25유닛
+const rkCache = {};
+let rkReq = 0;
+let rkRegion = localStorage.getItem('yt_rk_region') || (EN_UI ? 'US' : 'KR');
+if (![...$('#rkRegion').options].some(o => o.value === rkRegion)) rkRegion = 'KR';
+$('#rkRegion').value = rkRegion;
+const scriptOK = (text, region) => NATIVE_SCRIPT[region] ? NATIVE_SCRIPT[region].test(text) : !NON_LATIN.test(text);
+
+function rkReadSession(region) {
+  try { const c = JSON.parse(sessionStorage.getItem('yt_rk_' + region)); return c && Date.now() - c.at < 10 * 60e3 ? c : null; } catch { return null; }
+}
+function rkWriteSession(region, data) { try { sessionStorage.setItem('yt_rk_' + region, JSON.stringify(data)); } catch {} }
+
+function rkRow(v, chans) {
+  const views = +v.statistics?.viewCount || 0;
+  const ch = chans[v.snippet.channelId];
+  const subs = ch && !ch.statistics?.hiddenSubscriberCount ? +ch.statistics.subscriberCount || 0 : 0;
+  const hours = Math.max(1, (Date.now() - new Date(v.snippet.publishedAt)) / 36e5);
+  return {
+    id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle, channelId: v.snippet.channelId,
+    thumb: v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url || '',
+    chThumb: ch?.snippet?.thumbnails?.default?.url || '', views, subs, hours,
+    vph: Math.round(views / Math.max(hours, 12)), ratio: subs ? views / subs : 0,
+    dur: parseDur(v.contentDetails?.duration || 'PT0S'), viewers: +v.liveStreamingDetails?.concurrentViewers || 0,
+  };
+}
+async function rkSearchIds(params) {
+  const d = await yt('search', { part: 'id', type: 'video', maxResults: 50, ...params }).catch(() => null);
+  return (d?.items || []).map(i => i.id.videoId).filter(Boolean);
+}
+async function rkVideos(ids, part, extra) {
+  const out = [];
+  for (const c of chunk([...new Set(ids)], 50)) {
+    const d = await yt('videos', { part, id: c.join(','), ...(extra || {}) }).catch(() => null);
+    out.push(...(d?.items || []));
+  }
+  return out;
+}
+const rkDedupe = list => { const seen = new Set(); return list.filter(r => !seen.has(r.id) && seen.add(r.id)); };
+
+async function loadHome(force) {
+  const st = $('#rkStatus');
+  if (!($('#apiKey').value || '').trim()) {
+    st.hidden = false;
+    st.textContent = T('위에 YouTube API 키를 넣으면 나라별 순위가 바로 나와요.', 'Add your YouTube API key above to see rankings by country.');
+    renderSocial();
+    return;
+  }
+  const region = rkRegion;
+  const c = rkCache[region] || rkReadSession(region);
+  if (!force && c && Date.now() - c.at < 10 * 60e3) { rkCache[region] = c; renderRanking(c); return; }
+  const my = ++rkReq;
+  $('#rkRefresh').disabled = true;
+  st.hidden = false;
+  st.textContent = T('순위 불러오는 중...', 'Loading rankings...');
+  try {
+    const lang = REGION_LANG[region] || '';
+    const after48 = new Date(Date.now() - 48 * 36e5).toISOString();
+    const liveQ = region === 'KR' ? ['', '라이브'] : region === 'JP' ? ['', 'ライブ'] : [''];
+    const shortQ = region === 'KR' ? ['', '쇼츠'] : [''];
+    const [chart, topicSets, liveIds, shortIds] = await Promise.all([
+      chartIndex(region),
+      Promise.all(TR_CATS.slice(1).map(([cat]) =>
+        yt('videos', { part: 'snippet,statistics,contentDetails', chart: 'mostPopular', regionCode: region, videoCategoryId: cat, maxResults: 50 })
+          .then(d => d.items || []).catch(() => []))),
+      Promise.all(liveQ.map(q => rkSearchIds({ eventType: 'live', order: 'viewCount', regionCode: region, relevanceLanguage: lang, q }))).then(a => a.flat()),
+      Promise.all(shortQ.map(q => rkSearchIds({ videoDuration: 'short', order: 'viewCount', regionCode: region, relevanceLanguage: lang, publishedAfter: after48, q }))).then(a => a.flat()),
+    ]);
+    const [liveVids, shortVids] = await Promise.all([
+      rkVideos(liveIds, 'snippet,liveStreamingDetails'),
+      rkVideos(shortIds, 'snippet,statistics,contentDetails,player', { maxHeight: 360 }),
+    ]);
+    if (my !== rkReq) return;
+    const allChart = chart.items.filter(v => chart.map.get(v.id)?.cat === '')
+      .sort((a, b) => chart.map.get(a.id).rank - chart.map.get(b.id).rank);
+    const chans = {};
+    const need = [...new Set([...allChart, ...liveVids].map(v => v.snippet.channelId))];
+    for (const ids of chunk(need, 50)) {
+      const d = await yt('channels', { part: 'snippet,statistics', id: ids.join(',') }).catch(() => null);
+      (d?.items || []).forEach(ch => chans[ch.id] = ch);
+    }
+    if (my !== rkReq) return;
+    const data = {
+      at: Date.now(),
+      chart: allChart.map(v => rkRow(v, chans)),
+      live: rkDedupe(liveVids.map(v => rkRow(v, chans))
+        .filter(r => r.viewers > 0 && scriptOK(r.title + ' ' + r.channel, region))
+        .sort((a, b) => b.viewers - a.viewers)),
+      // 쇼츠 = 세로 영상(재생기 높이 > 너비) · 3분 이하
+      shorts: rkDedupe(shortVids.filter(v => +(v.player?.embedHeight || 0) > +(v.player?.embedWidth || 0))
+        .map(v => rkRow(v, chans))
+        .filter(r => r.dur <= 180 && scriptOK(r.title + ' ' + r.channel, region))
+        .sort((a, b) => b.views - a.views)),
+      // YouTube 카테고리 차트는 일부가 거의 같은 목록으로 옴(엔터·코미디·애니) → 상위 5개 중 3개 이상 겹치면 뺌
+      topics: (() => {
+        const seen = new Set();
+        return TR_CATS.slice(1).map(([cat], i) => ({ cat, rows: topicSets[i].map(v => rkRow(v, chans)) })).filter(t => {
+          if (!t.rows.length) return false;
+          const top = t.rows.slice(0, 5).map(r => r.id);
+          const dup = top.filter(id => seen.has(id)).length >= 3;
+          top.forEach(id => seen.add(id));
+          return !dup;
+        });
+      })(),
+    };
+    rkCache[region] = data;
+    rkWriteSession(region, data);
+    renderRanking(data);
+  } catch (e) {
+    if (my === rkReq) st.textContent = /quota/i.test(e.message)
+      ? T('오늘 API 할당량을 다 썼어요. 한국시간 오후 4~5시에 리셋돼요.', 'Daily API quota used up — it resets at midnight Pacific time.')
+      : e.message;
+  } finally {
+    if (my === rkReq) $('#rkRefresh').disabled = false;
+  }
+}
+
+function rkVideoRow(r, i, val, cls) {
+  return `<a class="rk-row" href="https://youtu.be/${r.id}" target="_blank" rel="noopener">
+    <span class="rk-n">${i + 1}</span><img class="rk-th" src="${esc(r.thumb)}" loading="lazy" alt="">
+    <span class="rk-mid"><span class="rk-name">${esc(r.title)}</span><span class="rk-sub2">${esc(r.channel)}</span></span>
+    <span class="rk-v ${cls || ''}">${val}</span></a>`;
+}
+function rkChannelRow(c, i, val, sub, cls) {
+  return `<a class="rk-row" href="https://youtube.com/channel/${c.channelId}" target="_blank" rel="noopener">
+    <span class="rk-n">${i + 1}</span><img class="rk-av" src="${esc(c.chThumb || '')}" loading="lazy" alt="">
+    <span class="rk-mid"><span class="rk-name">${esc(c.channel)}</span><span class="rk-sub2">${sub}</span></span>
+    <span class="rk-v ${cls || ''}">${val}</span></a>`;
+}
+function rkCard(title, hint, rows, rowHtml) {
+  const list = rows.slice(0, 10).map(rowHtml).join('');
+  return `<div class="rkcard">
+    <div class="rk-h"><span class="rk-t">${title}</span>${hint}</div>
+    <div class="rk-list">${list || `<div class="rk-empty">${T('지금은 데이터가 없어요.', 'No data right now.')}</div>`}</div>
+    ${rows.length > 5 ? `<button class="rk-more">${T('더보기', 'Show more')}</button>` : ''}
+  </div>`;
+}
+const rkHint = t => `<span class="rk-hint">${t}</span>`;
+const subsTxt = n => n ? T('구독자 ' + fmtNum(n), fmtNum(n) + ' subs') : T('구독자 비공개', 'subs hidden');
+
+function renderRanking(d) {
+  const st = $('#rkStatus');
+  st.hidden = true;
+  const time = new Date(d.at).toLocaleTimeString(EN_UI ? 'en-US' : 'ko-KR', { hour: 'numeric', minute: '2-digit' });
+  $('#rkUpdated').textContent = T(time + ' 기준', 'as of ' + time);
+  const chart = d.chart;
+  const byCh = new Map();
+  chart.forEach(r => {
+    const c = byCh.get(r.channelId) || { channelId: r.channelId, channel: r.channel, chThumb: r.chThumb, subs: r.subs, n: 0, views: 0 };
+    c.n++; c.views += r.views;
+    byCh.set(r.channelId, c);
+  });
+  const channels = [...byCh.values()].sort((a, b) => b.views - a.views);
+  $('#rkGrid').innerHTML = [
+    rkCard(T('인기 영상', 'Trending videos'), rkHint(T('인기 차트 순', 'chart order')), chart,
+      (r, i) => rkVideoRow(r, i, fmtNum(r.views))),
+    rkCard(T('급상승 영상', 'Fastest rising'), rkHint(T('시간당 조회', 'views/hour')), [...chart].sort((a, b) => b.vph - a.vph),
+      (r, i) => rkVideoRow(r, i, fmtNum(r.vph))),
+    rkCard(T('떡상 영상', 'Breakouts'), rkHint(T('조회수 ÷ 구독자', 'views ÷ subs')), chart.filter(r => r.subs >= 1000 && !/ - Topic$/.test(r.channel)).sort((a, b) => b.ratio - a.ratio),
+      (r, i) => rkVideoRow(r, i, r.ratio.toFixed(1) + '×', 'gold')),
+    rkCard(T('인기 채널', 'Top channels'), rkHint(T('차트 영상 조회수 합', 'total chart views')), channels,
+      (c, i) => rkChannelRow(c, i, fmtNum(c.views), subsTxt(c.subs) + (c.n > 1 ? T(` · 차트 ${c.n}개`, ` · ${c.n} on chart`) : ''))),
+    rkCard(T('쇼츠 인기', 'Top Shorts'), rkHint(T('최근 48시간', 'last 48 hours')), d.shorts,
+      (r, i) => rkVideoRow(r, i, fmtNum(r.views))),
+    rkCard(T('라이브 시청자', 'Live viewers'), rkHint(T('지금 시청 중', 'watching now')), d.live,
+      (r, i) => rkChannelRow(r, i, T(fmtNum(r.viewers) + '명', fmtNum(r.viewers)), esc(r.title), 'live')),
+  ].join('');
+
+  // 실시간 인기 라이브
+  const lives = d.live.slice(0, 12);
+  $('#rkLivePanel').hidden = !lives.length;
+  $('#rkLiveHint').textContent = lives.length ? T('동시 시청자 순', 'by concurrent viewers') : '';
+  $('#rkLive').innerHTML = lives.map(r => `<a class="tvid" href="https://youtu.be/${r.id}" target="_blank" rel="noopener">
+      <img src="${esc(r.thumb)}" loading="lazy" alt=""><span class="lb">LIVE</span>
+      <div class="tvt">${esc(r.title)}</div>
+      <div class="tvm">${esc(r.channel)}</div>
+      <div class="tvm live">${T(fmtNum(r.viewers) + '명 시청 중', fmtNum(r.viewers) + ' watching')}</div>
+    </a>`).join('');
+
+  // 주제별 차트 — '전체 보기'는 급상승 탭의 같은 나라·카테고리로
+  $('#rkTopicsHead').hidden = !d.topics.length;
+  $('#rkTopics').innerHTML = d.topics.map(t => {
+    const name = (TR_CATS.find(c => c[0] === t.cat) || [])[EN_UI ? 2 : 1] || t.cat;
+    return rkCard(esc(name), `<button class="rk-hint" data-topic="${t.cat}">${T('전체 보기 →', 'See all →')}</button>`, t.rows,
+      (r, i) => rkVideoRow(r, i, fmtNum(r.views)));
+  }).join('');
+  $('#rkTopics').querySelectorAll('[data-topic]').forEach(b => b.addEventListener('click', () => {
+    trRegion = rkRegion; trCat = b.dataset.topic;
+    $('#trRegion').value = trRegion;
+    localStorage.setItem('yt_tr_region', trRegion); localStorage.setItem('yt_tr_cat', trCat);
+    renderTrCats();
+    switchTab('trend');
+  }));
+  document.querySelectorAll('#view-home .rk-more').forEach(b => b.addEventListener('click', () => {
+    const card = b.closest('.rkcard');
+    card.classList.toggle('open');
+    b.textContent = card.classList.contains('open') ? T('접기', 'Show less') : T('더보기', 'Show more');
+  }));
+  renderSocial();
+}
+
+// 다른 플랫폼: 인스타(내 계정 연결 시) · 틱톡 공식 트렌드 · YouTube 하입
+function renderSocial() {
+  const region = rkRegion;
+  const tiktok = `https://ads.tiktok.com/creative/creativeCenter/trends?region=${region}`;
+  const ig = window.igHomeCard ? window.igHomeCard() : '';
+  $('#rkSocial').innerHTML = (ig || `<div class="rkcard">
+      <div class="rk-h"><span class="rk-t">${T('인스타그램', 'Instagram')}</span></div>
+      <div class="rk-txt">${T('내 인스타 프로페셔널 계정을 연결하면 해시태그 인기 게시물과 크리에이터 통계를 볼 수 있어요.', 'Connect your Instagram professional account to see top posts for hashtags and creator stats.')}</div>
+      <div class="rk-links"><button data-go-insta>${T('인스타 연결하기', 'Connect Instagram')}</button></div>
+    </div>`) + `<div class="rkcard">
+      <div class="rk-h"><span class="rk-t">${T('틱톡 트렌드', 'TikTok trends')}</span></div>
+      <div class="rk-txt">${T('틱톡은 공개 API가 없어서 틱톡 공식 트렌드 페이지(크리에이티브 센터)로 연결해요. 인기 해시태그·음악·크리에이터·영상을 나라별로 볼 수 있어요.', "TikTok has no public trends API, so this opens TikTok's official Creative Center — trending hashtags, songs, creators and videos by country.")}</div>
+      <div class="rk-links"><a href="${tiktok}" target="_blank" rel="noopener">${T('틱톡 트렌드 보기 ↗', 'Open TikTok trends ↗')}</a></div>
+    </div><div class="rkcard">
+      <div class="rk-h"><span class="rk-t">${T('YouTube 하입', 'YouTube Hype')}</span></div>
+      <div class="rk-txt">${T('하입 순위는 공개 API가 없어서 YouTube 공식 하입 페이지로 연결해요. 하입 조건에 맞는 후보는 급상승 탭에서 볼 수 있어요.', "The Hype leaderboard has no public API, so this opens YouTube's official Hype page. Eligible candidates are in the Trending tab.")}</div>
+      <div class="rk-links"><a href="https://www.youtube.com/feed/hype?gl=${region}" target="_blank" rel="noopener">${T('하입 순위 보기 ↗', 'Open Hype leaderboard ↗')}</a></div>
+    </div>`;
+  $('#rkSocial').querySelectorAll('[data-go-insta]').forEach(b => b.addEventListener('click', () => switchTab('insta')));
+}
+
+function renderHome() { loadHome(); }
+$('#rkRegion').addEventListener('change', e => { rkRegion = e.target.value; localStorage.setItem('yt_rk_region', rkRegion); loadHome(); });
+$('#rkRefresh').addEventListener('click', () => loadHome(true));
+// 홈을 보고 있으면 10분마다 자동 갱신
+setInterval(() => {
+  const c = rkCache[rkRegion];
+  if ($('#view-home').classList.contains('active') && !document.hidden && c && Date.now() - c.at >= 10 * 60e3) loadHome(true);
+}, 60e3);
 
 // ═══════════ API 키 패널 접기 ═══════════
 function updateKeyPanel(editing) {
@@ -1953,6 +2495,10 @@ const USER_KEY = 'yt_user';
     '모든 길이': 'Any length', '쇼츠 (≤3분)': 'Shorts (≤3 min)', '4~20분': '4–20 min', '20분 이상': '20+ min',
     '25개': '25 results', '50개': '50 results', '100개': '100 results',
     '결과': 'Results', '갤러리 보기': 'Gallery view', '목록 보기': 'List view',
+    '인스타': 'Instagram', '연결됨': 'Connected', '연결 해제': 'Disconnect', '해시태그': 'Hashtag', '크리에이터': 'Creator', '보기': 'View',
+    '유튜브 순위': 'YouTube Rankings', 'YouTube 공식 인기 차트와 라이브를 실시간으로 모았어요': "Live rankings from YouTube's official trending charts and live streams",
+    '실시간 인기 라이브': 'Top live streams now', '주제별 차트': 'Topic charts', '카테고리별 인기 영상': 'Top videos by category', '다른 플랫폼': 'Other platforms',
+    '장르·키워드로 떡상 영상 찾기 — 예: 마인크래프트 미니게임': 'Find breakout videos by genre or keyword — e.g. minecraft minigame',
     '눈에 띄는 영상': 'Standouts', '트렌드순': 'Trending first', '조회수순': 'Most viewed', '떡상 배율순': 'Breakout ratio',
     '최신순': 'Newest', '표에서 정렬': 'Custom', '정렬': 'Sort',
     '트렌드순 = 시간당 조회수 기준 (올라온 지 12시간이 안 된 영상은 12시간으로 계산)': 'Trending first = views per hour (videos younger than 12 hours count as 12 hours)',

@@ -215,6 +215,7 @@
   .rkctl select { border-radius: 980px; font-size: 14px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
   .rkstatus { margin: 0 0 12px; }
   .rkgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+  .rkgrid:has(> .rkcard.open) { align-items: start; }
   .rkcard { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 8px; min-width: 0; display: flex; flex-direction: column; }
   .rk-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
   .rk-h h3, .rk-t { font-size: 15px; font-weight: 600; color: var(--text); margin: 0; }
@@ -223,8 +224,7 @@
   button.rk-hint:hover { color: var(--text); filter: none; }
   .rk-list { flex: 1; }
   .rk-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; text-decoration: none; min-width: 0; }
-  .rkcard:not(.open) .rk-row:nth-child(n+6) { display: none; }
-  .rk-n { width: 18px; text-align: center; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; flex-shrink: 0; font-size: 14px; }
+  .rk-n { width: 22px; text-align: center; font-weight: 700; color: var(--sub); font-variant-numeric: tabular-nums; flex-shrink: 0; font-size: 14px; }
   .rk-row:nth-child(-n+3) .rk-n { color: var(--text); }
   .rk-av { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #222; }
   .rk-th { width: 64px; aspect-ratio: 16/9; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #222; }
@@ -235,8 +235,14 @@
   .rk-v.gold { color: var(--gold); }
   .rk-v.live { color: #ff6961; }
   .rk-row:hover .rk-name { color: var(--accent); }
-  .rk-more { display: block; width: 100%; margin-top: 6px; background: none; color: var(--sub); font-size: 12.5px; font-weight: 500; padding: 9px 0 6px; border-top: 1px solid var(--border); border-radius: 0; }
+  .rk-n.w3 { font-size: 11px; letter-spacing: -.4px; }
+  .rk-foot { display: flex; margin-top: 6px; border-top: 1px solid var(--border); }
+  .rk-foot:empty { display: none; }
+  .rk-more { flex: 1; background: none; color: var(--sub); font-size: 12.5px; font-weight: 500; padding: 9px 0 6px; border-radius: 0; }
+  .rk-more + .rk-more { border-left: 1px solid var(--border); }
   .rk-more:hover { color: var(--text); filter: none; }
+  .rk-more:active { transform: none; }
+  .rk-cnt { margin-left: 6px; opacity: .65; font-variant-numeric: tabular-nums; }
   .rk-empty { font-size: 13px; color: var(--sub); padding: 14px 0; }
   .rksec { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 12px; }
   .rksec h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
@@ -2074,7 +2080,7 @@ $('#igModeSeg').querySelectorAll('[data-igm]').forEach(b => b.addEventListener('
 
 // ═══════════ 홈: 유튜브 순위 (Playboard식) ═══════════
 // 전부 YouTube 공식 데이터를 실시간으로 조회 — 메모리·탭 세션에 10분만 보관하고 저장하지 않음 (정책 III.E.4)
-// 한 번 불러올 때: 검색 할당량 8~10 (라이브·쇼츠·주제별 쇼츠 6) + 일반 ~30유닛
+// 한 번 불러올 때: 검색 할당량 8~10 (라이브·쇼츠·주제별 쇼츠 6) + 일반 ~30유닛 · 더보기로 다음 페이지 받을 때마다 검색 1~2
 const SHORT_CATS = [['20', '게임', 'Gaming'], ['24', '엔터', 'Entertainment'], ['23', '코미디', 'Comedy'], ['22', '일상', 'People & Blogs'], ['15', '동물', 'Pets & Animals'], ['26', '노하우', 'How-to']];
 const GAME_Q = { KR: '게임', JP: 'ゲーム' };
 const rkCache = {};
@@ -2085,7 +2091,7 @@ $('#rkRegion').value = rkRegion;
 const scriptOK = (text, region) => NATIVE_SCRIPT[region] ? NATIVE_SCRIPT[region].test(text) : !NON_LATIN.test(text);
 
 // 홈 데이터 모양이 바뀌면 숫자를 올림 → 업데이트 전에 저장된 캐시는 버리고 새로 불러옴
-const RK_VER = 2;
+const RK_VER = 3;
 function rkReadSession(region) {
   try { const c = JSON.parse(sessionStorage.getItem('yt_rk_' + region)); return c && c.v === RK_VER && Date.now() - c.at < 10 * 60e3 ? c : null; } catch { return null; }
 }
@@ -2104,9 +2110,23 @@ function rkRow(v, chans) {
     dur: parseDur(v.contentDetails?.duration || 'PT0S'), viewers: +v.liveStreamingDetails?.concurrentViewers || 0,
   };
 }
-async function rkSearchIds(params) {
-  const d = await yt('search', { part: 'id', type: 'video', maxResults: 50, ...params }).catch(() => null);
-  return (d?.items || []).map(i => i.id.videoId).filter(Boolean);
+// 한 페이지 + 다음 페이지 정보 (더보기에서 이어서 불러옴)
+async function rkSearchPage(params) {
+  const p = { part: 'id', type: 'video', maxResults: 50, ...params };
+  const d = await yt('search', p).catch(() => null);
+  return { ids: (d?.items || []).map(i => i.id.videoId).filter(Boolean), page: { api: 'search', params: p, token: d?.nextPageToken || '' } };
+}
+async function rkChartPage(params) {
+  const d = await yt('videos', params).catch(() => null);
+  return { items: d?.items || [], page: { api: 'videos', params, token: d?.nextPageToken || '' } };
+}
+async function rkChans(vids) {
+  const chans = {};
+  for (const ids of chunk([...new Set(vids.map(v => v.snippet.channelId))], 50)) {
+    const d = await yt('channels', { part: 'snippet,statistics', id: ids.join(',') }).catch(() => null);
+    (d?.items || []).forEach(ch => chans[ch.id] = ch);
+  }
+  return chans;
 }
 async function rkVideos(ids, part, extra) {
   const out = [];
@@ -2117,6 +2137,15 @@ async function rkVideos(ids, part, extra) {
   return out;
 }
 const rkDedupe = list => { const seen = new Set(); return list.filter(r => !seen.has(r.id) && seen.add(r.id)); };
+// 쇼츠 = 세로 영상(재생기 높이 > 너비) · 3분 이하 · 그 나라 글자
+const rkShortRows = (vids, chans, region) => rkDedupe(vids
+  .filter(v => v && +(v.player?.embedHeight || 0) > +(v.player?.embedWidth || 0))
+  .map(v => rkRow(v, chans))
+  .filter(r => r.dur <= 180 && scriptOK(r.title + ' ' + r.channel, region))
+  .sort((a, b) => b.views - a.views));
+const rkLiveRows = (vids, chans, region) => rkDedupe(vids.map(v => rkRow(v, chans))
+  .filter(r => r.viewers > 0 && scriptOK(r.title + ' ' + r.channel, region))
+  .sort((a, b) => b.viewers - a.viewers));
 
 async function loadHome(force) {
   const st = $('#rkStatus');
@@ -2138,16 +2167,17 @@ async function loadHome(force) {
     const after48 = new Date(Date.now() - 48 * 36e5).toISOString();
     const liveQ = region === 'KR' ? ['', '라이브'] : region === 'JP' ? ['', 'ライブ'] : [''];
     const shortQ = region === 'KR' ? ['', '쇼츠'] : [''];
-    const [chart, topicSets, liveIds, shortIds, catShortIds] = await Promise.all([
+    const [chart, topicRes, liveRes, shortRes, catShortRes] = await Promise.all([
       chartIndex(region),
       Promise.all(TR_CATS.slice(1).map(([cat]) =>
-        yt('videos', { part: 'snippet,statistics,contentDetails', chart: 'mostPopular', regionCode: region, videoCategoryId: cat, maxResults: 50 })
-          .then(d => d.items || []).catch(() => []))),
-      Promise.all(liveQ.map(q => rkSearchIds({ eventType: 'live', order: 'viewCount', regionCode: region, relevanceLanguage: lang, q }))).then(a => a.flat()),
-      Promise.all(shortQ.map(q => rkSearchIds({ videoDuration: 'short', order: 'viewCount', regionCode: region, relevanceLanguage: lang, publishedAfter: after48, q }))).then(a => a.flat()),
-      Promise.all(SHORT_CATS.map(([cat]) => rkSearchIds({ videoDuration: 'short', order: 'viewCount', regionCode: region, relevanceLanguage: lang,
+        rkChartPage({ part: 'snippet,statistics,contentDetails', chart: 'mostPopular', regionCode: region, videoCategoryId: cat, maxResults: 50 }))),
+      Promise.all(liveQ.map(q => rkSearchPage({ eventType: 'live', order: 'viewCount', regionCode: region, relevanceLanguage: lang, q }))),
+      Promise.all(shortQ.map(q => rkSearchPage({ videoDuration: 'short', order: 'viewCount', regionCode: region, relevanceLanguage: lang, publishedAfter: after48, q }))),
+      Promise.all(SHORT_CATS.map(([cat]) => rkSearchPage({ videoDuration: 'short', order: 'viewCount', regionCode: region, relevanceLanguage: lang,
         publishedAfter: after48, videoCategoryId: cat, q: cat === '20' ? (GAME_Q[region] || '') : '' }))),
     ]);
+    const topicSets = topicRes.map(r => r.items);
+    const liveIds = liveRes.flatMap(r => r.ids), shortIds = shortRes.flatMap(r => r.ids), catShortIds = catShortRes.map(r => r.ids);
     const [liveVids, shortVids] = await Promise.all([
       rkVideos(liveIds, 'snippet,liveStreamingDetails'),
       rkVideos([...shortIds, ...catShortIds.flat()], 'snippet,statistics,contentDetails,player', { maxHeight: 360 }),
@@ -2155,28 +2185,22 @@ async function loadHome(force) {
     if (my !== rkReq) return;
     const allChart = chart.items.filter(v => chart.map.get(v.id)?.cat === '')
       .sort((a, b) => chart.map.get(a.id).rank - chart.map.get(b.id).rank);
-    const chans = {};
-    const need = [...new Set([...allChart, ...liveVids].map(v => v.snippet.channelId))];
-    for (const ids of chunk(need, 50)) {
-      const d = await yt('channels', { part: 'snippet,statistics', id: ids.join(',') }).catch(() => null);
-      (d?.items || []).forEach(ch => chans[ch.id] = ch);
-    }
+    const chans = await rkChans([...allChart, ...liveVids]);
     if (my !== rkReq) return;
-    // 쇼츠 = 세로 영상(재생기 높이 > 너비) · 3분 이하 · 그 나라 글자
     const shortMap = new Map(shortVids.map(v => [v.id, v]));
-    const shortRows = ids => rkDedupe(ids.map(id => shortMap.get(id))
-      .filter(v => v && +(v.player?.embedHeight || 0) > +(v.player?.embedWidth || 0))
-      .map(v => rkRow(v, chans))
-      .filter(r => r.dur <= 180 && scriptOK(r.title + ' ' + r.channel, region))
-      .sort((a, b) => b.views - a.views));
+    const shortRows = ids => rkShortRows(ids.map(id => shortMap.get(id)), chans, region);
     const data = {
       v: RK_VER, at: Date.now(),
       chart: allChart.map(v => rkRow(v, chans)),
-      live: rkDedupe(liveVids.map(v => rkRow(v, chans))
-        .filter(r => r.viewers > 0 && scriptOK(r.title + ' ' + r.channel, region))
-        .sort((a, b) => b.viewers - a.viewers)),
+      live: rkLiveRows(liveVids, chans, region),
       shorts: shortRows(shortIds),
       shortTopics: SHORT_CATS.map(([cat], i) => ({ cat, rows: shortRows(catShortIds[i]) })).filter(t => t.rows.length),
+      // 더보기에서 이어서 불러올 다음 페이지 (검색·카테고리 차트)
+      pages: {
+        live: liveRes.map(r => r.page), shorts: shortRes.map(r => r.page),
+        ...Object.fromEntries(SHORT_CATS.map(([cat], i) => ['stopic:' + cat, [catShortRes[i].page]])),
+        ...Object.fromEntries(TR_CATS.slice(1).map(([cat], i) => ['topic:' + cat, [topicRes[i].page]])),
+      },
       // YouTube 카테고리 차트는 일부가 거의 같은 목록으로 옴(엔터·코미디·애니) → 상위 5개 중 3개 이상 겹치면 뺌
       topics: (() => {
         const seen = new Set();
@@ -2203,28 +2227,103 @@ async function loadHome(force) {
 
 function rkVideoRow(r, i, val, cls) {
   return `<a class="rk-row" href="https://youtu.be/${r.id}" target="_blank" rel="noopener">
-    <span class="rk-n">${i + 1}</span><img class="rk-th" src="${esc(r.thumb)}" loading="lazy" alt="">
+    <span class="rk-n${i >= 99 ? ' w3' : ''}">${i + 1}</span><img class="rk-th" src="${esc(r.thumb)}" loading="lazy" alt="">
     <span class="rk-mid"><span class="rk-name">${esc(r.title)}</span><span class="rk-sub2">${esc(r.channel)}</span></span>
     <span class="rk-v ${cls || ''}">${val}</span></a>`;
 }
 function rkChannelRow(c, i, val, sub, cls) {
   return `<a class="rk-row" href="https://youtube.com/channel/${c.channelId}" target="_blank" rel="noopener">
-    <span class="rk-n">${i + 1}</span><img class="rk-av" src="${esc(c.chThumb || '')}" loading="lazy" alt="">
+    <span class="rk-n${i >= 99 ? ' w3' : ''}">${i + 1}</span><img class="rk-av" src="${esc(c.chThumb || '')}" loading="lazy" alt="">
     <span class="rk-mid"><span class="rk-name">${esc(c.channel)}</span><span class="rk-sub2">${sub}</span></span>
     <span class="rk-v ${cls || ''}">${val}</span></a>`;
 }
-function rkCard(title, hint, rows, rowHtml) {
-  const list = rows.slice(0, 10).map(rowHtml).join('');
-  return `<div class="rkcard">
+const RK_FIRST = 5, RK_STEP = 30;
+let rkLists = {}, rkData = null, rkDataRegion = '';
+function rkCard(key, title, hint, rows, rowHtml) {
+  rkLists[key] = { rows, rowHtml, shown: Math.min(RK_FIRST, rows.length), pages: ((rkData && rkData.pages) || {})[key] || [] };
+  return `<div class="rkcard" data-k="${esc(key)}">
     <div class="rk-h"><span class="rk-t">${title}</span>${hint}</div>
-    <div class="rk-list">${list || `<div class="rk-empty">${T('지금은 데이터가 없어요.', 'No data right now.')}</div>`}</div>
-    ${rows.length > 5 ? `<button class="rk-more">${T('더보기', 'Show more')}</button>` : ''}
+    <div class="rk-list">${rows.length ? rkRowsHtml(key, 0, RK_FIRST) : `<div class="rk-empty">${T('지금은 데이터가 없어요.', 'No data right now.')}</div>`}</div>
+    <div class="rk-foot">${rkFoot(key)}</div>
   </div>`;
 }
+function rkRowsHtml(key, from, to) {
+  const L = rkLists[key];
+  return L.rows.slice(from, to).map((r, i) => L.rowHtml(r, from + i)).join('');
+}
+function rkFoot(key) {
+  const L = rkLists[key];
+  const morePages = L.pages.some(p => p && p.token);
+  return (L.shown < L.rows.length || morePages
+      ? `<button class="rk-more" data-act="more">${T('더보기', 'Show more')}<span class="rk-cnt">${L.shown}/${L.rows.length}${morePages ? '+' : ''}</span></button>` : '')
+    + (L.shown > RK_FIRST ? `<button class="rk-more" data-act="less">${T('접기', 'Show less')}</button>` : '');
+}
+// 받아 둔 게 모자라면 다음 페이지를 이어서 받음 (한 번에 검색 1~2 · 일반 1~3유닛)
+async function rkFetchMore(key, L, want) {
+  const by = key === 'live' ? (a, b) => b.viewers - a.viewers : key.startsWith('topic:') ? null : (a, b) => b.views - a.views;
+  for (let tries = 0; tries < 3 && L.rows.length < want; tries++) {
+    const pages = L.pages.filter(p => p && p.token);
+    if (!pages.length) break;
+    const res = await Promise.all(pages.map(p => yt(p.api, { ...p.params, pageToken: p.token }).catch(e => ({ err: e }))));
+    if (res.every(r => r.err)) throw res[0].err;
+    res.forEach((r, i) => { if (!r.err) pages[i].token = r.nextPageToken || ''; });
+    const ok = res.filter(r => !r.err);
+    let rows;
+    if (key.startsWith('topic:')) rows = ok.flatMap(r => r.items || []).map(v => rkRow(v, {}));
+    else {
+      const ids = ok.flatMap(r => (r.items || []).map(i => i.id?.videoId)).filter(Boolean);
+      if (key === 'live') {
+        const vids = await rkVideos(ids, 'snippet,liveStreamingDetails');
+        rows = rkLiveRows(vids, await rkChans(vids), rkDataRegion);
+      } else rows = rkShortRows(await rkVideos(ids, 'snippet,statistics,contentDetails,player', { maxHeight: 360 }), {}, rkDataRegion);
+    }
+    // 아직 안 보여 준 줄 + 새로 받은 줄을 함께 다시 정렬 (이미 보이는 순위는 그대로)
+    const have = new Set(L.rows.map(r => r.id));
+    const tail = L.rows.splice(L.shown).concat(rows.filter(r => !have.has(r.id) && have.add(r.id)));
+    if (by) tail.sort(by);
+    L.rows.push(...tail);
+  }
+  if (rkData) rkWriteSession(rkDataRegion, rkData);
+}
+$('#view-home').addEventListener('click', async e => {
+  const b = e.target.closest('.rk-more[data-act]');
+  const card = b && b.closest('.rkcard');
+  const key = card && card.dataset.k, L = key && rkLists[key];
+  if (!L) return;
+  const list = card.querySelector('.rk-list'), foot = card.querySelector('.rk-foot');
+  if (b.dataset.act === 'less') {
+    L.shown = Math.min(RK_FIRST, L.rows.length);
+    list.innerHTML = rkRowsHtml(key, 0, L.shown);
+    card.classList.remove('open');
+    foot.innerHTML = rkFoot(key);
+    const top = card.getBoundingClientRect().top;
+    if (top < 0) window.scrollTo({ top: top + scrollY - 12 });
+    return;
+  }
+  const want = L.shown < RK_STEP ? RK_STEP : L.shown + RK_STEP;
+  if (want > L.rows.length && L.pages.some(p => p && p.token)) {
+    b.disabled = true;
+    b.textContent = T('불러오는 중...', 'Loading...');
+    try { await rkFetchMore(key, L, want); }
+    catch (err) {
+      if (rkLists[key] !== L || !card.isConnected) return;
+      b.disabled = false;
+      b.textContent = /quota/i.test(err.message) ? T('오늘 할당량을 다 썼어요', 'Daily quota used up') : T('못 불러왔어요 · 다시 누르기', 'Failed — tap to retry');
+      return;
+    }
+    if (rkLists[key] !== L || !card.isConnected) return;
+  }
+  const from = L.shown;
+  L.shown = Math.min(want, L.rows.length);
+  list.insertAdjacentHTML('beforeend', rkRowsHtml(key, from, L.shown));
+  card.classList.toggle('open', L.shown > RK_FIRST);
+  foot.innerHTML = rkFoot(key);
+});
 const rkHint = t => `<span class="rk-hint">${t}</span>`;
 const subsTxt = n => n ? T('구독자 ' + fmtNum(n), fmtNum(n) + ' subs') : T('구독자 비공개', 'subs hidden');
 
 function renderRanking(d) {
+  rkLists = {}; rkData = d; rkDataRegion = rkRegion;
   const st = $('#rkStatus');
   st.hidden = true;
   const time = new Date(d.at).toLocaleTimeString(EN_UI ? 'en-US' : 'ko-KR', { hour: 'numeric', minute: '2-digit' });
@@ -2238,17 +2337,17 @@ function renderRanking(d) {
   });
   const channels = [...byCh.values()].sort((a, b) => b.views - a.views);
   $('#rkGrid').innerHTML = [
-    rkCard(T('인기 영상', 'Trending videos'), rkHint(T('인기 차트 순', 'chart order')), chart,
+    rkCard('chart', T('인기 영상', 'Trending videos'), rkHint(T('인기 차트 순', 'chart order')), chart,
       (r, i) => rkVideoRow(r, i, fmtNum(r.views))),
-    rkCard(T('급상승 영상', 'Fastest rising'), rkHint(T('시간당 조회', 'views/hour')), [...chart].sort((a, b) => b.vph - a.vph),
+    rkCard('rising', T('급상승 영상', 'Fastest rising'), rkHint(T('시간당 조회', 'views/hour')), [...chart].sort((a, b) => b.vph - a.vph),
       (r, i) => rkVideoRow(r, i, fmtNum(r.vph))),
-    rkCard(T('떡상 영상', 'Breakouts'), rkHint(T('조회수 ÷ 구독자', 'views ÷ subs')), chart.filter(r => r.subs >= 1000 && !/ - Topic$/.test(r.channel)).sort((a, b) => b.ratio - a.ratio),
+    rkCard('breakout', T('떡상 영상', 'Breakouts'), rkHint(T('조회수 ÷ 구독자', 'views ÷ subs')), chart.filter(r => r.subs >= 1000 && !/ - Topic$/.test(r.channel)).sort((a, b) => b.ratio - a.ratio),
       (r, i) => rkVideoRow(r, i, r.ratio.toFixed(1) + '×', 'gold')),
-    rkCard(T('인기 채널', 'Top channels'), rkHint(T('차트 영상 조회수 합', 'total chart views')), channels,
+    rkCard('channels', T('인기 채널', 'Top channels'), rkHint(T('차트 영상 조회수 합', 'total chart views')), channels,
       (c, i) => rkChannelRow(c, i, fmtNum(c.views), subsTxt(c.subs) + (c.n > 1 ? T(` · 차트 ${c.n}개`, ` · ${c.n} on chart`) : ''))),
-    rkCard(T('쇼츠 인기', 'Top Shorts'), rkHint(T('최근 48시간', 'last 48 hours')), d.shorts,
+    rkCard('shorts', T('쇼츠 인기', 'Top Shorts'), rkHint(T('최근 48시간', 'last 48 hours')), d.shorts,
       (r, i) => rkVideoRow(r, i, fmtNum(r.views))),
-    rkCard(T('라이브 시청자', 'Live viewers'), rkHint(T('지금 시청 중', 'watching now')), d.live,
+    rkCard('live', T('라이브 시청자', 'Live viewers'), rkHint(T('지금 시청 중', 'watching now')), d.live,
       (r, i) => rkChannelRow(r, i, T(fmtNum(r.viewers) + '명', fmtNum(r.viewers)), esc(r.title), 'live')),
   ].join('');
 
@@ -2267,7 +2366,7 @@ function renderRanking(d) {
   $('#rkTopicsHead').hidden = !d.topics.length;
   $('#rkTopics').innerHTML = d.topics.map(t => {
     const name = (TR_CATS.find(c => c[0] === t.cat) || [])[EN_UI ? 2 : 1] || t.cat;
-    return rkCard(esc(name), `<button class="rk-hint" data-topic="${t.cat}">${T('전체 보기 →', 'See all →')}</button>`, t.rows,
+    return rkCard('topic:' + t.cat, esc(name), `<button class="rk-hint" data-topic="${t.cat}">${T('전체 보기 →', 'See all →')}</button>`, t.rows,
       (r, i) => rkVideoRow(r, i, fmtNum(r.views)));
   }).join('');
   $('#rkTopics').querySelectorAll('[data-topic]').forEach(b => b.addEventListener('click', () => {
@@ -2281,14 +2380,9 @@ function renderRanking(d) {
   $('#rkShortsHead').hidden = !shortTopics.length;
   $('#rkShortTopics').innerHTML = shortTopics.map(t => {
     const c = SHORT_CATS.find(x => x[0] === t.cat) || [];
-    return rkCard(esc((EN_UI ? c[2] : c[1]) || t.cat), rkHint(T('최근 48시간', 'last 48 hours')), t.rows,
+    return rkCard('stopic:' + t.cat, esc((EN_UI ? c[2] : c[1]) || t.cat), rkHint(T('최근 48시간', 'last 48 hours')), t.rows,
       (r, i) => rkVideoRow(r, i, fmtNum(r.views)));
   }).join('');
-  document.querySelectorAll('#view-home .rk-more').forEach(b => b.addEventListener('click', () => {
-    const card = b.closest('.rkcard');
-    card.classList.toggle('open');
-    b.textContent = card.classList.contains('open') ? T('접기', 'Show less') : T('더보기', 'Show more');
-  }));
   renderSocial();
 }
 
@@ -2319,7 +2413,8 @@ $('#rkRefresh').addEventListener('click', () => loadHome(true));
 // 홈을 보고 있으면 10분마다 자동 갱신
 setInterval(() => {
   const c = rkCache[rkRegion];
-  if ($('#view-home').classList.contains('active') && !document.hidden && c && Date.now() - c.at >= 10 * 60e3) loadHome(true);
+  const browsing = Object.values(rkLists).some(L => L.shown > RK_FIRST);
+  if ($('#view-home').classList.contains('active') && !document.hidden && !browsing && c && Date.now() - c.at >= 10 * 60e3) loadHome(true);
 }, 60e3);
 
 // ═══════════ API 키 패널 접기 ═══════════

@@ -364,6 +364,8 @@
   </div>
   <div class="rksec" id="rkTopicsHead" hidden><h3>주제별 차트</h3><span class="rk-hint">카테고리별 인기 영상</span></div>
   <div class="rkgrid" id="rkTopics"></div>
+  <div class="rksec" id="rkShortsHead" hidden><h3>주제별 쇼츠</h3><span class="rk-hint">카테고리별 인기 쇼츠 · 최근 48시간</span></div>
+  <div class="rkgrid" id="rkShortTopics"></div>
   <div class="rksec"><h3>다른 플랫폼</h3></div>
   <div class="rkgrid" id="rkSocial"></div>
 </div>
@@ -2072,7 +2074,9 @@ $('#igModeSeg').querySelectorAll('[data-igm]').forEach(b => b.addEventListener('
 
 // ═══════════ 홈: 유튜브 순위 (Playboard식) ═══════════
 // 전부 YouTube 공식 데이터를 실시간으로 조회 — 메모리·탭 세션에 10분만 보관하고 저장하지 않음 (정책 III.E.4)
-// 한 번 불러올 때: 검색 할당량 2~4 (라이브·쇼츠) + 일반 ~25유닛
+// 한 번 불러올 때: 검색 할당량 8~10 (라이브·쇼츠·주제별 쇼츠 6) + 일반 ~30유닛
+const SHORT_CATS = [['20', '게임', 'Gaming'], ['24', '엔터', 'Entertainment'], ['23', '코미디', 'Comedy'], ['22', '일상', 'People & Blogs'], ['15', '동물', 'Pets & Animals'], ['26', '노하우', 'How-to']];
+const GAME_Q = { KR: '게임', JP: 'ゲーム' };
 const rkCache = {};
 let rkReq = 0;
 let rkRegion = localStorage.getItem('yt_rk_region') || (EN_UI ? 'US' : 'KR');
@@ -2132,17 +2136,19 @@ async function loadHome(force) {
     const after48 = new Date(Date.now() - 48 * 36e5).toISOString();
     const liveQ = region === 'KR' ? ['', '라이브'] : region === 'JP' ? ['', 'ライブ'] : [''];
     const shortQ = region === 'KR' ? ['', '쇼츠'] : [''];
-    const [chart, topicSets, liveIds, shortIds] = await Promise.all([
+    const [chart, topicSets, liveIds, shortIds, catShortIds] = await Promise.all([
       chartIndex(region),
       Promise.all(TR_CATS.slice(1).map(([cat]) =>
         yt('videos', { part: 'snippet,statistics,contentDetails', chart: 'mostPopular', regionCode: region, videoCategoryId: cat, maxResults: 50 })
           .then(d => d.items || []).catch(() => []))),
       Promise.all(liveQ.map(q => rkSearchIds({ eventType: 'live', order: 'viewCount', regionCode: region, relevanceLanguage: lang, q }))).then(a => a.flat()),
       Promise.all(shortQ.map(q => rkSearchIds({ videoDuration: 'short', order: 'viewCount', regionCode: region, relevanceLanguage: lang, publishedAfter: after48, q }))).then(a => a.flat()),
+      Promise.all(SHORT_CATS.map(([cat]) => rkSearchIds({ videoDuration: 'short', order: 'viewCount', regionCode: region, relevanceLanguage: lang,
+        publishedAfter: after48, videoCategoryId: cat, q: cat === '20' ? (GAME_Q[region] || '') : '' }))),
     ]);
     const [liveVids, shortVids] = await Promise.all([
       rkVideos(liveIds, 'snippet,liveStreamingDetails'),
-      rkVideos(shortIds, 'snippet,statistics,contentDetails,player', { maxHeight: 360 }),
+      rkVideos([...shortIds, ...catShortIds.flat()], 'snippet,statistics,contentDetails,player', { maxHeight: 360 }),
     ]);
     if (my !== rkReq) return;
     const allChart = chart.items.filter(v => chart.map.get(v.id)?.cat === '')
@@ -2154,17 +2160,21 @@ async function loadHome(force) {
       (d?.items || []).forEach(ch => chans[ch.id] = ch);
     }
     if (my !== rkReq) return;
+    // 쇼츠 = 세로 영상(재생기 높이 > 너비) · 3분 이하 · 그 나라 글자
+    const shortMap = new Map(shortVids.map(v => [v.id, v]));
+    const shortRows = ids => rkDedupe(ids.map(id => shortMap.get(id))
+      .filter(v => v && +(v.player?.embedHeight || 0) > +(v.player?.embedWidth || 0))
+      .map(v => rkRow(v, chans))
+      .filter(r => r.dur <= 180 && scriptOK(r.title + ' ' + r.channel, region))
+      .sort((a, b) => b.views - a.views));
     const data = {
       at: Date.now(),
       chart: allChart.map(v => rkRow(v, chans)),
       live: rkDedupe(liveVids.map(v => rkRow(v, chans))
         .filter(r => r.viewers > 0 && scriptOK(r.title + ' ' + r.channel, region))
         .sort((a, b) => b.viewers - a.viewers)),
-      // 쇼츠 = 세로 영상(재생기 높이 > 너비) · 3분 이하
-      shorts: rkDedupe(shortVids.filter(v => +(v.player?.embedHeight || 0) > +(v.player?.embedWidth || 0))
-        .map(v => rkRow(v, chans))
-        .filter(r => r.dur <= 180 && scriptOK(r.title + ' ' + r.channel, region))
-        .sort((a, b) => b.views - a.views)),
+      shorts: shortRows(shortIds),
+      shortTopics: SHORT_CATS.map(([cat], i) => ({ cat, rows: shortRows(catShortIds[i]) })).filter(t => t.rows.length),
       // YouTube 카테고리 차트는 일부가 거의 같은 목록으로 옴(엔터·코미디·애니) → 상위 5개 중 3개 이상 겹치면 뺌
       topics: (() => {
         const seen = new Set();
@@ -2265,6 +2275,13 @@ function renderRanking(d) {
     renderTrCats();
     switchTab('trend');
   }));
+  const shortTopics = d.shortTopics || [];
+  $('#rkShortsHead').hidden = !shortTopics.length;
+  $('#rkShortTopics').innerHTML = shortTopics.map(t => {
+    const c = SHORT_CATS.find(x => x[0] === t.cat) || [];
+    return rkCard(esc((EN_UI ? c[2] : c[1]) || t.cat), rkHint(T('최근 48시간', 'last 48 hours')), t.rows,
+      (r, i) => rkVideoRow(r, i, fmtNum(r.views)));
+  }).join('');
   document.querySelectorAll('#view-home .rk-more').forEach(b => b.addEventListener('click', () => {
     const card = b.closest('.rkcard');
     card.classList.toggle('open');
@@ -2496,6 +2513,7 @@ const USER_KEY = 'yt_user';
     '25개': '25 results', '50개': '50 results', '100개': '100 results',
     '결과': 'Results', '갤러리 보기': 'Gallery view', '목록 보기': 'List view',
     '인스타': 'Instagram', '연결됨': 'Connected', '연결 해제': 'Disconnect', '해시태그': 'Hashtag', '크리에이터': 'Creator', '보기': 'View',
+    '주제별 쇼츠': 'Shorts by topic', '카테고리별 인기 쇼츠 · 최근 48시간': 'Top Shorts by category · last 48 hours',
     '유튜브 순위': 'YouTube Rankings', 'YouTube 공식 인기 차트와 라이브를 실시간으로 모았어요': "Live rankings from YouTube's official trending charts and live streams",
     '실시간 인기 라이브': 'Top live streams now', '주제별 차트': 'Topic charts', '카테고리별 인기 영상': 'Top videos by category', '다른 플랫폼': 'Other platforms',
     '장르·키워드로 떡상 영상 찾기 — 예: 마인크래프트 미니게임': 'Find breakout videos by genre or keyword — e.g. minecraft minigame',

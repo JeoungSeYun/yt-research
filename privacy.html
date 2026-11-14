@@ -18,35 +18,36 @@
 </head>
 <body>
 <h1>개인정보처리방침</h1>
-<div class="sub">떡상 리서치 (Tteoksang Research) · 시행일: 2026년 7월 12일</div>
+<div class="sub">떡상 리서치 (Tteoksang Research) · 시행일: 2026년 7월 12일 · 개정일: 2026년 11월 14일</div>
 
 <p>떡상 리서치(이하 "본 서비스")는 유튜브 크리에이터가 자신의 장르에서 성과가 좋은 영상과 채널을 검색·분석하도록 돕는 웹 기반 도구입니다. 본 서비스는 이용자의 개인정보를 최소한으로만 처리하며, 아래와 같이 그 방침을 안내합니다.</p>
 
 <h2>1. 수집·저장하는 정보</h2>
-<p>본 서비스는 <b>백엔드 서버가 없는 정적 웹사이트</b>로, 모든 처리는 이용자의 브라우저 안에서만 이루어집니다. 본 서비스 운영자는 어떠한 개인정보도 서버로 전송받거나 저장하지 않습니다.</p>
+<p>본 서비스는 <b>별도의 백엔드 서버 없이 이용자의 브라우저에서 동작하는 웹사이트</b>입니다. 대부분의 정보는 이용자 브라우저에만 저장되며, <b>이용자가 Google 계정으로 로그인한 경우에 한해</b> 아래 '로그인 시 클라우드 동기화' 항목의 데이터가 Google Firebase에 저장됩니다.</p>
 <ul>
-  <li><b>YouTube Data API 키</b> — 이용자가 직접 입력한 키는 이용자 브라우저의 localStorage에만 저장되며, 외부로 전송되지 않습니다. (직접 Google API 호출에만 사용)</li>
-  <li><b>Google 로그인 정보</b> — Google 계정으로 로그인 시 이름·이메일·프로필 사진을 받아 화면에 표시하고 브라우저에만 저장합니다. 외부 서버로 전송하거나 제3자에게 제공하지 않습니다.</li>
-  <li><b>Instagram 액세스 토큰</b> — 이용자가 자기 Instagram 프로페셔널 계정을 연결할 때 입력한 토큰은 이용자 브라우저의 localStorage에만 저장되며, Instagram(Meta) Graph API 호출에만 사용됩니다. Instagram에서 조회한 게시물·통계는 화면 표시용으로만 쓰고 저장하지 않습니다.</li>
-  <li><b>이용자 저장 데이터</b> — 저장한 영상, 추적 채널, 검색 기록 등은 이용자 브라우저에만 저장되며 언제든 삭제할 수 있습니다.</li>
+  <li><b>YouTube Data API 키</b> — 이용자가 직접 입력한 키는 이용자 브라우저의 localStorage에만 저장되며, 클라우드 동기화 대상이 아닙니다. Google API를 직접 호출하는 데에만 사용합니다.</li>
+  <li><b>Instagram 액세스 토큰</b> — 이용자가 자기 Instagram 프로페셔널 계정을 연결할 때 입력한 토큰은 이용자 브라우저의 localStorage에만 저장되며, Instagram(Meta) Graph API 호출에만 사용됩니다. Instagram에서 조회한 게시물·통계는 화면 표시용으로만 쓰고 저장하지 않으며, 토큰은 클라우드 동기화 대상이 아닙니다.</li>
+  <li><b>이용자 저장 데이터</b> — 저장한 영상(영상 ID·제목·채널명·메모만 저장하며 조회수 등 통계는 저장하지 않음), 추적 채널, 최근 검색어, 추적 채널의 구독자 수 기록(최근 30일)은 이용자 브라우저에 저장됩니다.</li>
+  <li><b>Google 로그인 정보</b> — Google 계정으로 로그인하면 Google Firebase Authentication이 로그인을 처리하며, 본 서비스는 이름·이메일·프로필 사진을 받아 화면에 표시합니다. 이 계정 정보는 Firebase Authentication(Google 제공)에 로그인 계정으로 등록되고, 이용자 브라우저에도 저장됩니다.</li>
+  <li><b>로그인 시 클라우드 동기화</b> — 로그인한 이용자의 '이용자 저장 데이터'는 다른 기기에서도 쓸 수 있도록 Google Firebase(Cloud Firestore, 서울 리전)의 이용자 본인 영역에 저장됩니다. 보안 규칙에 따라 로그인한 본인만 읽고 쓸 수 있으며, 운영자는 이를 동기화 외의 목적으로 이용하거나 제3자에게 제공·판매하지 않습니다.</li>
 </ul>
 
 <h2>2. YouTube API 서비스 이용</h2>
 <p>본 서비스는 <b>YouTube API Services</b>를 사용합니다. 이용자는 본 서비스를 사용함으로써 <a href="https://www.youtube.com/t/terms" target="_blank">YouTube 서비스 약관</a>에 동의하게 됩니다. 또한 Google의 개인정보 처리에 관해서는 <a href="https://policies.google.com/privacy" target="_blank">Google 개인정보처리방침</a>이 적용됩니다.</p>
-<p>본 서비스는 YouTube에서 조회한 공개 데이터(영상·채널의 공개 통계)를 이용자에게 표시하는 용도로만 사용하며, 이를 별도로 저장하거나 제3자에게 판매·공유하지 않습니다.</p>
+<p>본 서비스는 YouTube에서 조회한 공개 데이터(영상·채널의 공개 통계)를 이용자에게 표시하는 용도로만 사용하며, 제3자에게 판매·공유하지 않습니다. 화면을 다시 그리기 위해 조회 결과를 이용자 브라우저에 최대 10분간 임시로 보관하고, 추적 채널의 구독자 수 기록은 앱을 열 때 30일이 지난 기록을 지웁니다(로그인한 경우 클라우드 사본도 이때 함께 갱신됩니다).</p>
 
 <h2>3. 쿠키 및 추적</h2>
-<p>본 서비스는 광고·분석용 쿠키나 추적 기술을 사용하지 않습니다.</p>
+<p>본 서비스는 광고·분석용 쿠키나 추적 기술을 사용하지 않습니다. 로그인 상태를 유지하기 위해 Firebase가 브라우저 저장소를 사용합니다.</p>
 
 <h2>4. 데이터 삭제</h2>
-<p>모든 데이터는 이용자 브라우저에 저장되므로, 브라우저의 사이트 데이터 삭제 또는 서비스 내 로그아웃·삭제 기능을 통해 언제든지 완전히 제거할 수 있습니다.</p>
+<p>브라우저에 저장된 데이터는 브라우저의 사이트 데이터 삭제 또는 서비스 안의 삭제 기능으로 언제든지 지울 수 있습니다. 로그아웃해도 클라우드에 동기화된 데이터는 남아 있으며, 삭제를 원하시면 아래 이메일로 요청해 주세요. 요청을 받으면 해당 계정의 클라우드 데이터를 삭제합니다.</p>
 
 <h2>5. 문의</h2>
 <p>개인정보 관련 문의: <a href="mailto:jeongseyun02@gmail.com">jeongseyun02@gmail.com</a></p>
 
 <footer>
 본 방침은 필요 시 개정될 수 있으며, 변경 시 본 페이지에 게시합니다.<br>
-<span class="en">This service uses YouTube API Services. By using it you agree to the YouTube Terms of Service. Google's Privacy Policy also applies. An Instagram access token you enter is kept only in your browser and used only to call the Instagram Graph API; Instagram data is displayed, not stored.</span>
+<span class="en">This service uses YouTube API Services. By using it you agree to the YouTube Terms of Service. Google's Privacy Policy also applies. An Instagram access token you enter is kept only in your browser and used only to call the Instagram Graph API; Instagram data is displayed, not stored. If you sign in with Google, your saved videos (no statistics), tracked channels, recent searches and tracked-channel subscriber history (last 30 days) are synced to Google Firebase (Cloud Firestore, Seoul) under your account, readable and writable only by you; signing out does not delete them — email us to have them deleted.</span>
 </footer>
 </body>
 </html>

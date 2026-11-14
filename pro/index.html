@@ -2084,8 +2084,10 @@ if (![...$('#rkRegion').options].some(o => o.value === rkRegion)) rkRegion = 'KR
 $('#rkRegion').value = rkRegion;
 const scriptOK = (text, region) => NATIVE_SCRIPT[region] ? NATIVE_SCRIPT[region].test(text) : !NON_LATIN.test(text);
 
+// 홈 데이터 모양이 바뀌면 숫자를 올림 → 업데이트 전에 저장된 캐시는 버리고 새로 불러옴
+const RK_VER = 2;
 function rkReadSession(region) {
-  try { const c = JSON.parse(sessionStorage.getItem('yt_rk_' + region)); return c && Date.now() - c.at < 10 * 60e3 ? c : null; } catch { return null; }
+  try { const c = JSON.parse(sessionStorage.getItem('yt_rk_' + region)); return c && c.v === RK_VER && Date.now() - c.at < 10 * 60e3 ? c : null; } catch { return null; }
 }
 function rkWriteSession(region, data) { try { sessionStorage.setItem('yt_rk_' + region, JSON.stringify(data)); } catch {} }
 
@@ -2168,7 +2170,7 @@ async function loadHome(force) {
       .filter(r => r.dur <= 180 && scriptOK(r.title + ' ' + r.channel, region))
       .sort((a, b) => b.views - a.views));
     const data = {
-      at: Date.now(),
+      v: RK_VER, at: Date.now(),
       chart: allChart.map(v => rkRow(v, chans)),
       live: rkDedupe(liveVids.map(v => rkRow(v, chans))
         .filter(r => r.viewers > 0 && scriptOK(r.title + ' ' + r.channel, region))

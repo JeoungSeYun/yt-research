@@ -87,6 +87,7 @@ button{cursor:pointer}
 .fov input{width:138px;accent-color:var(--gold)}
 .fov output{font:600 12.5px/1 var(--f-data);min-width:3em;text-align:right;font-variant-numeric:tabular-nums}
 .fine{margin:0;font-size:11px;line-height:1.55;color:var(--faint)}
+.snd{display:flex;flex-direction:column;gap:9px;padding-top:12px;border-top:1px solid var(--edge)}
 
 /* 아래 안내 바 */
 .dock{position:absolute;left:50%;bottom:var(--sb);z-index:6;transform:translateX(-50%);display:flex;align-items:center;gap:16px;padding:7px 7px 7px 20px;border-radius:999px;background:var(--glass);border:1px solid var(--edge);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);box-shadow:0 20px 44px rgb(0 0 0 / .5);max-width:calc(100vw - 32px)}
@@ -226,7 +227,11 @@ button{cursor:pointer}
           </div>
         </div>
         <p class="msg" id="trMsg" hidden aria-live="polite"></p>
-        <p class="fine">영상 파일은 이 브라우저에서만 재생되고 어디에도 올라가지 않아요.</p>
+        <div class="snd" role="group" aria-label="소리">
+          <label class="prow" for="vol"><span class="plab">소리 크기</span><span class="fov"><input type="range" id="vol" min="0" max="100" step="1" value="80"><output id="volOut" for="vol">80</output></span></label>
+          <div class="prow"><span class="plab">입체음</span><button type="button" class="tog on" id="tSpatial" aria-pressed="true" title="고른 좌석에서 스크린 뒤 왼쪽·오른쪽 스피커가 들리는 방향과 거리대로">좌석 위치 소리</button></div>
+        </div>
+        <p class="fine">영상 파일은 이 브라우저에서만 재생되고 어디에도 올라가지 않아요. 좌석 위치 소리는 영상 파일만 돼요(유튜브는 소리 크기만). 이어폰으로 들으면 앞자리·옆자리 차이가 잘 느껴져요.</p>
       </div>
       <div class="pop" id="opts" hidden role="dialog" aria-label="보기 설정">
         <div class="prow"><span class="plab">화면비</span>
@@ -387,6 +392,8 @@ button{cursor:pointer}
     s.grade = gradeOf(s.score);
     s.cgv = s.r >= 6 && s.r <= 9 && s.n >= 16 && s.n <= 30;
     s.aisle = isAisleSide(s);
+    // 팔걸이: 옆에 바로 의자가 있으면 공용(컵홀더는 자리마다 하나씩), 없으면 그쪽은 혼자 씀
+    s.armOwn = (s.c > 0 && grid[s.r][s.c - 1] ? 0 : 1) + (s.c < NCELL - 1 && grid[s.r][s.c + 1] ? 0 : 1);
   });
 
   /* ---------- 색 ---------- */
@@ -430,7 +437,7 @@ button{cursor:pointer}
   const handlers = {};
   const on = (name, fn) => { (handlers[name] = handlers[name] || []).push(fn); };
   const emit = (name, ...args) => (handlers[name] || []).forEach((fn) => fn(...args));
-  const state = { level: 'over', sec: null, sel: null, prev: null, heat: true, ratio: 1.43, content: 'film', people: true, subs: false, lights: false, hfov: 80, initSeat: null };
+  const state = { level: 'over', sec: null, sel: null, prev: null, heat: true, ratio: 1.43, content: 'film', people: true, subs: false, lights: false, hfov: 80, volume: 0.8, spatial: true, initSeat: null };
   const coarse = matchMedia('(pointer: coarse)').matches;
 
   /* ---------- 말풍선 (3D 쪽에서 부름) ---------- */
@@ -491,7 +498,10 @@ button{cursor:pointer}
     if (m.a >= 24) out.push(`화면을 ${r0(m.a)}° 비스듬히 봐서 먼 쪽 끝이 ${r0(m.skew)}% 작아 보여요.`);
     else if (m.a >= 12) out.push('살짝 옆에서 보지만 크게 거슬리지 않아요.');
     if (s.cgv) out.push('CGV가 추천한 구역(G~J열 가운데)이에요.');
-    if (s.aisle) out.push('바로 옆이 통로라 드나들기 편해요.');
+    if (s.aisle) out.push('바로 옆이 통로라 드나들기 편하고, 그쪽 팔걸이는 혼자 써요.');
+    else if (s.armOwn === 2) out.push('양옆이 비어 있어 팔걸이 둘 다 혼자 써요.');
+    else if (s.armOwn === 1) out.push('한쪽 옆이 비어 있어 그쪽 팔걸이는 혼자 써요.');
+    else out.push('팔걸이는 양쪽 다 옆 사람과 같이 쓰지만, 컵홀더는 자리마다 하나씩 있어요.');
     if (s.r === 0) out.push('앞에 아무도 없어서 앞사람 머리가 걸리지 않아요.');
     if (s.r === 15) out.push('맨 뒷줄이라 뒤에서 의자를 찰 사람이 없어요.');
     return out.slice(0, 4);
@@ -768,6 +778,12 @@ button{cursor:pointer}
   toggle('tPeople', 'people');
   toggle('tSubs', 'subs');
   toggle('tLights', 'lights');
+  toggle('tSpatial', 'spatial');
+  const volEl = $('vol');
+  volEl.addEventListener('input', () => {
+    state.volume = Number(volEl.value) / 100; $('volOut').textContent = volEl.value;
+    emit('volume', state.volume);
+  });
   const fov = $('fov');
   function setHfov(v, fromUI) {
     v = Math.round(Math.max(50, Math.min(110, v)));
@@ -1243,8 +1259,8 @@ const WALKWAY = 1.5;
 }
 
 // 통로 계단: 줄마다 좌석표에서 비어 있는 칸(통로 칸 + 붙어서 비는 자리)만큼 넓게 + 중간 단 + 금속 모서리 + 빨간 계단 불빛
-// (F열부터는 15·30·43번이 비어 통로가 2칸으로 넓어지고, A~H열 양 끝은 벽까지 비어 있다)
-const stepLights = [], noseList = [], aisleRuns = [];   // aisleRuns: [r, 시작 칸, 끝 칸, s0, s1]
+// (F열부터는 15·30·43번이 비어 통로가 2칸, 벽에 닿는 옆 통로는 벽까지 계단 — 실제 사진처럼)
+const stepLights = [], noseList = [], ledList = [], aisleRuns = [];   // aisleRuns: [r, 시작 칸, 끝 칸, s0, s1]
 let noseMesh, stepLightMesh, stepLightMat;
 {
   const seen = new Set();
@@ -1256,28 +1272,35 @@ let noseMesh, stepLightMesh, stepLightMat;
       const key = r + ':' + ca + ':' + cb;
       if (seen.has(key)) continue;
       seen.add(key);
-      aisleRuns.push([r, ca, cb, A.cellX[ca] - A.cellW[ca] / 2, A.cellX[cb] + A.cellW[cb] / 2]);
+      const R = arcR(r), wallS = R * Math.asin(Math.min(1, (W - 0.06) / R));
+      const s0 = ca === 0 ? -wallS : A.cellX[ca] - A.cellW[ca] / 2;
+      const s1 = cb === A.NCELL - 1 ? wallS : A.cellX[cb] + A.cellW[cb] / 2;
+      aisleRuns.push([r, ca, cb, s0, s1]);
     }
   }
   const stepGeos = [], noseGeos = [];
   for (const [r, , , s0, s1] of aisleRuns) {
-    const sa = (s0 + s1) / 2, wa = s1 - s0;
-    const addEdge = (Redge, h) => {
-      const e = onArc(Redge, sa);
-      noseGeos.push(boxAt(wa - 0.08, 0.02, 0.05, e.x + Math.sin(e.th) * 0.02, h + 0.006, e.z + Math.cos(e.th) * 0.02, e.th));
-      noseList.push([e.x, h, e.z, e.th, wa - 0.05]);
-      for (const sg of [-1, 1]) {
-        const off = sg * (wa / 2 - 0.16);
-        stepLights.push([e.x + Math.cos(e.th) * off - Math.sin(e.th) * 0.012, h - 0.06, e.z - Math.sin(e.th) * off - Math.cos(e.th) * 0.012, e.th]);
-      }
-    };
     const R = arcR(r), fy = A.floorY(r);
-    if (r > 0) addEdge(R - 0.6, fy);
-    if (r < 15) {
-      const mid = fy + (A.floorY(r + 1) - fy) / 2;
-      const m = onArc(R + 0.295, sa);
-      stepGeos.push(boxAt(wa - 0.02, mid - fy + 0.05, 0.59, m.x, (mid + fy - 0.05) / 2, m.z, m.th));
-      addEdge(R, mid);
+    const edges = [];
+    if (r > 0) edges.push([R - 0.6, fy]);
+    const mid = r < 15 ? fy + (A.floorY(r + 1) - fy) / 2 : fy;
+    if (r < 15) edges.push([R, mid]);
+    // 넓은 계단은 1.2 m 조각으로 나눠 둥근 줄을 따라가게
+    const nseg = Math.max(1, Math.ceil((s1 - s0) / 1.2));
+    for (let k = 0; k < nseg; k++) {
+      const a = s0 + (s1 - s0) * k / nseg, b = s0 + (s1 - s0) * (k + 1) / nseg, sm = (a + b) / 2, w = b - a;
+      if (r < 15) { const m = onArc(R + 0.295, sm); stepGeos.push(boxAt(w + 0.012, mid - fy + 0.05, 0.59, m.x, (mid + fy - 0.05) / 2, m.z, m.th)); }
+      for (const [Re, h] of edges) {
+        const e = onArc(Re, sm);
+        noseGeos.push(boxAt(w - 0.01, 0.02, 0.05, e.x + Math.sin(e.th) * 0.02, h + 0.006, e.z + Math.cos(e.th) * 0.02, e.th));
+        noseList.push([e.x, h, e.z, e.th, w + 0.004]);
+      }
+    }
+    // 빨간 LED는 계단 양 끝에만
+    for (const [Re, h] of edges) for (const sEnd of [s0 + 0.14, s1 - 0.14]) {
+      const p = onArc(Re, sEnd);
+      ledList.push([p.x, h, p.z, p.th]);
+      stepLights.push([p.x - Math.sin(p.th) * 0.012, h - 0.06, p.z - Math.cos(p.th) * 0.012, p.th]);
     }
   }
   stepMesh = new THREE.Mesh(merge(stepGeos), M.carpet); room.add(stepMesh);
@@ -1311,7 +1334,7 @@ const DOOR_UP_Z = 4.7, DOOR_LOW_Z = 2.5;
   };
   const y0 = A.floorY(0), RW = arcR(0) - 0.6 - WALKWAY;
   const edgeZ = (x) => Math.max(-ARC + Math.sqrt(Math.max(RW * RW - x * x, 0)), FRONT_MIN_Z);
-  const RAMP_W = 1.3, X0 = 1.6, X1 = 14.3;
+  const RAMP_W = 1.3, X0 = 8.0, X1 = 14.3;
   const front = [];
   for (let x = -X1; x <= X1 + 0.01; x += 0.4) front.push(new THREE.Vector3(x, y0, edgeZ(x) + 0.05));
   balustrade(front);
@@ -1527,22 +1550,32 @@ A.seats.forEach((s, i) => {
 fabric.computeBoundingSphere(); shell.computeBoundingSphere(); people.computeBoundingSphere();
 scene.add(fabric, shell, people);
 fabric.castShadow = shell.castShadow = true; fabric.receiveShadow = shell.receiveShadow = true;
-let armsMesh;
+// 팔걸이: 의자 사이 = 공용(컵홀더 2개), 줄 끝(통로·빈자리 쪽) = 1개 (실제 사진 기준)
+let armsMesh, armsInnerMesh;
 {
-  const xs = [];
+  const ends = [], inner = [];
   for (let r = 0; r < 16; r++) {
     let run = [];
-    const flush = () => { if (!run.length) return; xs.push([A.cellX[run[0]] - G.CELL / 2, r]); run.forEach((c) => xs.push([A.cellX[c] + G.CELL / 2, r])); run = []; };
+    const flush = () => {
+      if (!run.length) return;
+      ends.push([A.cellX[run[0]] - G.CELL / 2, r]);
+      run.forEach((c, k) => (k === run.length - 1 ? ends : inner).push([A.cellX[c] + G.CELL / 2, r]));
+      run = [];
+    };
     for (let c = 0; c < A.NCELL; c++) {
       if (A.grid[r][c]) { if (run.length && run[run.length - 1] !== c - 1) flush(); run.push(c); } else flush();
     }
     flush();
   }
-  const arms = new THREE.InstancedMesh(SG.arm, M.arm, xs.length);
-  xs.forEach(([s, r], i) => { const p = onArc(arcR(r), s); o3.position.set(p.x, A.floorY(r), p.z); o3.rotation.set(0, p.th, 0); o3.scale.set(1, 1, 1); o3.updateMatrix(); arms.setMatrixAt(i, o3.matrix); });
-  arms.castShadow = arms.receiveShadow = true;
-  scene.add(arms);
-  armsMesh = arms;
+  const mk = (list) => {
+    const im = new THREE.InstancedMesh(SG.arm, M.arm, list.length);
+    list.forEach(([s, r], i) => { const p = onArc(arcR(r), s); o3.position.set(p.x, A.floorY(r), p.z); o3.rotation.set(0, p.th, 0); o3.scale.set(1, 1, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); });
+    im.castShadow = im.receiveShadow = true;
+    scene.add(im);
+    return im;
+  };
+  armsMesh = mk(ends);
+  armsInnerMesh = mk(inner);
 }
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 // 고르기용 보이지 않는 상자 (장면에 넣지 않고 광선만 쏨)
@@ -1898,6 +1931,8 @@ function fileStart(file) {
   stopMedia(true);
   med.kind = 'file';
   vidURL = URL.createObjectURL(file);
+  if (sndInit()) { sndWire(); sndWake(); }
+  sndVol();
   vidEl.src = vidURL; vidEl.muted = false;
   const p = vidEl.play();
   // 소리 있는 자동 재생이 막히면 소리 끄고 재생 (소리 켜기 버튼으로 다시 켬)
@@ -1906,12 +1941,12 @@ function fileStart(file) {
 vidEl.addEventListener('loadedmetadata', () => { if (vidEl.videoWidth && vidEl.videoHeight) med.aspect = vidEl.videoWidth / vidEl.videoHeight; });
 vidEl.addEventListener('play', () => { if (med.kind === 'file') A.mediaStatus({ playing: true }); });
 vidEl.addEventListener('pause', () => { if (med.kind === 'file') A.mediaStatus({ playing: false }); });
-vidEl.addEventListener('volumechange', () => { if (med.kind === 'file') A.mediaStatus({ muted: vidEl.muted }); });
+vidEl.addEventListener('volumechange', () => { if (snd.ctx) sndVol(); if (med.kind === 'file') A.mediaStatus({ muted: vidEl.muted }); });
 vidEl.addEventListener('error', () => { if (med.kind === 'file' && vidURL) { stopMedia(true); A.mediaFail('file'); } });
 function ytStart(id) {
   stopMedia(true);
   med.kind = 'yt'; med.aspect = 16 / 9;
-  Object.assign(yt, { id, alive: false, state: -1, muted: false, title: '' });
+  Object.assign(yt, { id, alive: false, state: -1, muted: false, title: '', volSet: false });
   const f = document.createElement('iframe');
   f.src = `${YT_ORIGIN}/embed/${id}?autoplay=1&controls=0&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&enablejsapi=1&loop=1&playlist=${id}&origin=${encodeURIComponent(location.origin)}`;
   f.width = String(YT_W); f.height = String(YT_H); f.title = '유튜브 예고편';
@@ -1937,6 +1972,7 @@ function ytStart(id) {
 function ytState(s) {
   if (s === yt.state) return;
   yt.state = s;
+  if (s === 1 && !yt.volSet) { yt.volSet = true; sndVol(); }
   if (s === 1 || s === 2) A.mediaStatus({ playing: s === 1 });
 }
 window.addEventListener('message', (e) => {
@@ -1944,7 +1980,7 @@ window.addEventListener('message', (e) => {
   let d = e.data;
   if (typeof d === 'string') { try { d = JSON.parse(d); } catch (err) { return; } }
   if (!d || typeof d !== 'object') return;
-  if (!yt.alive) { yt.alive = true; clearTimeout(yt.timer); }
+  if (!yt.alive) { yt.alive = true; clearTimeout(yt.timer); sndVol(); }
   const info = d.info;
   if (d.event === 'onError') { stopMedia(true); A.mediaFail('yterror', info); return; }
   if (d.event === 'onStateChange' && typeof info === 'number') ytState(info);
@@ -1962,6 +1998,7 @@ A.on('media', (kind, payload) => { if (kind === 'yt') ytStart(payload); else if 
 A.on('mediaCmd', (cmd) => {
   if (cmd === 'stop') { stopMedia(); return; }
   if (med.kind === 'file') {
+    sndWake();
     if (cmd === 'play') vidEl.play().catch(() => {});
     else if (cmd === 'pause') vidEl.pause();
     else if (cmd === 'mute') vidEl.muted = true;
@@ -1972,6 +2009,80 @@ A.on('mediaCmd', (cmd) => {
     else if (cmd === 'mute' || cmd === 'unmute') { ytCmd(cmd === 'mute' ? 'mute' : 'unMute'); yt.muted = cmd === 'mute'; A.mediaStatus({ muted: yt.muted }); }
   }
 });
+
+/* ================= 소리 ================= */
+// 영상 파일: Web Audio로 소리 크기 + '좌석 위치 소리'(스크린 뒤 왼쪽·오른쪽 스피커 → 지금 카메라 자리·방향대로 HRTF)
+//   앞자리일수록 크고 양쪽이 넓게, 옆 구역이면 가까운 쪽 스피커가 크게, 고개를 돌리면 소리 방향도 돎
+// 유튜브: 다른 사이트 소리는 손댈 수 없어서 소리 크기만 (플레이어 setVolume)
+const snd = { ctx: null, up: null, split: null, out: null, wired: null, last: '' };
+function sndInit() {
+  if (snd.ctx) return true;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return false;
+  try {
+    const ctx = new AC();
+    const src = ctx.createMediaElementSource(vidEl);
+    const up = ctx.createGain();   // 모노 영상도 양쪽 스피커로
+    up.channelCount = 2; up.channelCountMode = 'explicit'; up.channelInterpretation = 'speakers';
+    const split = ctx.createChannelSplitter(2);
+    const out = ctx.createGain();
+    const mix = ctx.createGain(); mix.gain.value = 0.7;   // 두 스피커 소리가 겹쳐 커지는 만큼 줄여 '끔'일 때와 비슷한 크기로
+    mix.connect(out);
+    for (const ch of [0, 1]) {
+      const p = ctx.createPanner();
+      p.panningModel = 'HRTF'; p.distanceModel = 'inverse';
+      p.refDistance = 14; p.rolloffFactor = 0.55; p.maxDistance = 400;
+      const x = (ch ? 1 : -1) * G.half * 0.62, y = G.YC, z = -0.6;
+      if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
+      split.connect(p, ch);
+      p.connect(mix);
+    }
+    src.connect(up);
+    out.connect(ctx.destination);
+    Object.assign(snd, { ctx, up, split, out });
+    vidEl.volume = 1;
+    return true;
+  } catch (e) { return false; }
+}
+function sndWire() {
+  if (!snd.ctx) return;
+  const sp = !!A.state.spatial;
+  if (snd.wired === sp) return;
+  snd.up.disconnect();
+  snd.up.connect(sp ? snd.split : snd.out);
+  snd.wired = sp; snd.last = '';
+}
+function sndVol() {
+  const v = clamp(A.state.volume, 0, 1);
+  if (snd.ctx) snd.out.gain.setTargetAtTime(vidEl.muted ? 0 : v, snd.ctx.currentTime, 0.03);
+  else vidEl.volume = v;
+  if (med.kind === 'yt' && yt.alive) ytCmd('setVolume', [Math.round(v * 100)]);
+}
+function sndWake() { if (snd.ctx && snd.ctx.state === 'suspended') snd.ctx.resume().catch(() => {}); }
+// 좌석을 고르기 전(전체·구역 보기)엔 H열 가운데에 앉은 소리, 좌석에 앉으면 그 자리·고개 방향대로
+const SND_HOME = new THREE.Vector3(0, 4.3, 18), SND_HOME_F = new THREE.Vector3(0, G.YC - 4.3, -18).normalize();
+const sndF = new THREE.Vector3(), sndU = new THREE.Vector3(), sndP = new THREE.Vector3(), sndUp = new THREE.Vector3(0, 1, 0);
+function sndFrame() {
+  if (!snd.ctx || med.kind !== 'file' || !snd.wired) return;
+  const w = 1 - clamp(lvW.seat, 0, 1);
+  cam.getWorldDirection(sndF).lerp(SND_HOME_F, w).normalize();
+  sndU.set(0, 1, 0).applyQuaternion(cam.quaternion).lerp(sndUp, w).normalize();
+  const p = sndP.copy(cam.position).lerp(SND_HOME, w);
+  const key = [p.x, p.y, p.z, sndF.x, sndF.y, sndF.z].map((v) => v.toFixed(2)).join();
+  if (key === snd.last) return;
+  snd.last = key;
+  const L = snd.ctx.listener, t = snd.ctx.currentTime;
+  if (L.positionX) {
+    const go = (prm, v) => prm.setTargetAtTime(v, t, 0.04);
+    go(L.positionX, p.x); go(L.positionY, p.y); go(L.positionZ, p.z);
+    go(L.forwardX, sndF.x); go(L.forwardY, sndF.y); go(L.forwardZ, sndF.z);
+    go(L.upX, sndU.x); go(L.upY, sndU.y); go(L.upZ, sndU.z);
+  } else { L.setPosition(p.x, p.y, p.z); L.setOrientation(sndF.x, sndF.y, sndF.z, sndU.x, sndU.y, sndU.z); }
+}
+window.addEventListener('pointerdown', sndWake, true);
+window.addEventListener('keydown', sndWake, true);
+A.on('volume', sndVol);
+A.on('spatial', sndWire);
 
 /* ================= 입력 ================= */
 const hudEl = document.getElementById('hud'), dockEl = document.getElementById('dock');
@@ -2271,6 +2382,7 @@ function loop() {
     pose.yaw += wrapPi(tg.yaw - pose.yaw) * kf; pose.pitch = lerp(pose.pitch, tg.pitch, kf); pose.fov = lerp(pose.fov, tg.fov, kf);
   }
   applyPose();
+  sndFrame();
 
   lookPass.u.uVig.value = 0.3; lookPass.u.uTime.value = t; lookPass.u.uAspect.value = aspect;
 
@@ -2373,13 +2485,8 @@ loop();
   inst(P.SpkBig_body, M.speaker, tops, wallG.C); inst(P.SpkBig_grille, grilleMat, tops, wallG.C);
   // 통로 계단: 3줄 알루미늄 모서리 + 양 끝 빨간 LED (사진)
   const noses = [], leds = [];
-  noseList.forEach(([x, h, z, th, w]) => {
-    o.position.set(x, h, z); o.rotation.set(0, th, 0); o.scale.set(w, 1, 1); o.updateMatrix(); noses.push(o.matrix.clone());
-    for (const sg of [-1, 1]) {
-      const off = sg * (w / 2 - 0.1);
-      leds.push(mtx(x + Math.cos(th) * off + Math.sin(th) * 0.034, h + 0.006, z - Math.sin(th) * off + Math.cos(th) * 0.034, th));
-    }
-  });
+  noseList.forEach(([x, h, z, th, w]) => { o.position.set(x, h, z); o.rotation.set(0, th, 0); o.scale.set(w, 1, 1); o.updateMatrix(); noses.push(o.matrix.clone()); });
+  ledList.forEach(([x, h, z, th]) => leds.push(mtx(x + Math.sin(th) * 0.034, h + 0.006, z + Math.cos(th) * 0.034, th)));
   inst(P.Nosing, M.nosing, noses, room, { recv: true });
   inst(P.LedBody, M.arm, leds, room);
   inst(P.LedLens, stepLightMat, leds, room);
@@ -2392,7 +2499,7 @@ loop();
   inst(P.PuckRing, M.nosing, pucks, room);
   inst(P.PuckGlow, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.3, 1.1) }), pucks, room);
   // 의자·팔걸이를 블렌더 모양으로 (구역 빛남 속성은 그대로 이어 붙임)
-  for (const [mesh, geo] of [[fabric, P.SeatFabric], [shell, P.SeatShell], [armsMesh, P.Arm]]) {
+  for (const [mesh, geo] of [[fabric, P.SeatFabric], [shell, P.SeatShell], [armsMesh, P.Arm], [armsInnerMesh, P.ArmDouble || P.Arm]]) {
     if (mesh.geometry.attributes.aEmit) geo.setAttribute('aEmit', mesh.geometry.attributes.aEmit);
     mesh.geometry = geo; mesh.computeBoundingSphere();
   }

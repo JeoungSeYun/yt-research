@@ -781,14 +781,19 @@ button{cursor:pointer}
 
   /* ---------- 3D 쪽과 연결 ---------- */
   function fail3D(msg) { $('vmsg').textContent = msg; $('vstatus').classList.remove('gone'); }
-  const watchdog = setTimeout(() => { if (!window.YAM.ready) fail3D('3D 화면을 불러오지 못했어요. 새로고침해 주세요.'); }, 25000);
+  // 탭이 보이는 동안만 25초를 센다 (백그라운드 탭으로 열면 그리기가 멈춰 있어서 잘못 실패로 보이지 않게)
+  let shownSec = 0;
+  const watchdog = setInterval(() => {
+    if (document.hidden || window.YAM.ready) return;
+    if (++shownSec >= 25) { clearInterval(watchdog); fail3D('3D 화면을 불러오지 못했어요. 새로고침해 주세요.'); }
+  }, 1000);
 
   window.YAM = {
     geo: GEO, seats, byId, grid, cellX, cellW, NCELL, AISLE, ROWS, floorY, rowZ, heatRGB, state, sections, secById, BEST, TOP,
     on, emit, goOver, goSection, goSeat, setHfov, showTip, hideTip, showHint, fail3D, mediaStatus, mediaFail,
     current: () => byId.get(state.sel),
     ready: false,
-    markReady() { this.ready = true; clearTimeout(watchdog); $('vstatus').classList.add('gone'); showHint(); },
+    markReady() { this.ready = true; clearInterval(watchdog); $('vstatus').classList.add('gone'); showHint(); },
   };
 
   const fromHash = decodeURIComponent((location.hash || '').slice(1)).toUpperCase();

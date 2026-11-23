@@ -2113,25 +2113,24 @@ const colA = fabric.instanceColor.array;
 const cBlue = [SEAT_BLUE.r, SEAT_BLUE.g, SEAT_BLUE.b], cGold = [SEAT_GOLD.r, SEAT_GOLD.g, SEAT_GOLD.b];
 const cDim = cBlue.map((v) => v * 0.42);
 // 마우스를 올린 구역: 그 구역 의자들이 하얗게 환해짐 (릴스처럼, 조명 원이 아니라 의자 자체가 밝아짐)
-const SEAT_LIT = new THREE.Color('#c4d2ff'), cLit = [SEAT_LIT.r, SEAT_LIT.g, SEAT_LIT.b];
-const SHELL_LIT = new THREE.Color('#6f80b8'), cShellLit = [SHELL_LIT.r, SHELL_LIT.g, SHELL_LIT.b];
+const SEAT_LIT = new THREE.Color('#6f8ad8'), cLit = [SEAT_LIT.r, SEAT_LIT.g, SEAT_LIT.b];
+const SHELL_LIT = new THREE.Color('#34426e'), cShellLit = [SHELL_LIT.r, SHELL_LIT.g, SHELL_LIT.b];
 const cShell = [SHELL_DARK.r, SHELL_DARK.g, SHELL_DARK.b];
 const shellA = shell.instanceColor.array;
 function paintSeats(dt, t) {
   const kc = 1 - Math.exp(-dt * 10), kq = 1 - Math.exp(-dt * 14);
   const heat = A.state.heat, wO = lvW.over, wS = lvW.sec;
   const hs = cur.level === 'over' && !fly ? hover.sec : null, hi = hover.seat, sel = cur.seat && cur.level !== 'seat' ? cur.seat.i : -1;
-  const pulse = 0.8 + 0.2 * Math.sin(t * 4);
   // 구역 보기: 고른 구역만 밝게, 그 안의 명당만 금색 (도착한 뒤에)
   const inSec = cur.level === 'section' ? cur.sec : null;
   const goldOn = heat && inSec && !fly;
   for (let i = 0; i < N; i++) {
     const s = A.seats[i], top = s.score >= A.TOP, lit = hs && s.sec === hs;
     let er = 0, eg = 0, eb = 0;
-    if (heat && top) { const g = (lit ? 0.42 : 0.2) * wO + 0.06 * wS; er += GOLD_E[0] * g; eg += GOLD_E[1] * g; eb += GOLD_E[2] * g; }
-    if (lit) { er += 0.13; eg += 0.16; eb += 0.26; }
+    if (heat && top) { const g = (lit ? 0.26 : 0.16) * wO + 0.05 * wS; er += GOLD_E[0] * g; eg += GOLD_E[1] * g; eb += GOLD_E[2] * g; }
+    if (lit) { er += 0.025; eg += 0.035; eb += 0.07; }
     if (i === hi) { const w = 0.5; er += w; eg += w; eb += w * 1.05; }
-    if (i === sel) { const g = 1.1 * pulse; er += GOLD_E[0] * g; eg += GOLD_E[1] * g; eb += GOLD_E[2] * g; }
+    if (i === sel) { const g = 0.28; er += GOLD_E[0] * g; eg += GOLD_E[1] * g; eb += GOLD_E[2] * g; }
     const j = i * 3;
     emitArr[j] += (er - emitArr[j]) * kc; emitArr[j + 1] += (eg - emitArr[j + 1]) * kc; emitArr[j + 2] += (eb - emitArr[j + 2]) * kc;
     const tc = inSec && s.sec !== inSec ? cDim : goldOn && top ? cGold : lit ? cLit : cBlue;
@@ -2257,7 +2256,7 @@ function loop() {
   spotMat.color.setRGB(0.015 + look.house * 5.5, 0.012 + look.house * 4.6, 0.01 + look.house * 3.4);
   downMat.color.setScalar(0.015 + look.house * 2.6);
   scallopMat.color.setScalar(0.01 + look.house * 0.95);
-  bloom.strength = 0.5 - look.house * 0.2 + lvW.over * 0.12;
+  bloom.strength = 0.45 - look.house * 0.18;
 
   // 카메라
   const ko = Math.min(1, dt * 6);

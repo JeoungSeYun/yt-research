@@ -392,7 +392,7 @@ button{cursor:pointer}
     s.grade = gradeOf(s.score);
     s.cgv = s.r >= 6 && s.r <= 9 && s.n >= 16 && s.n <= 30;
     s.aisle = isAisleSide(s);
-    // 팔걸이: 옆에 바로 의자가 있으면 공용(컵홀더는 자리마다 하나씩), 없으면 그쪽은 혼자 씀
+    // 팔걸이: 옆에 바로 의자가 있으면 공용(팔걸이마다 앞 끝 컵홀더 1개), 없으면 그쪽은 혼자 씀
     s.armOwn = (s.c > 0 && grid[s.r][s.c - 1] ? 0 : 1) + (s.c < NCELL - 1 && grid[s.r][s.c + 1] ? 0 : 1);
   });
 
@@ -501,7 +501,7 @@ button{cursor:pointer}
     if (s.aisle) out.push('바로 옆이 통로라 드나들기 편하고, 그쪽 팔걸이는 혼자 써요.');
     else if (s.armOwn === 2) out.push('양옆이 비어 있어 팔걸이 둘 다 혼자 써요.');
     else if (s.armOwn === 1) out.push('한쪽 옆이 비어 있어 그쪽 팔걸이는 혼자 써요.');
-    else out.push('팔걸이는 양쪽 다 옆 사람과 같이 쓰지만, 컵홀더는 자리마다 하나씩 있어요.');
+    else out.push('팔걸이는 양쪽 다 옆 사람과 같이 써요. 팔걸이마다 앞 끝에 컵홀더가 하나씩 있어요.');
     if (s.r === 0) out.push('앞에 아무도 없어서 앞사람 머리가 걸리지 않아요.');
     if (s.r === 15) out.push('맨 뒷줄이라 뒤에서 의자를 찰 사람이 없어요.');
     return out.slice(0, 4);
@@ -1184,7 +1184,8 @@ const M = {
   shell: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.15 }),
   arm: new THREE.MeshStandardMaterial({ color: 0x141519, roughness: 0.38, metalness: 0.2 }),
   carpet: new THREE.MeshStandardMaterial({ color: 0xffffff, map: carpetTexture(), roughness: 0.96 }),
-  stage: new THREE.MeshStandardMaterial({ color: 0x5a5c62, roughness: 0.95 }),
+  stage: new THREE.MeshStandardMaterial({ color: 0x141518, roughness: 1 }),
+  railDark: new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.42, metalness: 0.6 }),
   nosing: new THREE.MeshStandardMaterial({ color: 0x9096a0, roughness: 0.32, metalness: 0.8 }),
   black: new THREE.MeshStandardMaterial({ color: 0x040405, roughness: 1 }),
   door: new THREE.MeshStandardMaterial({ color: 0x1c1e23, roughness: 0.7 }),
@@ -1198,7 +1199,11 @@ const W = G.WALL, CEIL = G.CEIL, BACK = G.BACK, ARC = G.ARC;
 let floorMesh, stepMesh;
 const arcR = (r) => A.rowZ(r) + ARC;
 const onArc = (R, s) => { const th = s / R; return { x: R * Math.sin(th), z: -ARC + R * Math.cos(th), th }; };
-const FRONT_MIN_Z = 5.2;
+// 맨 앞: 1열 앞 통로보다 약 1.3 m 낮은 피트(관객은 못 내려감, 난간) · 통로 끝은 1열 줄을 따라 둥글고 양옆은 스크린 가까이까지
+// (실측 추정 참고: A열 바닥 기준 피트 약 -1.3 m · 사진: 통로 끝 빨간 LED, 짙은 두 줄 난간, 앞 모서리 문)
+const PIT_Y = A.floorY(0) - 1.3;
+const scrZ = (x) => G.RC - Math.sqrt(Math.max(G.RC * G.RC - x * x, 0));
+const frontEdgeZ = (x) => Math.max(-ARC + Math.sqrt(Math.max((arcR(0) - 0.6 - WALKWAY) ** 2 - x * x, 0)), scrZ(x) + 0.45);
 function planeUV(w, h, tw, th) {
   const g = new THREE.PlaneGeometry(w, h);
   const uv = g.attributes.uv;
@@ -1211,36 +1216,35 @@ const room = new THREE.Group(); scene.add(room);
 const wallG = { L: new THREE.Group(), R: new THREE.Group(), B: new THREE.Group(), C: new THREE.Group() };
 room.add(wallG.L, wallG.R, wallG.B, wallG.C);
 for (const s of [-1, 1]) {
-  const m = new THREE.Mesh(planeUV(BACK + 0.4, CEIL, 4.8, 4.8), M.wall);
+  const m = new THREE.Mesh(planeUV(BACK + 0.4, CEIL - PIT_Y, 4.8, 4.8), M.wall);
   m.rotation.y = -s * Math.PI / 2;
-  m.position.set(s * W, CEIL / 2, (BACK - 0.4) / 2);
+  m.position.set(s * W, (CEIL + PIT_Y) / 2, (BACK - 0.4) / 2);
   room.add(m);
 }
 {
   const back = new THREE.Mesh(planeUV(2 * W, CEIL, 4.8, 4.8), M.wall);
   back.rotation.y = Math.PI; back.position.set(0, CEIL / 2, BACK); room.add(back);
-  const front = new THREE.Mesh(new THREE.PlaneGeometry(2 * W, CEIL), M.black);
-  front.position.set(0, CEIL / 2, -0.4); room.add(front);
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(2 * W, CEIL - PIT_Y), M.black);
+  front.position.set(0, (CEIL + PIT_Y) / 2, -0.4); room.add(front);
   const ceil = new THREE.Mesh(planeUV(2 * W, BACK + 0.4, 0.6, 0.6), M.ceil);
   ceil.rotation.x = Math.PI / 2; ceil.position.set(0, CEIL, (BACK - 0.4) / 2); room.add(ceil);
   const ground = new THREE.Mesh(new THREE.BoxGeometry(2 * W, 0.3, BACK + 0.4), M.stage);
-  ground.position.set(0, -0.15, (BACK - 0.4) / 2); room.add(ground);
+  ground.position.set(0, PIT_Y - 0.15, (BACK - 0.4) / 2); room.add(ground);
 }
 
 // 계단식 객석 바닥: 줄마다 둥근 띠
 function sectorGeo(rFront, rBack, zBack, y0, y1, minZ) {
   const N = 80, pts = [];
+  const lim = (x, z) => (minZ == null ? z : Math.max(z, typeof minZ === 'function' ? minZ(x) : minZ));
   const tF = Math.asin(Math.min(1, W / rFront));
   for (let i = 0; i <= N; i++) {
-    const th = -tF + 2 * tF * i / N;
-    let z = -ARC + rFront * Math.cos(th);
-    if (minZ != null) z = Math.max(z, minZ);
-    pts.push(new THREE.Vector2(rFront * Math.sin(th), -z));
+    const th = -tF + 2 * tF * i / N, x = rFront * Math.sin(th);
+    pts.push(new THREE.Vector2(x, -lim(x, -ARC + rFront * Math.cos(th))));
   }
   if (zBack != null) pts.push(new THREE.Vector2(W, -zBack), new THREE.Vector2(-W, -zBack));
   else {
     const tB = Math.asin(Math.min(1, W / rBack));
-    for (let i = N; i >= 0; i--) { const th = -tB + 2 * tB * i / N; pts.push(new THREE.Vector2(rBack * Math.sin(th), -(-ARC + rBack * Math.cos(th)))); }
+    for (let i = N; i >= 0; i--) { const th = -tB + 2 * tB * i / N, x = rBack * Math.sin(th); pts.push(new THREE.Vector2(x, -lim(x, -ARC + rBack * Math.cos(th)))); }
   }
   const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: y1 - y0, bevelEnabled: false, curveSegments: 1 });
   g.rotateX(-Math.PI / 2); g.translate(0, y0, 0);
@@ -1251,14 +1255,14 @@ const WALKWAY = 1.5;
   const slabs = [];
   for (let r = 0; r < 16; r++) {
     const R = arcR(r), fy = A.floorY(r);
-    if (r === 0) slabs.push(sectorGeo(R - 0.6 - WALKWAY, R + 0.6, null, 0.002, fy, FRONT_MIN_Z));
+    if (r === 0) slabs.push(sectorGeo(R - 0.6 - WALKWAY, R + 0.6, null, PIT_Y + 0.002, fy, frontEdgeZ));
     else if (r === 15) slabs.push(sectorGeo(R - 0.6, 0, BACK, 0.002, fy));
     else slabs.push(sectorGeo(R - 0.6, R + 0.6, null, 0.002, fy));
   }
   floorMesh = new THREE.Mesh(merge(slabs), M.carpet); room.add(floorMesh);
 }
 
-// 통로 계단: 줄마다 좌석표에서 비어 있는 칸(통로 칸 + 붙어서 비는 자리)만큼 넓게 + 중간 단 + 금속 모서리 + 빨간 계단 불빛
+// 통로 계단: 줄마다 좌석표에서 비어 있는 칸(통로 칸 + 붙어서 비는 자리)만큼 넓게 + 열마다 3칸 + 금속 모서리 + 빨간 계단 불빛
 // (F열부터는 15·30·43번이 비어 통로가 2칸, 벽에 닿는 옆 통로는 벽까지 계단 — 실제 사진처럼)
 const stepLights = [], noseList = [], ledList = [], aisleRuns = [];   // aisleRuns: [r, 시작 칸, 끝 칸, s0, s1]
 let noseMesh, stepLightMesh, stepLightMat;
@@ -1283,13 +1287,16 @@ let noseMesh, stepLightMesh, stepLightMat;
     const R = arcR(r), fy = A.floorY(r);
     const edges = [];
     if (r > 0) edges.push([R - 0.6, fy]);
-    const mid = r < 15 ? fy + (A.floorY(r + 1) - fy) / 2 : fy;
-    if (r < 15) edges.push([R, mid]);
+    const rise = r < 15 ? A.floorY(r + 1) - fy : 0;
+    if (r < 15) edges.push([R - 0.2, fy + rise / 3], [R + 0.2, fy + rise * 2 / 3]);
     // 넓은 계단은 1.2 m 조각으로 나눠 둥근 줄을 따라가게
     const nseg = Math.max(1, Math.ceil((s1 - s0) / 1.2));
     for (let k = 0; k < nseg; k++) {
       const a = s0 + (s1 - s0) * k / nseg, b = s0 + (s1 - s0) * (k + 1) / nseg, sm = (a + b) / 2, w = b - a;
-      if (r < 15) { const m = onArc(R + 0.295, sm); stepGeos.push(boxAt(w + 0.012, mid - fy + 0.05, 0.59, m.x, (mid + fy - 0.05) / 2, m.z, m.th)); }
+      if (r < 15) for (const [rc, k] of [[R, 1], [R + 0.4, 2]]) {
+        const m = onArc(rc, sm), top = fy + rise * k / 3;
+        stepGeos.push(boxAt(w + 0.012, top - fy + 0.05, 0.4, m.x, (top + fy - 0.05) / 2, m.z, m.th));
+      }
       for (const [Re, h] of edges) {
         const e = onArc(Re, sm);
         noseGeos.push(boxAt(w - 0.01, 0.02, 0.05, e.x + Math.sin(e.th) * 0.02, h + 0.006, e.z + Math.cos(e.th) * 0.02, e.th));
@@ -1314,77 +1321,64 @@ let noseMesh, stepLightMesh, stepLightMat;
   stepLightMesh = im; stepLightMat = mat;
 }
 
-// 맨 앞 (실제 사진 기준): 1열 높이 통로 앞 세로살 난간 + 앞 바닥에서 양옆 출입문 쪽으로 올라가는 경사로 + 옆 계단 난간
-const DOOR_UP_Z = 4.7, DOOR_LOW_Z = 2.5;
+// 맨 앞 (실제 사진 기준): 1열 앞 통로 끝 = 알루미늄 모서리 + 빨간 LED 줄 + 짙은 두 줄 난간(윗손잡이·가운데 가로대·기둥)
+// 그 앞은 낮은 피트(검은 벽·바닥)라 내려가는 길 없음 · 옆 계단 난간
+const DOOR_Z = 2.85;
 {
-  const railGeos = [], balusters = [], railPosts = [];
-  const tube = (pts, r = 0.026) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'centripetal'), pts.length * 6, r, 8, false);
-  // 세로살 난간: 바닥 경로를 따라 윗손잡이·아래 가로대·세로살(13 cm)·기둥(1.4 m)
-  const balustrade = (path, h = 1.0) => {
-    railGeos.push(tube(path.map((p) => new THREE.Vector3(p.x, p.y + h, p.z))));
-    railGeos.push(tube(path.map((p) => new THREE.Vector3(p.x, p.y + 0.1, p.z)), 0.013));
-    let acc = 0, lastPost = -9;
-    for (let i = 0; i < path.length - 1; i++) {
-      const a = path[i], b = path[i + 1], len = a.distanceTo(b);
-      for (let t = 0; t < len; t += 0.13) { const k = t / len; balusters.push([a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k + 0.1, a.z + (b.z - a.z) * k, h - 0.1]); }
-      if (acc - lastPost >= 1.4) { railPosts.push([a.x, a.y, a.z, h]); lastPost = acc; }
-      acc += len;
+  const y0 = A.floorY(0);
+  const xs = [];
+  for (let x = -W + 0.05; x < W - 0.05; x += 0.25) xs.push(x);
+  xs.push(W - 0.05);
+  const edge = xs.map((x) => new THREE.Vector3(x, y0, frontEdgeZ(x)));
+  // 피트 쪽 앞면(검게)
+  {
+    const pos = [];
+    for (let i = 0; i < edge.length - 1; i++) {
+      const p = edge[i], q = edge[i + 1], zp = p.z - 0.006, zq = q.z - 0.006;
+      pos.push(p.x, PIT_Y, zp, q.x, PIT_Y, zq, q.x, y0 - 0.012, zq, p.x, PIT_Y, zp, q.x, y0 - 0.012, zq, p.x, y0 - 0.012, zp);
     }
-    const e = path[path.length - 1]; railPosts.push([e.x, e.y, e.z, h]);
-  };
-  const y0 = A.floorY(0), RW = arcR(0) - 0.6 - WALKWAY;
-  const edgeZ = (x) => Math.max(-ARC + Math.sqrt(Math.max(RW * RW - x * x, 0)), FRONT_MIN_Z);
-  const RAMP_W = 1.3, X0 = 8.0, X1 = 14.3;
-  const front = [];
-  for (let x = -X1; x <= X1 + 0.01; x += 0.4) front.push(new THREE.Vector3(x, y0, edgeZ(x) + 0.05));
-  balustrade(front);
-  const rampY = (ax) => y0 * Math.min(1, Math.max(0, (ax - X0) / (X1 - X0)));
-  const pos = [], idx = [], uv = [];
-  for (const sg of [-1, 1]) {
-    const outer = [], N = 56, base = pos.length / 3;
-    for (let i = 0; i <= N; i++) {
-      const ax = X0 + (W - 0.02 - X0) * i / N, x = sg * ax, y = rampY(ax) + 0.004, zi = edgeZ(x), zo = zi - RAMP_W;
-      pos.push(x, y, zi, x, y, zo, x, 0.0, zo);
-      uv.push(x, zi, x, zo, x, zo + y);
-      if (ax <= X1 + 0.7) outer.push(new THREE.Vector3(x, y, zo + 0.05));
-      if (i < N) {
-        const k = base + i * 3, n = k + 3;
-        const tri = sg > 0 ? [k, n, k + 1, k + 1, n, n + 1, k + 1, n + 1, k + 2, k + 2, n + 1, n + 2]
-          : [k, k + 1, n, k + 1, n + 1, n, k + 1, k + 2, n + 1, k + 2, n + 2, n + 1];
-        idx.push(...tri);
-      }
-    }
-    balustrade(outer);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals();
+    const face = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x0c0d10, roughness: 0.9, side: THREE.DoubleSide }));
+    face.receiveShadow = true; room.add(face);
   }
-  const rg = new THREE.BufferGeometry();
-  rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  rg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  rg.setIndex(idx); rg.computeVertexNormals();
-  const ramp = new THREE.Mesh(rg, M.carpet); ramp.receiveShadow = true; room.add(ramp);
+  // 모서리 알루미늄 + 바로 아래 빨간 LED 줄
+  const noseGs = [], ledGs = [];
+  for (let i = 0; i < edge.length - 1; i++) {
+    const p = edge[i], q = edge[i + 1], L = Math.hypot(q.x - p.x, q.z - p.z), ry = Math.atan2(-(q.z - p.z), q.x - p.x);
+    const mx = (p.x + q.x) / 2, mz = (p.z + q.z) / 2;
+    noseGs.push(boxAt(L + 0.004, 0.02, 0.05, mx, y0 + 0.004, mz + 0.018, ry));
+    ledGs.push(boxAt(L + 0.002, 0.012, 0.006, mx, y0 - 0.04, mz - 0.01, ry));
+  }
+  const nose = new THREE.Mesh(merge(noseGs), M.nosing); nose.receiveShadow = true; room.add(nose);
+  room.add(new THREE.Mesh(merge(ledGs), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 0.16, 0.08) })));
+  // 두 줄 난간: 통로 끝에서 10 cm 안쪽, 높이 1.0 m · 가운데 가로대 0.5 m · 기둥 1.6 m마다
+  const railPath = edge.map((p) => new THREE.Vector3(p.x, p.y, p.z + 0.1));
+  const tube = (pts, r) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'centripetal'), pts.length * 3, r, 8, false);
+  const up = (h) => railPath.map((p) => new THREE.Vector3(p.x, p.y + h, p.z));
+  const railGeos = [tube(up(1.0), 0.024), tube(up(0.5), 0.016)];
+  const posts = [];
+  let acc = 0, last = -9;
+  for (let i = 0; i < railPath.length; i++) {
+    if (i) acc += railPath[i].distanceTo(railPath[i - 1]);
+    if (acc - last >= 1.6 || i === railPath.length - 1) { posts.push(railPath[i]); last = acc; }
+  }
+  for (const p of posts) { const g = new THREE.CylinderGeometry(0.022, 0.022, 1.0, 8); g.translate(p.x, p.y + 0.5, p.z); railGeos.push(g); }
+  // 옆 계단 난간 (A~H열 벽 쪽 계단, 의자 쪽 가장자리)
   for (const sg of [-1, 1]) {
     const s = sg * (Math.abs(A.cellX[3]) + G.CELL / 2 + 0.16), pts = [];
     for (let r = 0; r <= 7; r++) { const p = onArc(arcR(r), s); pts.push(new THREE.Vector3(p.x, A.floorY(r) + 0.95, p.z)); }
-    railGeos.push(tube(pts));
-    pts.forEach((p, i) => { if (i % 2 === 0 || i === pts.length - 1) railPosts.push([p.x, p.y - 0.95, p.z, 0.95]); });
+    railGeos.push(tube(pts, 0.024));
+    pts.forEach((p, i) => { if (i % 2 === 0 || i === pts.length - 1) { const g = new THREE.CylinderGeometry(0.022, 0.022, 0.95, 8); g.translate(p.x, p.y - 0.475, p.z); railGeos.push(g); } });
   }
-  const rails = new THREE.Mesh(merge(railGeos), M.rail); rails.castShadow = true; room.add(rails);
-  const cylU = (r) => { const g = new THREE.CylinderGeometry(r, r, 1, 8); g.translate(0, 0.5, 0); return g; };
-  const o = new THREE.Object3D();
-  const inst = (geo, list) => {
-    const im = new THREE.InstancedMesh(geo, M.rail, list.length);
-    list.forEach(([x, y, z, h], i) => { o.position.set(x, y, z); o.rotation.set(0, 0, 0); o.scale.set(1, h, 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); });
-    im.castShadow = true; room.add(im);
-  };
-  inst(cylU(0.008), balusters);
-  inst(cylU(0.022), railPosts);
+  const rails = new THREE.Mesh(merge(railGeos), M.railDark); rails.castShadow = true; room.add(rails);
 }
 
 // 영사실 창, 문, 비상구 (스피커는 블렌더 부품으로 따로)
 {
   for (const s of [-1, 1]) {
-    // 위 문 = 경사로 끝(1열 높이), 아래 문 = 앞 바닥
-    for (const [y, z] of [[A.floorY(0) + 1.25, DOOR_UP_Z], [1.25, DOOR_LOW_Z]]) {
-      const door = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 2.5), M.door);
+    // 앞 모서리 문 (1열 통로 높이, 스크린 바로 옆 · 2017 공식 사진)
+    for (const [y, z] of [[A.floorY(0) + 1.25, DOOR_Z]]) {
+      const door = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 2.5), M.door);
       door.rotation.y = -s * Math.PI / 2; door.position.set(s * (W - 0.012), y, z);
       (s < 0 ? wallG.L : wallG.R).add(door);
     }
@@ -1413,7 +1407,7 @@ const DOOR_UP_Z = 4.7, DOOR_LOW_Z = 2.5;
   const exitMat = new THREE.MeshBasicMaterial({ map: exitTex.tex, color: new THREE.Color(1.5, 1.5, 1.5) });
   const exitGeo = new THREE.PlaneGeometry(0.9, 0.45);
   for (const s of [-1, 1]) {
-    for (const [y, z] of [[A.floorY(0) + 2.85, DOOR_UP_Z], [2.85, DOOR_LOW_Z]]) {
+    for (const [y, z] of [[A.floorY(0) + 2.85, DOOR_Z]]) {
       const e1 = new THREE.Mesh(exitGeo, exitMat); e1.rotation.y = -s * Math.PI / 2; e1.position.set(s * (W - 0.02), y, z); (s < 0 ? wallG.L : wallG.R).add(e1);
     }
     const e2 = new THREE.Mesh(exitGeo, exitMat); e2.rotation.y = Math.PI; e2.position.set(s * (W - 2.2), A.floorY(15) + 2.7, BACK - 0.02); wallG.B.add(e2);
@@ -1550,7 +1544,7 @@ A.seats.forEach((s, i) => {
 fabric.computeBoundingSphere(); shell.computeBoundingSphere(); people.computeBoundingSphere();
 scene.add(fabric, shell, people);
 fabric.castShadow = shell.castShadow = true; fabric.receiveShadow = shell.receiveShadow = true;
-// 팔걸이: 의자 사이 = 공용(컵홀더 2개), 줄 끝(통로·빈자리 쪽) = 1개 (실제 사진 기준)
+// 팔걸이: 모두 앞 끝 컵홀더 1개 · 줄 끝(통로·빈자리 쪽)은 아래가 파란 가죽 옆판 (CJ 공식 사진)
 let armsMesh, armsInnerMesh;
 {
   const ends = [], inner = [];
@@ -2499,9 +2493,17 @@ loop();
   inst(P.PuckRing, M.nosing, pucks, room);
   inst(P.PuckGlow, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.3, 1.1) }), pucks, room);
   // 의자·팔걸이를 블렌더 모양으로 (구역 빛남 속성은 그대로 이어 붙임)
-  for (const [mesh, geo] of [[fabric, P.SeatFabric], [shell, P.SeatShell], [armsMesh, P.Arm], [armsInnerMesh, P.ArmDouble || P.Arm]]) {
+  for (const [mesh, geo] of [[fabric, P.SeatFabric], [shell, P.SeatShell], [armsMesh, P.Arm], [armsInnerMesh, P.Arm]]) {
     if (mesh.geometry.attributes.aEmit) geo.setAttribute('aEmit', mesh.geometry.attributes.aEmit);
     mesh.geometry = geo; mesh.computeBoundingSphere();
+  }
+  // 줄 끝 팔걸이 아래 파란 가죽 옆판 + 바깥 둥근 축 덮개
+  if (P.ArmEndPanel) {
+    const endM = [], m4 = new THREE.Matrix4();
+    for (let i = 0; i < armsMesh.count; i++) { armsMesh.getMatrixAt(i, m4); endM.push(m4.clone()); }
+    const panelMat = new THREE.MeshPhysicalMaterial({ color: SEAT_BLUE.clone(), roughness: 0.52, sheen: 0.35, sheenRoughness: 0.4, sheenColor: new THREE.Color(0.5, 0.53, 0.62) });
+    inst(P.ArmEndPanel, panelMat, endM, scene, { cast: true, recv: true });
+    if (P.ArmEndCap) inst(P.ArmEndCap, M.arm, endM, scene);
   }
   // 등받이 뒤 번호 타원판 + 앞면 위 빨간 자수 (모든 의자에 같은 자리)
   if (P.SeatPlate && P.SeatBadge) {

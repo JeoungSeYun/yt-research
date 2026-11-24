@@ -262,7 +262,7 @@ button{cursor:pointer}
           </div>
         </div>
         <label class="prow" for="fov" title="좌석 시점에서 화면에 담기는 가로 범위"><span class="plab">시야각</span><span class="fov"><input type="range" id="fov" min="50" max="110" step="1" value="80"><output id="fovOut" for="fov">80°</output></span></label>
-        <p class="fine">팬이 만든 비공식 좌석 시야 시뮬레이터예요. CGV·IMAX와 관계없고, 실제 시야와 조금 다를 수 있어요. 좌석 배치는 공개된 CGV 좌석표(624석) 기준이고, 거리·높이는 스크린 실측(31 × 22.4 m)으로 추정했어요.</p>
+        <p class="fine">팬이 만든 비공식 좌석 시야 시뮬레이터예요. CGV·IMAX와 관계없고, 실제 시야와 조금 다를 수 있어요. 좌석 배치는 공개된 CGV 좌석표(624석) 기준이고, 거리는 사진·관람객 제보로 추정한 값(A열 약 11.4 m, 열 간격 1.3 m)이에요.</p>
       </div>
     </div>
   </header>
@@ -322,14 +322,14 @@ button{cursor:pointer}
 
   /* ---------- 상영관 치수 (m) ---------- */
   // ARC: 좌석 줄이 둥글게 감싸는 중심이 스크린 뒤 몇 m인지 (공식 사진의 둥근 줄에 맞춤)
-  const GEO = { SW: 31, SH: 22.4, SB: 0.9, RC: 75, Z0: 9.5, PITCH: 1.2, EYE: 1.15, WALL: 16, CEIL: 24.2, CELL: 0.58, ARC: 12 };
+  const GEO = { SW: 31, SH: 22.4, SB: 0.9, RC: 75, Z0: 11.4, PITCH: 1.3, EYE: 1.15, WALL: 16, CEIL: 24.2, CELL: 0.58, ARC: 12 };
   GEO.half = GEO.RC * Math.sin(GEO.SW / 2 / GEO.RC);
   GEO.sag = GEO.RC * (1 - Math.cos(GEO.SW / 2 / GEO.RC));
   GEO.YC = GEO.SB + GEO.SH / 2;
   GEO.YT = GEO.SB + GEO.SH;
   const floorY = (r) => 0.6 + 0.30 * r + 0.01 * r * (r - 1);
   const rowZ = (r) => GEO.Z0 + GEO.PITCH * r;
-  GEO.BACK = rowZ(15) + 0.6 + 1.8;
+  GEO.BACK = rowZ(15) + GEO.PITCH / 2 + 1.8;
 
   const AISLE = { 2: 1.3, 16: 1.4, 32: 1.4, 46: 1.3 };
   const NCELL = 49;
@@ -1198,12 +1198,13 @@ const M = {
 const W = G.WALL, CEIL = G.CEIL, BACK = G.BACK, ARC = G.ARC;
 let floorMesh, stepMesh;
 const arcR = (r) => A.rowZ(r) + ARC;
+const HP = G.PITCH / 2, STEP = G.PITCH / 3;   // 줄 띠 반폭 · 통로 계단 한 칸 깊이 (열마다 3칸)
 const onArc = (R, s) => { const th = s / R; return { x: R * Math.sin(th), z: -ARC + R * Math.cos(th), th }; };
 // 맨 앞: 1열 앞 통로보다 약 1.3 m 낮은 피트(관객은 못 내려감, 난간) · 통로 끝은 1열 줄을 따라 둥글고 양옆은 스크린 가까이까지
 // (실측 추정 참고: A열 바닥 기준 피트 약 -1.3 m · 사진: 통로 끝 빨간 LED, 짙은 두 줄 난간, 앞 모서리 문)
 const PIT_Y = A.floorY(0) - 1.3;
 const scrZ = (x) => G.RC - Math.sqrt(Math.max(G.RC * G.RC - x * x, 0));
-const frontEdgeZ = (x) => Math.max(-ARC + Math.sqrt(Math.max((arcR(0) - 0.6 - WALKWAY) ** 2 - x * x, 0)), scrZ(x) + 0.45);
+const frontEdgeZ = (x) => Math.max(-ARC + Math.sqrt(Math.max((arcR(0) - HP - WALKWAY) ** 2 - x * x, 0)), scrZ(x) + 0.45);
 function planeUV(w, h, tw, th) {
   const g = new THREE.PlaneGeometry(w, h);
   const uv = g.attributes.uv;
@@ -1255,9 +1256,9 @@ const WALKWAY = 1.5;
   const slabs = [];
   for (let r = 0; r < 16; r++) {
     const R = arcR(r), fy = A.floorY(r);
-    if (r === 0) slabs.push(sectorGeo(R - 0.6 - WALKWAY, R + 0.6, null, PIT_Y + 0.002, fy, frontEdgeZ));
-    else if (r === 15) slabs.push(sectorGeo(R - 0.6, 0, BACK, 0.002, fy));
-    else slabs.push(sectorGeo(R - 0.6, R + 0.6, null, 0.002, fy));
+    if (r === 0) slabs.push(sectorGeo(R - HP - WALKWAY, R + HP, null, PIT_Y + 0.002, fy, frontEdgeZ));
+    else if (r === 15) slabs.push(sectorGeo(R - HP, 0, BACK, 0.002, fy));
+    else slabs.push(sectorGeo(R - HP, R + HP, null, 0.002, fy));
   }
   floorMesh = new THREE.Mesh(merge(slabs), M.carpet); room.add(floorMesh);
 }
@@ -1286,16 +1287,16 @@ let noseMesh, stepLightMesh, stepLightMat;
   for (const [r, , , s0, s1] of aisleRuns) {
     const R = arcR(r), fy = A.floorY(r);
     const edges = [];
-    if (r > 0) edges.push([R - 0.6, fy]);
+    if (r > 0) edges.push([R - HP, fy]);
     const rise = r < 15 ? A.floorY(r + 1) - fy : 0;
-    if (r < 15) edges.push([R - 0.2, fy + rise / 3], [R + 0.2, fy + rise * 2 / 3]);
+    if (r < 15) edges.push([R - HP + STEP, fy + rise / 3], [R - HP + 2 * STEP, fy + rise * 2 / 3]);
     // 넓은 계단은 1.2 m 조각으로 나눠 둥근 줄을 따라가게
     const nseg = Math.max(1, Math.ceil((s1 - s0) / 1.2));
     for (let k = 0; k < nseg; k++) {
       const a = s0 + (s1 - s0) * k / nseg, b = s0 + (s1 - s0) * (k + 1) / nseg, sm = (a + b) / 2, w = b - a;
-      if (r < 15) for (const [rc, k] of [[R, 1], [R + 0.4, 2]]) {
-        const m = onArc(rc, sm), top = fy + rise * k / 3;
-        stepGeos.push(boxAt(w + 0.012, top - fy + 0.05, 0.4, m.x, (top + fy - 0.05) / 2, m.z, m.th));
+      if (r < 15) for (const k of [1, 2]) {
+        const m = onArc(R - HP + (k + 0.5) * STEP, sm), top = fy + rise * k / 3;
+        stepGeos.push(boxAt(w + 0.012, top - fy + 0.05, STEP, m.x, (top + fy - 0.05) / 2, m.z, m.th));
       }
       for (const [Re, h] of edges) {
         const e = onArc(Re, sm);
@@ -2460,13 +2461,14 @@ loop();
   for (const sg of [-1, 1]) {
     const grp = sg < 0 ? wallG.L : wallG.R;
     const pairs = [], rods = [], bigs = [];
-    for (const z of [12.5, 21.5]) {
-      const x = sg * (W - 1.35), y = 15.2, ry = yawTo(x, z, 0, 17);
+    const AIM = BACK * 0.57;
+    for (const z of [BACK * 0.418, BACK * 0.719]) {
+      const x = sg * (W - 1.35), y = 15.2, ry = yawTo(x, z, 0, AIM);
       pairs.push(mtx(x, y, z, ry));
       for (const lx of [-0.32, 0.32]) { o.position.set(x + Math.cos(ry) * lx, y, z - Math.sin(ry) * lx); o.rotation.set(0, 0, 0); o.scale.set(1, CEIL - y, 1); o.updateMatrix(); rods.push(o.matrix.clone()); }
     }
-    for (const z of [7.5, 26.5]) {
-      const x = sg * (W - 0.75), y = 20.6, ry = yawTo(x, z, 0, 17), rx = Math.atan2(4 - y, Math.hypot(x, z - 17));
+    for (const z of [BACK * 0.251, BACK * 0.886]) {
+      const x = sg * (W - 0.75), y = 20.6, ry = yawTo(x, z, 0, AIM), rx = Math.atan2(4 - y, Math.hypot(x, z - AIM));
       bigs.push(mtx(x, y, z, ry, rx));
       o.position.set(x, y + 0.6, z); o.rotation.set(0, 0, 0); o.scale.set(1.6, CEIL - y - 0.6, 1.6); o.updateMatrix(); rods.push(o.matrix.clone());
     }
@@ -2475,7 +2477,7 @@ loop();
     inst(P.Rod, M.rail, rods, grp);
   }
   const tops = [];
-  for (const sx of [-6.5, 6.5]) for (const z of [10, 19, 27]) tops.push(mtx(sx, CEIL - 0.42, z, yawTo(sx, z, 0, 18), -1.05, 0.6));
+  for (const sx of [-6.5, 6.5]) for (const z of [BACK * 0.334, BACK * 0.635, BACK * 0.903]) tops.push(mtx(sx, CEIL - 0.42, z, yawTo(sx, z, 0, BACK * 0.6), -1.05, 0.6));
   inst(P.SpkBig_body, M.speaker, tops, wallG.C); inst(P.SpkBig_grille, grilleMat, tops, wallG.C);
   // 통로 계단: 3줄 알루미늄 모서리 + 양 끝 빨간 LED (사진)
   const noses = [], leds = [];
@@ -2487,8 +2489,8 @@ loop();
   // 줄 끝 바닥 둥근 등 (통로 옆 첫 자리 앞)
   const pucks = [];
   for (const [r, ca, cb, s0, s1] of aisleRuns) {
-    if (ca - 1 >= 0 && A.grid[r][ca - 1]) { const p = onArc(arcR(r) - 0.42, s0 + 0.1); pucks.push(mtx(p.x, A.floorY(r) + 0.001, p.z, p.th)); }
-    if (cb + 1 < A.NCELL && A.grid[r][cb + 1]) { const p = onArc(arcR(r) - 0.42, s1 - 0.1); pucks.push(mtx(p.x, A.floorY(r) + 0.001, p.z, p.th)); }
+    if (ca - 1 >= 0 && A.grid[r][ca - 1]) { const p = onArc(arcR(r) - HP + 0.18, s0 + 0.1); pucks.push(mtx(p.x, A.floorY(r) + 0.001, p.z, p.th)); }
+    if (cb + 1 < A.NCELL && A.grid[r][cb + 1]) { const p = onArc(arcR(r) - HP + 0.18, s1 - 0.1); pucks.push(mtx(p.x, A.floorY(r) + 0.001, p.z, p.th)); }
   }
   inst(P.PuckRing, M.nosing, pucks, room);
   inst(P.PuckGlow, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.3, 1.1) }), pucks, room);
